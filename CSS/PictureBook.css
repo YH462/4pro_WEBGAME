@@ -1,0 +1,20 @@
+.img { 
+    display: flex; 
+    flex-direction: row; 
+    min-height: 100svh; 
+    justify-content: space-around;
+    align-items: flex-end; 
+
+}
+.img-collect{ 
+    max-width: 400px;
+    height: auto;
+    margin-top: auto;
+    margin-bottom: 2svh;
+}
+.img-battle{ 
+    max-width: 400px;
+    height: auto;
+    margin-top: auto; 
+    margin-bottom: 2svh;
+}

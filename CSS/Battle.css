@@ -1,0 +1,20 @@
+.img{
+    display: flex; 
+    flex-direction: row; 
+    min-height: 100svh; 
+    justify-content: space-around;
+    align-items: flex-end; 
+}
+/* 図鑑画像*/
+.img-picturebook {
+    max-width: 400px;
+    height: auto;
+    margin-top: auto;
+    margin-bottom: 2svh;
+}
+.img-collect {
+    max-width: 400px;
+    height: auto;
+    margin-top: auto;
+    margin-bottom: 2svh;
+}

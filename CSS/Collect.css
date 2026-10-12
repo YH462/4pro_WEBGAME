@@ -1,37 +1,45 @@
 @charset "UTF-8";
-.username{
+
+.username {
     color: black;
     text-align: right;
     font-size: 40px;
 }
-h1{
+
+h1 {
     color: orange;
     text-align: center;
     font-size: 80px;
 }
 
-.interactive-img{
-    display: flex;
-    justify-content: space-around;
-    align-items: flex-start;
-    min-height: 100vh;
-}
-.img-schoolmap{
-    max-width: 900px; /*画像横サイズ*/
+/* 学校マップ画像 */
+.img-schoolmap {
+    max-width: 900px;
     height: auto;
     display: block; 
-    margin: 30px auto; /*画像間隔*/
+    margin: 0 auto 30px auto; 
     flex: 1;
 }
-.img-picturebook{
-    max-width: 400px;
-    height: auto;
-    margin: auto 30px; /*画像間隔*/
-    margin-top: auto;
-
+/* 親要素 */
+.interactive-img {
+    display: flex; 
+    flex-direction: row; 
+    min-height: 42svh; /*ページ内のアイテム数に合わせて値を変える*/
+    justify-content: space-around;
+    align-items: flex-end; 
+    margin-left: 1svh;
 }
-.img-battle{
+/* 図鑑画像*/
+.img-picturebook {
     max-width: 400px;
     height: auto;
-    margin: auto 60px; /*画像間隔*/
+    margin-top: auto;
+    margin-bottom: 2svh;
+}
+/* バトル画像 */
+.img-battle {
+    max-width: 400px;
+    height: auto;
+    margin-top: auto;
+    margin-bottom: 2svh;
 }

@@ -1,0 +1,35 @@
+@charset "UTF-8";
+.username{
+    color: black;
+    text-align: right;
+    font-size: 40px;
+}
+h1{
+    color: orange;
+    text-align: center;
+    font-size: 80px;
+}
+
+.interactive-img{
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    height: 600px;
+}
+.img-schoolmap{
+    max-width: 900px; /*画像横サイズ*/
+    height: auto;
+    display: block; 
+    margin: 30px auto; /*画像間隔*/
+    flex: 1;
+}
+.img-picturebook{
+    max-width: 400px;
+    height: auto;
+    margin: auto 30px; /*画像間隔*/
+}
+.img-battle{
+    max-width: 400px;
+    height: auto;
+    margin: auto 60px; /*画像間隔
+}
