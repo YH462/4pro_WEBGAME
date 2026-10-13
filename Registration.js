@@ -2,8 +2,16 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const app = express();
+app.use(express.static(__dirname));
 const PORT = 3000;
 
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/name.html');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
 // フォームから送られてきたデータ（URLエンコード形式）を読み取れるようにする
 app.use(express.urlencoded({ extended: true }));
 
