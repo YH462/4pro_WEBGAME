@@ -1,10 +1,16 @@
-<label for="name">名前（4 ～ 8 文字）:</label>
-
-<input
-  type="text"
-  id="name"
-  name="name"
-  required
-  minlength="4"
-  maxlength="8"
-  size="10" />
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>JavaScriptの外部読み込みサンプル</title>
+</head>
+<body>
+  <form action="/submit" method="post">
+    <div>なまえをおしえて！</div>
+    <input type="text" name="name" id="name" autocomplete="on">
+    <div>パスワードをおしえて！</div>
+    <input type="password" name="new-password" id="new-password" autocomplete="on">
+    <button type="submit">登録</button>
+  </form>
+</body>
+</html>
