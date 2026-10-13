@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBERPUNK 3D MONSTER BATTLE</title>
+  
+  <!-- 1. Tailwind CSS (ユーティリティクラスによるUIレイアウト用) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 2. Three.js (3Dグラフィックス・ネオンライティング描画ライブラリ) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- 3. Google Fonts (サイバーパンク風 SFフォント Orbitron & Rajdhani) -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* -----------------------------------------------------------------
+       サイバーパンク・ネオンデザイン & カスタムCSSスタイル
+       ----------------------------------------------------------------- */
+    :root {
+      --cyber-black: #08090f;
+      --cyber-dark: #0f111a;
+      --cyber-panel: rgba(15, 17, 26, 0.85);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff0055;
+      --neon-yellow: #ffe600;
+      --neon-purple: #9d00ff;
+      --neon-green: #00ff66;
+    }
+
+    body {
+      font-family: 'Rajdhani', 'Orbitron', sans-serif;
+      background-color: var(--cyber-black);
+      color: #e2e8f0;
+      user-select: none;
+      overflow: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.05) 0%, transparent 80%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 30px 30px, 30px 30px;
+    }
+
+    /* SFスキャンライン（画面走査線）エフェクト */
+    .scanlines {
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.3) 50%,
+        rgba(0, 0, 0, 0.3)
+      );
+      background-size: 100% 4px;
+    }
+
+    /* サイバーパンクホログラムパネル (ガラスモフィズム＋ネオン枠線) */
+    .cyber-panel {
+      background: var(--cyber-panel);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--neon-cyan);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.25), inset 0 0 15px rgba(0, 243, 255, 0.08);
+      clip-path: polygon(
+        0 0, 
+        calc(100% - 12px) 0, 
+        100% 12px, 
+        100% 100%, 
+        12px 100%, 
+        0 calc(100% - 12px)
+      );
+    }
+
+    .cyber-panel-magenta {
+      background: var(--cyber-panel);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--neon-magenta);
+      box-shadow: 0 0 12px rgba(255, 0, 85, 0.25), inset 0 0 15px rgba(255, 0, 85, 0.08);
+      clip-path: polygon(
+        12px 0, 
+        100% 0, 
+        100% calc(100% - 12px), 
+        calc(100% - 12px) 100%, 
+        0 100%, 
+        0 12px
+      );
+    }
+
+    /* サイバーボタン（ネオン発光 & ホバーエフェクト） */
+    .cyber-button {
+      font-family: 'Orbitron', sans-serif;
+      background: rgba(0, 243, 255, 0.1);
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+      transition: all 0.15s ease-in-out;
+      clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    }
+    .cyber-button:hover {
+      background: var(--neon-cyan);
+      color: var(--cyber-black);
+      text-shadow: none;
+      box-shadow: 0 0 20px var(--neon-cyan);
+      transform: translateY(-2px);
+    }
+    .cyber-button:active {
+      transform: translateY(1px);
+      box-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    /* ひし形ボタン（ラフスケッチ2の defence ボタン再現用） */
+    .diamond-btn {
+      width: 72px;
+      height: 72px;
+      transform: rotate(45deg);
+      border: 2px solid var(--neon-magenta);
+      box-shadow: 0 0 15px rgba(255, 0, 85, 0.4), inset 0 0 10px rgba(255, 0, 85, 0.2);
+      background: rgba(255, 0, 85, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .diamond-btn-content {
+      transform: rotate(-45deg);
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-magenta);
+      text-shadow: 0 0 8px var(--neon-magenta);
+    }
+    .diamond-btn:hover {
+      background: var(--neon-magenta);
+      box-shadow: 0 0 25px var(--neon-magenta);
+    }
+    .diamond-btn:hover .diamond-btn-content {
+      color: #fff;
+      text-shadow: none;
+    }
+    .diamond-btn:active {
+      transform: rotate(45deg) scale(0.95);
+    }
+
+    /* 丸型強攻撃ボタン（ラフスケッチ2の 4 Pro Attack 再現用） */
+    .round-btn {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 2px solid var(--neon-yellow);
+      background: rgba(255, 230, 0, 0.12);
+      box-shadow: 0 0 15px rgba(255, 230, 0, 0.4), inset 0 0 10px rgba(255, 230, 0, 0.2);
+      color: var(--neon-yellow);
+      text-shadow: 0 0 8px var(--neon-yellow);
+      transition: all 0.15s ease;
+    }
+    .round-btn:hover {
+      background: var(--neon-yellow);
+      color: var(--cyber-black);
+      box-shadow: 0 0 25px var(--neon-yellow);
+      text-shadow: none;
+    }
+
+    /* 楕円攻撃ボタン (ラフスケッチ2 Attack 再現用) */
+    .oval-btn {
+      padding: 12px 28px;
+      border-radius: 9999px;
+      border: 2px solid var(--neon-cyan);
+      background: rgba(0, 243, 255, 0.15);
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px var(--neon-cyan);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+      transition: all 0.15s ease;
+    }
+    .oval-btn:hover {
+      background: var(--neon-cyan);
+      color: var(--cyber-black);
+      box-shadow: 0 0 25px var(--neon-cyan);
+      text-shadow: none;
+    }
+
+    /* サイバーグリッチ・フラッシュアニメーション */
+    @keyframes cyberGlitch {
+      0% { opacity: 1; transform: translate(0); filter: hue-rotate(0deg); }
+      20% { opacity: 0.8; transform: translate(-5px, 5px); filter: hue-rotate(90deg); }
+      40% { opacity: 0.9; transform: translate(5px, -5px); filter: hue-rotate(180deg); }
+      60% { opacity: 0.7; transform: translate(-3px, -3px); filter: hue-rotate(270deg); }
+      80% { opacity: 0.9; transform: translate(3px, 3px); filter: hue-rotate(360deg); }
+      100% { opacity: 0; transform: translate(0); }
+    }
+    .glitch-anim {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0, 243, 255, 0.3);
+      pointer-events: none;
+      animation: cyberGlitch 0.5s forwards;
+    }
+
+    /* 被弾衝撃シェイク */
+    @keyframes cyberShake {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(-8px, 6px); }
+      40% { transform: translate(8px, -6px); }
+      60% { transform: translate(-5px, 3px); }
+      80% { transform: translate(5px, -3px); }
+      100% { transform: translate(0, 0); }
+    }
+    .shake {
+      animation: cyberShake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    /* 発光プログレスバー */
+    .bar-fill {
+      transition: width 0.35s ease-out;
+      box-shadow: 0 0 8px currentColor;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen flex items-center justify-center p-2 scanlines">
+
+  <!-- ===================================================================
+       メインアプリ本体（サイバーパンクHUDコンテナ）
+       =================================================================== -->
+  <div id="gameApp" class="relative w-full max-w-2xl h-[95vh] max-h-[760px] bg-[#0c0e17]/90 border-2 border-[#00f3ff] rounded-lg overflow-hidden shadow-[0_0_30px_rgba(0,243,255,0.3)] flex flex-col p-2 sm:p-4">
+    
+    <!-- グリッチフラッシュオーバーレイ -->
+    <div id="flashOverlay" class="hidden"></div>
+
+    <!-- ===================================================================
+         【画面1】キャラクター選択・ステータス表示画面 (スケッチ1忠実再現)
+         =================================================================== -->
+    <div id="screen1" class="w-full h-full flex flex-col justify-between">
+      
+      <!-- [画面1 上部 52%] キャラ名 ＆ 敵弱点 ＆ 3Dモデル ＆ ステータス表示 -->
+      <div class="w-full h-[52%] grid grid-cols-12 gap-2 mb-2">
+        
+        <!-- 上部左(4列): キャラ名 ＋ 敵キャラ弱点情報 -->
+        <div class="col-span-4 flex flex-col justify-between">
+          <!-- キャラ名表示ボックス -->
+          <div class="cyber-panel p-2 flex items-center justify-center">
+            <span id="p1Name" class="font-['Orbitron'] text-sm sm:text-base font-black text-[#00f3ff] tracking-wider truncate">CYBER-01</span>
+          </div>
+          <!-- 敵キャラ弱点表示ボックス -->
+          <div class="cyber-panel-magenta p-2 flex-1 mt-2 flex flex-col justify-center">
+            <div class="text-[10px] sm:text-xs font-bold text-[#ff0055] tracking-widest border-b border-[#ff0055]/40 pb-0.5 mb-1">
+              敵キャラ弱点
+            </div>
+            <div id="p1Weakness" class="text-xs sm:text-sm font-bold text-slate-200 leading-tight">
+              弱点: みず<br>でんき
+            </div>
+          </div>
+        </div>
+
+        <!-- 上部中央(4列): 選択キャラ 3Dモデルプレビューキャンバス -->
+        <div class="col-span-4 cyber-panel relative overflow-hidden flex items-center justify-center">
+          <canvas id="select3DCanvas" class="w-full h-full object-cover"></canvas>
+          <div class="absolute bottom-1 font-['Orbitron'] text-[9px] bg-[#00f3ff]/20 text-[#00f3ff] border border-[#00f3ff]/50 px-1.5 py-0.5 rounded">
+            3D PREVIEW
+          </div>
+        </div>
+
+        <!-- 上部右(4列): ステータス表示（ネオンバーグラフ） -->
+        <div class="col-span-4 cyber-panel p-2 flex flex-col justify-around">
+          <div class="font-['Orbitron'] text-xs font-bold text-[#00f3ff] border-b border-[#00f3ff]/40 pb-0.5 text-center tracking-wider">
+            STATUS
+          </div>
+          
+          <!-- HP ゲージ -->
+          <div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-300">
+              <span>HP</span>
+              <span id="p1HpVal" class="text-[#00f3ff]">100</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2 border border-[#00f3ff]/40 rounded-sm p-0.5">
+              <div id="p1HpBar" class="bar-fill h-full bg-[#00f3ff] text-[#00f3ff]" style="width: 80%;"></div>
+            </div>
+          </div>
+
+          <!-- ATTACK ゲージ -->
+          <div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-300">
+              <span>ATK</span>
+              <span id="p1AtkVal" class="text-[#ff0055]">25</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2 border border-[#ff0055]/40 rounded-sm p-0.5">
+              <div id="p1AtkBar" class="bar-fill h-full bg-[#ff0055] text-[#ff0055]" style="width: 65%;"></div>
+            </div>
+          </div>
+
+          <!-- DEFENSE ゲージ -->
+          <div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-300">
+              <span>DEF</span>
+              <span id="p1DefVal" class="text-[#ffe600]">18</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2 border border-[#ffe600]/40 rounded-sm p-0.5">
+              <div id="p1DefBar" class="bar-fill h-full bg-[#ffe600] text-[#ffe600]" style="width: 50%;"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- [画面1 中段 36%] キャラクターイラスト／グリッド枠 -->
+      <div class="w-full h-[36%] cyber-panel p-2 mb-2">
+        <div id="charGrid" class="w-full h-full grid grid-cols-3 gap-2 overflow-y-auto pr-1">
+          <!-- JSで動的にカード生成 -->
+        </div>
+      </div>
+
+      <!-- [画面1 最下部 12%] 戻る / 決定 ボタンナビゲーション -->
+      <div class="w-full h-[12%] flex space-x-3">
+        <button id="btnSelectBack" class="cyber-button w-1/3 text-xs sm:text-sm font-bold flex items-center justify-center">
+          戻る
+        </button>
+        <button id="btnSelectConfirm" class="cyber-button w-2/3 text-sm sm:text-base font-black bg-[#00f3ff]/20 text-[#00f3ff] border-2 border-[#00f3ff] flex items-center justify-center tracking-widest">
+          決定 (2へ移動)
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ===================================================================
+         【画面2】制限時間付き3D戦闘画面 (スケッチ2忠実再現)
+         =================================================================== -->
+    <div id="screen2" class="w-full h-full hidden flex-col justify-between relative">
+      
+      <!-- 制限時間表示 (画面最上部中央 '00:30') -->
+      <div class="absolute top-2 left-1/2 -translate-x-1/2 z-20 cyber-panel px-5 py-1 text-center shadow-[0_0_15px_rgba(255,230,0,0.3)] border-[#ffe600]">
+        <span class="text-[9px] block font-bold text-[#ffe600] tracking-widest uppercase">制限時間</span>
+        <span id="battleTimer" class="font-['Orbitron'] text-xl sm:text-2xl font-black tracking-widest text-[#ffe600] drop-shadow-[0_0_8px_#ffe600]">
+          00:30
+        </span>
+      </div>
+
+      <!-- 3Dバトルフィールド Viewport (Three.js サイバーグリッド空間) -->
+      <div class="w-full flex-1 cyber-panel relative overflow-hidden my-1">
+        <canvas id="battle3DCanvas" class="w-full h-full object-cover"></canvas>
+        
+        <!-- 敵ステータスHUD (右上) -->
+        <div class="absolute top-2 right-2 cyber-panel-magenta p-2 w-36 sm:w-40 text-xs z-10">
+          <div class="flex justify-between font-black text-[#ff0055]">
+            <span id="enemyNameHud">ENEMY</span>
+            <span class="font-['Orbitron'] text-[10px]">LV.05</span>
+          </div>
+          <div class="w-full bg-slate-950 h-2 border border-[#ff0055]/50 mt-1 p-0.5 rounded-sm">
+            <div id="enemyHpBar" class="bar-fill h-full bg-[#ff0055] text-[#ff0055]" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- 自分ステータスHUD (左下) -->
+        <div class="absolute bottom-2 left-2 cyber-panel p-2 w-40 sm:w-44 text-xs z-10">
+          <div class="flex justify-between font-black text-[#00f3ff]">
+            <span id="playerNameHud">PLAYER</span>
+            <span class="font-['Orbitron'] text-[10px]">LV.05</span>
+          </div>
+          <div class="w-full bg-slate-950 h-2 border border-[#00f3ff]/50 mt-1 p-0.5 rounded-sm">
+            <div id="playerHpBar" class="bar-fill h-full bg-[#00f3ff] text-[#00f3ff]" style="width: 100%;"></div>
+          </div>
+          <div id="playerHpText" class="text-right font-['Orbitron'] text-[10px] font-bold mt-0.5 text-slate-300">
+            100/100
+          </div>
+        </div>
+      </div>
+
+      <!-- 下部コマンドエリア (スケッチ2通り: 4 Pro Attack, Attack, Defence) -->
+      <div class="w-full h-28 cyber-panel p-2 flex items-center justify-around relative">
+        
+        <!-- 4 Pro Attack ボタン (丸型 / 黄色ネオン強攻撃) -->
+        <button id="btn4ProAttack" class="round-btn flex flex-col items-center justify-center p-1 text-center font-black">
+          <span class="text-[10px] leading-tight tracking-tighter">4 Pro</span>
+          <span class="text-xs">Attack</span>
+        </button>
+
+        <!-- Attack ボタン (楕円 / シアンネオン通常攻撃) -->
+        <button id="btnAttack" class="oval-btn font-black text-sm sm:text-base tracking-widest uppercase">
+          Attack
+        </button>
+
+        <!-- Defence ボタン (スケッチ2通りのひし形マゼンタデザイン) -->
+        <div class="flex items-center justify-center p-2">
+          <button id="btnDefence" class="diamond-btn">
+            <div class="diamond-btn-content text-xs font-black tracking-wider uppercase">
+              defence
+            </div>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ===================================================================
+         【画面3】リザルト画面 (スケッチ3忠実再現 WIN / LOSS 動的分岐)
+         =================================================================== -->
+    <div id="screen3" class="w-full h-full hidden flex-col justify-between">
+      
+      <!-- 上部 Result ヘッダー -->
+      <div class="cyber-panel p-2 text-center mb-2">
+        <h2 class="font-['Orbitron'] text-xl font-black tracking-widest text-[#00f3ff] drop-shadow-[0_0_10px_#00f3ff]">
+          RESULT
+        </h2>
+      </div>
+
+      <!-- ---------------------------------------------------------------
+           【WIN表示パターン】勝利時
+           --------------------------------------------------------------- -->
+      <div id="resultWinGroup" class="w-full flex-1 flex flex-col justify-between hidden">
+        
+        <div class="text-center my-1">
+          <h1 class="font-['Orbitron'] text-4xl sm:text-5xl font-black tracking-widest text-[#00ff66] drop-shadow-[0_0_20px_#00ff66] animate-pulse">
+            WIN
+          </h1>
+        </div>
+
+        <div class="w-full flex-1 grid grid-cols-2 gap-2 my-1">
+          <!-- 左側: 勝利キャラ3Dモデルキャンバス -->
+          <div class="cyber-panel relative flex items-center justify-center">
+            <canvas id="win3DCanvas" class="w-full h-full object-cover"></canvas>
+            <div id="winCharName" class="absolute bottom-1 font-['Orbitron'] text-xs font-bold bg-[#00ff66]/20 text-[#00ff66] border border-[#00ff66]/50 px-2 py-0.5 rounded">
+              CYBER-01
+            </div>
+          </div>
+
+          <!-- 右側: ステータスup表示 -->
+          <div class="cyber-panel p-2 flex flex-col justify-center space-y-2">
+            <div class="font-['Orbitron'] text-xs font-bold text-[#00ff66] border-b border-[#00ff66]/40 pb-1 tracking-wider">
+              STATUS UP
+            </div>
+            <div class="text-xs font-bold space-y-1.5 text-slate-200">
+              <div class="flex justify-between items-center">
+                <span>HP</span>
+                <span class="text-[#00ff66] font-['Orbitron'] font-black">100 → 120 <i class="not-italic">▲</i></span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>ATK</span>
+                <span class="text-[#00ff66] font-['Orbitron'] font-black">25 → 30 <i class="not-italic">▲</i></span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>DEF</span>
+                <span class="text-[#00ff66] font-['Orbitron'] font-black">18 → 22 <i class="not-italic">▲</i></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WIN下部ボタン (図鑑 / 完了) -->
+        <div class="w-full flex space-x-3 mt-2 h-11">
+          <button class="btnOpenPokedex cyber-button w-1/2 text-sm font-bold">図鑑</button>
+          <button id="btnWinComplete" class="cyber-button w-1/2 text-sm font-black bg-[#00ff66]/20 border-[#00ff66] text-[#00ff66]">完了</button>
+        </div>
+
+      </div>
+
+      <!-- ---------------------------------------------------------------
+           【LOSS表示パターン】敗北時
+           --------------------------------------------------------------- -->
+      <div id="resultLossGroup" class="w-full flex-1 flex flex-col justify-between hidden">
+        
+        <div class="text-center my-1">
+          <h1 class="font-['Orbitron'] text-4xl sm:text-5xl font-black tracking-widest text-[#ff0055] drop-shadow-[0_0_20px_#ff0055]">
+            LOSS
+          </h1>
+        </div>
+
+        <!-- 中央: オススメキャラ提案枠 -->
+        <div class="w-full flex-1 cyber-panel-magenta p-2 flex flex-col items-center justify-around my-1">
+          <div class="font-['Orbitron'] text-xs font-bold text-[#ff0055] border-b border-[#ff0055]/40 px-4 pb-0.5 tracking-wider">
+            RECOMMENDED
+          </div>
+          
+          <div class="w-full h-32 relative my-1">
+            <canvas id="loss3DCanvas" class="w-full h-full object-cover"></canvas>
+            <div id="lossSuggestName" class="absolute bottom-1 left-1/2 -translate-x-1/2 font-['Orbitron'] text-xs font-bold bg-[#ff0055]/20 text-[#ff0055] border border-[#ff0055]/50 px-2 py-0.5 rounded">
+              CYBER-04
+            </div>
+          </div>
+
+          <p id="lossSuggestDesc" class="text-xs font-bold text-center leading-relaxed text-slate-300 px-2">
+            敵の弱点を突ける属性キャラで再挑戦しよう！
+          </p>
+        </div>
+
+        <!-- LOSS下部ボタン (図鑑 / 戻る) -->
+        <div class="w-full flex space-x-3 mt-2 h-11">
+          <button class="btnOpenPokedex cyber-button w-1/2 text-sm font-bold">図鑑</button>
+          <button id="btnLossBack" class="cyber-button w-1/2 text-sm font-bold border-[#ff0055] text-[#ff0055]">戻る</button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ===================================================================
+       図鑑ダイアログ (モーダル)
+       =================================================================== -->
+  <div id="pokedexModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="cyber-panel w-full max-w-md p-4 flex flex-col space-y-3">
+      <div class="flex justify-between items-center border-b border-[#00f3ff]/40 pb-2">
+        <h3 class="font-['Orbitron'] text-lg font-black text-[#00f3ff] tracking-wider">CYBER-DEX</h3>
+        <button id="btnClosePokedex" class="cyber-button px-2 py-0.5 text-xs font-bold">✕</button>
+      </div>
+      <div id="pokedexList" class="max-h-64 overflow-y-auto space-y-2 text-xs font-bold">
+        <!-- JSで動的に一覧を挿入 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===================================================================
+       1. WEB AUDIO API CYBER SYNTHESIZER (サイバー効果音生成)
+       -------------------------------------------------------------------
+       外部ファイル不要でレーザー、バリア、ネオン被弾、シンセフレーズを発音
+       =================================================================== */
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new AudioContext();
+    }
+
+    function playSound(type) {
+      initAudio();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'select') {
+        // ネオンカーソル音 (高音ピピッ)
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.04);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.04);
+        osc.start(now);
+        osc.stop(now + 0.04);
+      } else if (type === 'confirm') {
+        // 決定サイバーチャージ音
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'laser') {
+        // レーザー攻撃音
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.12);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === 'guard') {
+        // プラズマシールド展開音
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(900, now + 0.25);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'win') {
+        // サイバーシンセ勝利ファンファーレ
+        [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'square';
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.frequency.setValueAtTime(freq, now + idx * 0.1);
+          g.gain.setValueAtTime(0.1, now + idx * 0.1);
+          g.gain.linearRampToValueAtTime(0, now + idx * 0.1 + 0.12);
+          o.start(now + idx * 0.1);
+          o.stop(now + idx * 0.1 + 0.12);
+        });
+      } else if (type === 'loss') {
+        // 敗北ドローン音
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.5);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      }
+    }
+
+    /* ===================================================================
+       2. CYBER MONSTER MASTER DATA (サイバーモンスターデータ定義)
+       =================================================================== */
+    const CHARACTERS = [
+      {
+        id: 'c1',
+        name: 'サイバー・ホノオ',
+        type: 'ほのお',
+        weakness: '弱点: みず\nじめん',
+        hp: 100,
+        maxHp: 100,
+        attack: 28,
+        defense: 18,
+        color: 0xff0055, // マゼンタ
+        meshType: 'cyber_lizard',
+        desc: '高熱プラズマコアを宿したサイバーモンスター。高い攻撃力を誇る。'
+      },
+      {
+        id: 'c2',
+        name: 'サイバー・ハッパ',
+        type: 'くさ',
+        weakness: '弱点: ほのお\nどく',
+        hp: 120,
+        maxHp: 120,
+        attack: 22,
+        defense: 25,
+        color: 0x00ff66, // ネオングリーン
+        meshType: 'cyber_beast',
+        desc: 'バイオサーキットボディを持つ強靭な機体。防御力に優れる。'
+      },
+      {
+        id: 'c3',
+        name: 'サイバー・アクア',
+        type: 'みず',
+        weakness: '弱点: でんき\nくさ',
+        hp: 105,
+        maxHp: 105,
+        attack: 25,
+        defense: 20,
+        color: 0x00f3ff, // シアン
+        meshType: 'cyber_turtle',
+        desc: 'ハイドロ冷却ギアを搭載。攻防のバランスが取れた万能型。'
+      },
+      {
+        id: 'c4',
+        name: 'サイバー・デンキ',
+        type: 'でんき',
+        weakness: '弱点: じめん',
+        hp: 90,
+        maxHp: 90,
+        attack: 32,
+        defense: 14,
+        color: 0xffe600, // イエロー
+        meshType: 'cyber_mecha',
+        desc: '超高圧ボルテージを纏う高速モンスター。敵の弱点を突くのに最適！'
+      },
+      {
+        id: 'c5',
+        name: 'サイバー・ドクロ',
+        type: 'どく',
+        weakness: '弱点: エスパー\nじめん',
+        hp: 110,
+        maxHp: 110,
+        attack: 24,
+        defense: 22,
+        color: 0x9d00ff, // パープル
+        meshType: 'cyber_lizard',
+        desc: 'ナノ毒素スプレーを内蔵した妖しく光るサイバーモデル。'
+      },
+      {
+        id: 'c6',
+        name: 'サイバー・ゴーレム',
+        type: 'いわ',
+        weakness: '弱点: みず\nくさ',
+        hp: 130,
+        maxHp: 130,
+        attack: 20,
+        defense: 30,
+        color: 0x64748b, // チタニウム
+        meshType: 'cyber_beast',
+        desc: 'チタン合金装甲に覆われた巨大サイバー重装機。'
+      }
+    ];
+
+    // 対戦相手（敵モンスター）
+    const ENEMY_MASTER = {
+      name: 'キング・アクア',
+      type: 'みず',
+      hp: 140,
+      maxHp: 140,
+      attack: 22,
+      defense: 18,
+      color: 0x00a2ff,
+      meshType: 'cyber_turtle'
+    };
+
+    /* ===================================================================
+       3. THREE.JS 3D PROCEDURAL MESH GENERATOR (サイバーモデル構築)
+       -------------------------------------------------------------------
+       メタリック素材＋ネオン発光パーツを合わせた3Dモデルを生成
+       =================================================================== */
+    function buildCyberMesh(charData) {
+      const group = new THREE.Group();
+      
+      // メタリックボディ素材
+      const bodyMat = new THREE.MeshStandardMaterial({ 
+        color: 0x1e293b, 
+        metalness: 0.85, 
+        roughness: 0.25 
+      });
+      
+      // ネオン発光素材
+      const neonMat = new THREE.MeshBasicMaterial({ 
+        color: charData.color 
+      });
+
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+      if (charData.meshType === 'cyber_lizard' || charData.meshType === 'cyber_mecha') {
+        // メインボディ
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 1), bodyMat);
+        body.position.y = 0.6;
+        group.add(body);
+
+        // ネオンコアライン
+        const core = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 1.02), neonMat);
+        core.position.set(0, 0.6, 0);
+        group.add(core);
+
+        // ヘッド
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), bodyMat);
+        head.position.set(0, 1.4, 0.2);
+        group.add(head);
+
+        // サイバーバイザー（ネオン発光）
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.2, 0.2), neonMat);
+        visor.position.set(0, 1.45, 0.55);
+        group.add(visor);
+
+        // サイバーアンテナ／ツノ
+        const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6, 4), neonMat);
+        hornL.position.set(-0.3, 1.9, 0.2);
+        const hornR = hornL.clone();
+        hornR.position.x = 0.3;
+        group.add(hornL); group.add(hornR);
+
+      } else if (charData.meshType === 'cyber_turtle') {
+        // サイバー甲羅
+        const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9, 1), bodyMat);
+        shell.position.y = 0.6;
+        group.add(shell);
+
+        // 甲羅のネオンリング
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.06, 8, 16), neonMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.6;
+        group.add(ring);
+
+        // ヘッド
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 12), bodyMat);
+        head.position.set(0, 0.7, 0.8);
+        group.add(head);
+
+        // 目
+        const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), neonMat);
+        eyeL.position.set(-0.2, 0.85, 1.1);
+        const eyeR = eyeL.clone();
+        eyeR.position.x = 0.2;
+        group.add(eyeL); group.add(eyeR);
+
+      } else {
+        // 重装ビーストタイプ
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 1.4), bodyMat);
+        body.position.y = 0.5;
+        group.add(body);
+
+        // ショルダー装甲（ネオン）
+        const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.8), neonMat);
+        shoulderL.position.set(-0.75, 0.7, 0.2);
+        const shoulderR = shoulderL.clone();
+        shoulderR.position.x = 0.75;
+        group.add(shoulderL); group.add(shoulderR);
+
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.75, 0.75), bodyMat);
+        head.position.set(0, 0.9, 0.7);
+        group.add(head);
+
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.15, 0.15), neonMat);
+        visor.position.set(0, 0.95, 1.02);
+        group.add(visor);
+      }
+
+      return group;
+    }
+
+    /* ===================================================================
+       4. 3D SCENE & CANVAS MANAGERS (ネオンライティング＆グリッド付き)
+       =================================================================== */
+    class Simple3DViewer {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x0a0c14);
+
+        this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        this.camera.position.set(0, 1.5, 3.5);
+        this.camera.lookAt(0, 0.6, 0);
+
+        this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // サイバーパンクグリッド床
+        const grid = new THREE.GridHelper(10, 10, 0x00f3ff, 0x1e293b);
+        grid.position.y = 0;
+        this.scene.add(grid);
+
+        // ネオンポイントライト
+        const amb = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(amb);
+
+        this.pointLight = new THREE.PointLight(0x00f3ff, 1.5, 10);
+        this.pointLight.position.set(2, 4, 3);
+        this.scene.add(this.pointLight);
+
+        this.currentMesh = null;
+        this.resize();
+      }
+
+      setModel(charData) {
+        if (this.currentMesh) this.scene.remove(this.currentMesh);
+        this.currentMesh = buildCyberMesh(charData);
+        this.pointLight.color.setHex(charData.color);
+        this.scene.add(this.currentMesh);
+      }
+
+      resize() {
+        const w = this.canvas.clientWidth || 200;
+        const h = this.canvas.clientHeight || 200;
+        this.camera.aspect = w / h;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(w, h, false);
+      }
+
+      render(rotate = true) {
+        if (rotate && this.currentMesh) {
+          this.currentMesh.rotation.y += 0.02;
+        }
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    let selectViewer, winViewer, lossViewer;
+    let battleScene, battleCamera, battleRenderer;
+    let battlePlayerMesh, battleEnemyMesh, battleShieldMesh;
+
+    function init3DViewers() {
+      selectViewer = new Simple3DViewer('select3DCanvas');
+      winViewer = new Simple3DViewer('win3DCanvas');
+      lossViewer = new Simple3DViewer('loss3DCanvas');
+
+      // 戦闘画面（Screen 2）のサイバー空間構築
+      const bCanvas = document.getElementById('battle3DCanvas');
+      battleScene = new THREE.Scene();
+      battleScene.background = new THREE.Color(0x06070d);
+
+      battleCamera = new THREE.PerspectiveCamera(45, bCanvas.clientWidth / bCanvas.clientHeight, 0.1, 100);
+      battleCamera.position.set(-2.5, 2.2, 4.5);
+      battleCamera.lookAt(0, 0.5, -0.5);
+
+      battleRenderer = new THREE.WebGLRenderer({ canvas: bCanvas, antialias: true });
+      battleRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // 発光グリッド
+      const battleGrid = new THREE.GridHelper(16, 16, 0x00f3ff, 0xff0055);
+      battleGrid.position.y = 0;
+      battleScene.add(battleGrid);
+
+      // 環境光・ネオンライト
+      const amb = new THREE.AmbientLight(0xffffff, 0.5);
+      battleScene.add(amb);
+
+      const cyanLight = new THREE.PointLight(0x00f3ff, 2, 12);
+      cyanLight.position.set(-3, 3, 3);
+      battleScene.add(cyanLight);
+
+      const magentaLight = new THREE.PointLight(0xff0055, 2, 12);
+      magentaLight.position.set(3, 3, -3);
+      battleScene.add(magentaLight);
+
+      // 防御シールド用ホログラムワイヤーフレーム
+      const sGeo = new THREE.SphereGeometry(0.85, 16, 16);
+      const sMat = new THREE.MeshBasicMaterial({ color: 0xff0055, wireframe: true, transparent: true, opacity: 0.8 });
+      battleShieldMesh = new THREE.Mesh(sGeo, sMat);
+      battleShieldMesh.visible = false;
+      battleScene.add(battleShieldMesh);
+    }
+
+    /* ===================================================================
+       5. 【画面1】キャラクター選択 ＆ グリッド表示ロジック
+       =================================================================== */
+    let selectedCharIndex = 0;
+
+    function renderCharGrid() {
+      const grid = document.getElementById('charGrid');
+      grid.innerHTML = '';
+
+      CHARACTERS.forEach((char, idx) => {
+        const card = document.createElement('div');
+        const isSelected = idx === selectedCharIndex;
+        
+        card.className = `cyber-panel p-2 flex flex-col justify-between cursor-pointer text-center text-xs font-bold transition-all ${
+          isSelected 
+            ? 'border-2 border-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.6)] bg-[#00f3ff]/20' 
+            : 'border border-slate-700 hover:border-[#00f3ff]/50'
+        }`;
+        
+        card.innerHTML = `
+          <div class="font-['Orbitron'] text-[9px] text-[#00f3ff] tracking-widest">${char.type}</div>
+          <div class="font-bold text-xs my-0.5 text-slate-100 truncate">${char.name}</div>
+          <div class="font-['Orbitron'] text-[10px] text-slate-300">HP:${char.hp}</div>
+        `;
+
+        card.addEventListener('click', () => {
+          playSound('select');
+          selectedCharIndex = idx;
+          updateSelectScreenUI();
+          renderCharGrid();
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    function updateSelectScreenUI() {
+      const char = CHARACTERS[selectedCharIndex];
+      document.getElementById('p1Name').textContent = char.name;
+      document.getElementById('p1Weakness').innerText = char.weakness;
+      
+      document.getElementById('p1HpVal').textContent = char.hp;
+      document.getElementById('p1AtkVal').textContent = char.attack;
+      document.getElementById('p1DefVal').textContent = char.defense;
+
+      // バーゲージ計算
+      document.getElementById('p1HpBar').style.width = `${(char.hp / 140) * 100}%`;
+      document.getElementById('p1AtkBar').style.width = `${(char.attack / 40) * 100}%`;
+      document.getElementById('p1DefBar').style.width = `${(char.defense / 40) * 100}%`;
+
+      selectViewer.setModel(char);
+    }
+
+    // 「決定」ボタンクリック時 -> グリッチ演出を経て画面2へ
+    document.getElementById('btnSelectConfirm').addEventListener('click', () => {
+      playSound('confirm');
+      
+      const flash = document.getElementById('flashOverlay');
+      flash.className = 'glitch-anim';
+
+      setTimeout(() => {
+        flash.className = 'hidden';
+        startBattleScreen();
+      }, 500);
+    });
+
+    document.getElementById('btnSelectBack').addEventListener('click', () => {
+      playSound('select');
+      selectedCharIndex = 0;
+      updateSelectScreenUI();
+      renderCharGrid();
+    });
+
+    /* ===================================================================
+       6. 【画面2】戦闘画面 ＆ タイマー・コマンドバトルの実装
+       =================================================================== */
+    let battleTimerInterval = null;
+    let remainingTime = 30;
+    let playerBattleHp = 100;
+    let enemyBattleHp = 140;
+    let isGuarding = false;
+    let proAttackCd = false;
+
+    function startBattleScreen() {
+      document.getElementById('screen1').classList.add('hidden');
+      document.getElementById('screen2').classList.remove('hidden');
+      document.getElementById('screen2').classList.add('flex');
+
+      const pChar = CHARACTERS[selectedCharIndex];
+      const eChar = ENEMY_MASTER;
+
+      playerBattleHp = pChar.hp;
+      enemyBattleHp = eChar.hp;
+      remainingTime = 30;
+      isGuarding = false;
+      proAttackCd = false;
+
+      document.getElementById('playerNameHud').textContent = pChar.name;
+      document.getElementById('enemyNameHud').textContent = eChar.name;
+      updateBattleHpDisplay();
+
+      // 3Dモデル配置
+      if (battlePlayerMesh) battleScene.remove(battlePlayerMesh);
+      if (battleEnemyMesh) battleScene.remove(battleEnemyMesh);
+
+      battlePlayerMesh = buildCyberMesh(pChar);
+      battlePlayerMesh.position.set(-1.2, 0, 1.2);
+      battlePlayerMesh.rotation.y = Math.PI / 4;
+      battleScene.add(battlePlayerMesh);
+
+      battleEnemyMesh = buildCyberMesh(eChar);
+      battleEnemyMesh.position.set(1.2, 0, -1.2);
+      battleEnemyMesh.rotation.y = -Math.PI * 0.75;
+      battleScene.add(battleEnemyMesh);
+
+      // カウントダウン開始
+      updateTimerText();
+      clearInterval(battleTimerInterval);
+      battleTimerInterval = setInterval(() => {
+        remainingTime--;
+        updateTimerText();
+
+        if (remainingTime % 2 === 0 && remainingTime > 0) {
+          enemyAutoAttack();
+        }
+
+        if (remainingTime <= 0) {
+          clearInterval(battleTimerInterval);
+          endBattle(playerBattleHp >= enemyBattleHp);
+        }
+      }, 1000);
+    }
+
+    function updateTimerText() {
+      const sec = remainingTime < 10 ? `0${remainingTime}` : `${remainingTime}`;
+      document.getElementById('battleTimer').textContent = `00:${sec}`;
+    }
+
+    function updateBattleHpDisplay() {
+      const pChar = CHARACTERS[selectedCharIndex];
+      const pPct = Math.max(0, (playerBattleHp / pChar.hp) * 100);
+      const ePct = Math.max(0, (enemyBattleHp / ENEMY_MASTER.hp) * 100);
+
+      document.getElementById('playerHpBar').style.width = `${pPct}%`;
+      document.getElementById('enemyHpBar').style.width = `${ePct}%`;
+      document.getElementById('playerHpText').textContent = `${Math.max(0, playerBattleHp)}/${pChar.hp}`;
+    }
+
+    // [Attack] 通常攻撃 (レーザー発射)
+    document.getElementById('btnAttack').addEventListener('click', () => {
+      playSound('laser');
+      triggerShake();
+      const pChar = CHARACTERS[selectedCharIndex];
+      const dmg = Math.floor(pChar.attack * (0.8 + Math.random() * 0.4));
+      enemyBattleHp -= dmg;
+      updateBattleHpDisplay();
+
+      if (enemyBattleHp <= 0) endBattle(true);
+    });
+
+    // [4 Pro Attack] 強攻撃 (高火力)
+    document.getElementById('btn4ProAttack').addEventListener('click', () => {
+      if (proAttackCd) return;
+      proAttackCd = true;
+      playSound('laser');
+      triggerShake();
+
+      const pChar = CHARACTERS[selectedCharIndex];
+      const dmg = Math.floor(pChar.attack * 1.85);
+      enemyBattleHp -= dmg;
+      updateBattleHpDisplay();
+
+      const btn = document.getElementById('btn4ProAttack');
+      btn.style.opacity = '0.4';
+      setTimeout(() => {
+        proAttackCd = false;
+        btn.style.opacity = '1';
+      }, 3500);
+
+      if (enemyBattleHp <= 0) endBattle(true);
+    });
+
+    // [defence] シールド展開
+    document.getElementById('btnDefence').addEventListener('click', () => {
+      playSound('guard');
+      isGuarding = true;
+      battleShieldMesh.position.copy(battlePlayerMesh.position);
+      battleShieldMesh.position.y += 0.6;
+      battleShieldMesh.visible = true;
+
+      setTimeout(() => {
+        isGuarding = false;
+        battleShieldMesh.visible = false;
+      }, 2000);
+    });
+
+    function enemyAutoAttack() {
+      let dmg = Math.floor(ENEMY_MASTER.attack * (0.7 + Math.random() * 0.5));
+      if (isGuarding) {
+        dmg = Math.floor(dmg * 0.2); // 80%ダメージ軽減
+      } else {
+        triggerShake();
+      }
+      playerBattleHp -= dmg;
+      updateBattleHpDisplay();
+
+      if (playerBattleHp <= 0) endBattle(false);
+    }
+
+    function triggerShake() {
+      const app = document.getElementById('gameApp');
+      app.classList.add('shake');
+      setTimeout(() => app.classList.remove('shake'), 350);
+    }
+
+    /* ===================================================================
+       7. 【画面3】リザルト画面 (WIN / LOSS 動的切り替え)
+       =================================================================== */
+    function endBattle(isWin) {
+      clearInterval(battleTimerInterval);
+
+      document.getElementById('screen2').classList.add('hidden');
+      document.getElementById('screen3').classList.remove('hidden');
+      document.getElementById('screen3').classList.add('flex');
+
+      const winGroup = document.getElementById('resultWinGroup');
+      const lossGroup = document.getElementById('resultLossGroup');
+
+      const pChar = CHARACTERS[selectedCharIndex];
+
+      if (isWin) {
+        playSound('win');
+        winGroup.classList.remove('hidden');
+        winGroup.classList.add('flex');
+        lossGroup.classList.add('hidden');
+
+        document.getElementById('winCharName').textContent = pChar.name;
+        winViewer.setModel(pChar);
+      } else {
+        playSound('loss');
+        lossGroup.classList.remove('hidden');
+        lossGroup.classList.add('flex');
+        winGroup.classList.add('hidden');
+
+        // オススメとして「サイバー・デンキ」を提案
+        const suggestChar = CHARACTERS.find(c => c.id === 'c4') || CHARACTERS[1];
+        document.getElementById('lossSuggestName').textContent = suggestChar.name;
+        document.getElementById('lossSuggestDesc').innerText = `みず属性の「${ENEMY_MASTER.name}」には\nでんき属性の「${suggestChar.name}」が効果抜群！`;
+        lossViewer.setModel(suggestChar);
+      }
+    }
+
+    document.getElementById('btnWinComplete').addEventListener('click', returnToSelectScreen);
+    document.getElementById('btnLossBack').addEventListener('click', returnToSelectScreen);
+
+    function returnToSelectScreen() {
+      playSound('confirm');
+      document.getElementById('screen3').classList.add('hidden');
+      document.getElementById('screen1').classList.remove('hidden');
+      updateSelectScreenUI();
+    }
+
+    /* ===================================================================
+       8. 図鑑モーダル ＆ アニメーションルーチン
+       =================================================================== */
+    document.querySelectorAll('.btnOpenPokedex').forEach(btn => {
+      btn.addEventListener('click', () => {
+        playSound('select');
+        const modal = document.getElementById('pokedexModal');
+        const list = document.getElementById('pokedexList');
+        list.innerHTML = '';
+
+        CHARACTERS.forEach(c => {
+          const item = document.createElement('div');
+          item.className = 'cyber-panel p-2 border border-[#00f3ff]/30 flex justify-between items-center';
+          item.innerHTML = `
+            <div>
+              <div class="font-bold text-[#00f3ff]">${c.name} (${c.type})</div>
+              <div class="text-[10px] text-slate-300">${c.desc}</div>
+            </div>
+            <div class="font-['Orbitron'] text-right text-[10px] text-slate-400">
+              <div>HP: ${c.hp}</div>
+              <div>ATK: ${c.attack}</div>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+
+        modal.classList.remove('hidden');
+      });
+    });
+
+    document.getElementById('btnClosePokedex').addEventListener('click', () => {
+      playSound('select');
+      document.getElementById('pokedexModal').classList.add('hidden');
+    });
+
+    // 毎フレームの3Dレンダリングループ
+    function mainLoop() {
+      requestAnimationFrame(mainLoop);
+
+      // 画面1
+      if (!document.getElementById('screen1').classList.contains('hidden')) {
+        selectViewer.render(true);
+      }
+
+      // 画面2
+      if (!document.getElementById('screen2').classList.contains('hidden')) {
+        if (battlePlayerMesh) battlePlayerMesh.rotation.y += 0.01;
+        if (battleEnemyMesh) battleEnemyMesh.rotation.y += 0.01;
+        if (battleShieldMesh && battleShieldMesh.visible) {
+          battleShieldMesh.rotation.x += 0.03;
+          battleShieldMesh.rotation.y += 0.03;
+        }
+        battleRenderer.render(battleScene, battleCamera);
+      }
+
+      // 画面3
+      if (!document.getElementById('screen3').classList.contains('hidden')) {
+        winViewer.render(true);
+        lossViewer.render(true);
+      }
+    }
+
+    // レスポンシブ対応
+    window.addEventListener('resize', () => {
+      selectViewer.resize();
+      winViewer.resize();
+      lossViewer.resize();
+      const bCanvas = document.getElementById('battle3DCanvas');
+      if (bCanvas && battleCamera && battleRenderer) {
+        battleCamera.aspect = bCanvas.clientWidth / bCanvas.clientHeight;
+        battleCamera.updateProjectionMatrix();
+        battleRenderer.setSize(bCanvas.clientWidth, bCanvas.clientHeight, false);
+      }
+    });
+
+    // アプリ起動時の初期化
+    window.onload = function() {
+      init3DViewers();
+      renderCharGrid();
+      updateSelectScreenUI();
+      mainLoop();
+    };
+  </script>
+</body>
+</html>
