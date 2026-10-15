@@ -57,6 +57,18 @@ test.describe("viewport-contained game screens", () => {
             await page.getByRole("tab", { name: "冒険の記録", exact: true }).click();
             await expectScreenFits(page);
           }
+          if (route === "/battle") {
+            const enemy = await page.getByRole("region", { name: "敵画面", exact: true }).boundingBox();
+            const controls = await page.getByRole("region", { name: "スマホ操作画面", exact: true }).boundingBox();
+            expect(enemy).not.toBeNull(); expect(controls).not.toBeNull();
+            expect(Math.abs(enemy!.height - controls!.height)).toBeLessThanOrEqual(2);
+            expect(enemy!.y + enemy!.height).toBeLessThanOrEqual(controls!.y);
+            for (const button of await page.locator(".raid-skills button, .raid-confirm").all()) {
+              const size = await button.boundingBox();
+              expect(size!.height).toBeGreaterThanOrEqual(44);
+              expect(size!.width).toBeGreaterThanOrEqual(44);
+            }
+          }
         }
         await page.getByRole("button", { name: "遊び方を開く" }).click();
         await expect(page.getByRole("dialog", { name: "冒険のガイド" })).toBeVisible();
