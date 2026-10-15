@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  ACTIVE
+  ENDED
+}
+
+model Event {
+  id        String      @id
+  name      String
+  status    EventStatus @default(ACTIVE)
+  endedAt   DateTime?
+  purgeAt   DateTime?
+  createdAt DateTime    @default(now())
+  players   Player[]
+}
+
+model Player {
+  id         String            @id @default(uuid())
+  eventId    String
+  nickname   String?           @db.VarChar(20)
+  createdAt  DateTime          @default(now())
+  event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sessions   GuestSession[]
+  characters PlayerCharacter[]
+  @@index([eventId])
+}
+
+model GuestSession {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique @db.Char(64)
+  playerId  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+  @@index([playerId])
+}
+
+model Department {
+  id         String     @id
+  name       String
+  sortOrder  Int        @unique
+  character  Character?
+}
+
+model Character {
+  id           String            @id
+  name         String
+  description  String
+  element      String
+  departmentId String?           @unique
+  isLegendary  Boolean           @default(false)
+  baseHp       Int
+  baseAttack   Int
+  baseDefense  Int
+  baseSpeed    Int
+  sortOrder    Int               @unique
+  department   Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  skills       Skill[]
+  owners       PlayerCharacter[]
+}
+
+// Exactly three slots are seeded. Effects remain NULL until Ver.1.9/2.1 are supplied.
+model Skill {
+  id          String    @id
+  characterId String
+  slot        Int
+  name        String
+  confirmed   Boolean   @default(false)
+  effect      Json?
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  @@unique([characterId, slot])
+}
+
+model PlayerCharacter {
+  id           String    @id @default(uuid())
+  playerId     String
+  characterId  String
+  acquiredAt   DateTime  @default(now())
+  hpGrowth     Int       @default(0)
+  attackGrowth Int       @default(0)
+  defenseGrowth Int      @default(0)
+  speedGrowth  Int       @default(0)
+  player       Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  character    Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  @@unique([playerId, characterId])
+}
+
+model RateLimitBucket {
+  key       String   @id
+  hits      Int
+  expiresAt DateTime
+  @@index([expiresAt])
+}

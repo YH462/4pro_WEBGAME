@@ -1,0 +1,47 @@
+{
+  "name": "4pro-webgame",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "overrides": { "deepmerge-ts": "^8.0.0" },
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "prisma generate && next build",
+    "start": "next start --hostname 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:setup": "npm run db:generate && npm run db:migrate && npm run db:seed",
+    "db:local": "tsx scripts/local-postgres.ts",
+    "db:studio": "prisma studio",
+    "event:end": "tsx scripts/event-lifecycle.ts end",
+    "event:purge": "tsx scripts/event-lifecycle.ts purge",
+    "simulator:grant": "tsx scripts/simulator-grant.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "lucide-react": "^0.577.0",
+    "next": "16.4.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@tailwindcss/postcss": "^4.2.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "dotenv": "^17.3.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^4.2.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
+  }
+}
