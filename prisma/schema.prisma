@@ -70,7 +70,8 @@ model Character {
   owners       PlayerCharacter[]
 }
 
-// Exactly three slots are seeded. Effects remain NULL until Ver.1.9/2.1 are supplied.
+// Slot 1 is the character's single special move. Effects remain NULL until confirmed.
+// Legacy slots are retained in the database but excluded from current queries.
 model Skill {
   id          String    @id
   characterId String

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "協力レイド" };
 export default async function Battle() {
   const player = await requirePlayer();
-  const characters = await db.character.findMany({ orderBy: { sortOrder: "asc" }, include: { department: true, skills: { orderBy: { slot: "asc" } } } });
+  const characters = await db.character.findMany({ orderBy: { sortOrder: "asc" }, include: { department: true, skills: { where: { slot: 1 } } } });
   const ownedIds = new Set(player.characters.map((owned) => owned.characterId));
   // Unowned normal characters are available only as UI preview specimens.
   // This never grants ownership, starts a raid or changes progression.

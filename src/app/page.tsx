@@ -1,6 +1,7 @@
 import { Megaphone } from "lucide-react";
 import { Shell } from "@/components/shell";
 import { ExhibitionMap } from "@/components/exhibition-map";
+import { RaidQrScanner } from "@/components/raid-qr-scanner";
 import { currentPlayer } from "@/lib/session";
 import { db } from "@/lib/db";
 import styles from "./home.module.css";
@@ -25,6 +26,7 @@ export default async function Home() {
           partners={partners.filter((partner) => !partner.isLegendary)}
           legend={partners.find((partner) => partner.id === "four-pro")}
         />
+        <RaidQrScanner hasPlayer={!!player}/>
       </div>
     </Shell>
   );

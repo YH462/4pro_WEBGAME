@@ -22,17 +22,19 @@ test("touch commands preview an attack without changing HP, EP or guest data", a
   await expect(page.getByRole("heading", { name: "バトル", exact: true })).toBeVisible();
   await expect(page.locator(".arena-scene")).toHaveAttribute("data-renderer", /webgl|fallback/);
   await expect(page.locator(".raid-skills button")).toHaveCount(3);
+  for (const name of ["攻撃", "防御", "必殺"]) await expect(page.getByRole("button", { name: `${name}を選択`, exact: true })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "必殺ゲージ（EP・プレビュー）", exact: true })).toHaveAttribute("aria-valuenow", "30");
   await page.getByLabel("参加キャラクター").selectOption("flame-dragon");
   await expect(page.getByRole("progressbar", { name: "自分のHP（プレビュー）", exact: true })).toHaveAttribute("aria-valuenow", "120");
-  await page.getByRole("button", { name: "固有技 3を選択", exact: true }).click();
-  await expect(page.getByRole("button", { name: "固有技 3を選択", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "必殺を選択", exact: true }).click();
+  await expect(page.getByRole("button", { name: "必殺を選択", exact: true })).toHaveAttribute("aria-pressed", "true");
   const button = page.getByRole("button", { name: /演出を試す/ });
   await button.click();
   await expect(page.locator(".raid-confirm")).toBeDisabled();
   await expect(page.locator(".enemy-field")).toHaveClass(/is-attacking/);
   await expect(page.locator(".raid-skills button").first()).toBeDisabled();
   await page.clock.fastForward(1000);
-  await expect(page.getByRole("status")).toHaveText("固有技 3の演出を確認しました。");
+  await expect(page.getByRole("status")).toHaveText("必殺の演出を確認しました。");
   await expect(page.locator(".raid-confirm")).toBeEnabled();
   await expect(page.getByRole("progressbar", { name: "ボスHP（プレビュー）" })).toHaveAttribute("aria-valuenow", "450");
   await expect(page.getByRole("progressbar", { name: "自分のHP（プレビュー）" })).toHaveAttribute("aria-valuenow", "120");
@@ -40,7 +42,7 @@ test("touch commands preview an attack without changing HP, EP or guest data", a
   expect(await db.playerCharacter.count({ where: { playerId: id } })).toBe(0);
   await page.getByRole("button", { name: /演出を試す/ }).click();
   await page.clock.fastForward(1000);
-  await expect(page.getByRole("status")).toHaveText("固有技 3の演出を確認しました。");
+  await expect(page.getByRole("status")).toHaveText("必殺の演出を確認しました。");
 });
 
 test("owned characters use their DB growth values and the preview never changes them", async ({ page }) => {
@@ -53,7 +55,7 @@ test("owned characters use their DB growth values and the preview never changes 
   await page.getByLabel("参加キャラクター").selectOption("thunder-fox");
   await expect(page.getByRole("progressbar", { name: "自分のHP（プレビュー）" })).toHaveAttribute("aria-valuenow", "137");
   await page.getByRole("button", { name: /演出を試す/ }).click();
-  await expect(page.getByRole("status")).toHaveText("固有技 1の演出を確認しました。");
+  await expect(page.getByRole("status")).toHaveText("攻撃の演出を確認しました。");
   expect(await db.playerCharacter.findMany({ where: { playerId: id }, orderBy: { characterId: "asc" } })).toEqual(before);
 });
 
@@ -69,9 +71,11 @@ test("a device without WebGL keeps the enemy and command UI usable", async ({ pa
   await page.goto("/battle");
   await expect(page.locator(".arena-scene")).toHaveAttribute("data-renderer", "fallback");
   await expect(page.locator(".enemy-fallback-art")).toBeVisible();
-  await page.getByRole("button", { name: "固有技 2を選択", exact: true }).click();
+  await page.getByRole("button", { name: "防御を選択", exact: true }).click();
   await page.getByRole("button", { name: /演出を試す/ }).click();
-  await expect(page.getByRole("status")).toHaveText("固有技 2の演出を確認しました。");
+  await expect(page.locator(".defense-preview")).toBeVisible();
+  await expect(page.locator(".enemy-field")).not.toHaveClass(/is-attacking/);
+  await expect(page.getByRole("status")).toHaveText("防御の演出を確認しました。");
   await page.getByRole("link", { name: "ホーム HOME", exact: true }).click();
   await expect(page.getByRole("region", { name: "4学科の展示マップ", exact: true })).toBeVisible();
 });

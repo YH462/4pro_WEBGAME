@@ -15,7 +15,7 @@ test.afterAll(async () => { await db.$disconnect(); });
 test("guest entry, persistent session, dictionary and nickname update", async ({ page }) => {
   await page.goto("/start");
   await expect(page.getByRole("heading", { name: "冒険の準備" })).toBeVisible();
-  await page.getByLabel("ニックネーム").fill("テスト冒険者");
+  await page.getByRole("textbox", { name: /ニックネーム/ }).fill("テスト冒険者");
   await page.getByRole("button", { name: "ゲストではじめる" }).click();
   await expect(page.getByRole("heading", { name: "お知らせ", exact: true })).toBeVisible();
   const { player } = await (await page.request.get("/api/me")).json(); playerIds.push(player.id);
@@ -32,14 +32,17 @@ test("guest entry, persistent session, dictionary and nickname update", async ({
   for (const label of ["HP", "攻撃", "防御", "チャージ効率"]) {
     await expect(page.getByRole("group", { name: label, exact: true })).toBeVisible();
   }
-  await page.getByRole("tab", { name: "固有技", exact: true }).click();
-  await expect(page.locator(".skill-list > div")).toHaveCount(3);
+  await page.getByRole("tab", { name: "必殺技", exact: true }).click();
+  await expect(page.locator(".skill-list > div")).toHaveCount(1);
   await page.goto("/profile");
-  await page.getByLabel("ニックネーム").fill("更新後の名前");
+  await page.getByRole("button", { name: "ニックネームを編集", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: /ニックネーム/ })).toBeFocused();
+  await page.getByRole("textbox", { name: /ニックネーム/ }).fill("更新後の名前");
   await page.getByRole("button", { name: "変更を保存" }).click();
   await expect(page.getByRole("status")).toHaveText("ニックネームを保存しました。");
+  await expect(page.getByRole("heading", { name: "更新後の名前", exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("ニックネーム")).toHaveValue("更新後の名前");
+  await expect(page.getByRole("textbox", { name: /ニックネーム/ })).toHaveValue("更新後の名前");
   expect((await (await page.request.get("/api/me")).json()).player.id).toBe(player.id);
 });
 test("guest without nickname, HttpOnly cookie, hashed token and idempotent restart", async ({ page, context }) => {
@@ -106,7 +109,7 @@ test("health, master data and DB-backed rate limiting", async ({ page }) => {
   const { player } = await start(request);
   const { characters } = await (await request.get("/api/characters")).json();
   expect(characters).toHaveLength(5);
-  for (const character of characters) { expect(character.skills).toHaveLength(3); expect(character.skills.every((skill: { confirmed: boolean; effect: unknown }) => !skill.confirmed && skill.effect === null)).toBe(true); }
+  for (const character of characters) { expect(character.specialMove).toMatchObject({ slot: 1, name: "必殺技", confirmed: false, effect: null }); expect(character).not.toHaveProperty("skills"); }
   await db.rateLimitBucket.upsert({ where: { key: `nickname:${player.id}` }, update: { hits: 20, expiresAt: new Date(Date.now() + 60_000) }, create: { key: `nickname:${player.id}`, hits: 20, expiresAt: new Date(Date.now() + 60_000) } });
   try {
     expect((await request.patch("/api/me", { headers, data: { nickname: "blocked" } })).status()).toBe(429);

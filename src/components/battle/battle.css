@@ -42,8 +42,9 @@
 .raid-controls { min-height:0; display:grid; grid-template-rows:52px minmax(58px,1fr)18px 50px; gap:8px; padding:14px 22px; border:1px solid #fff; border-top:3px solid var(--red); background:#fffffff2; box-shadow:0 -4px 20px #932d4210; }
 .raid-controls>div,.raid-controls>p,.raid-controls>button { width:100%; max-width:900px; margin-left:auto; margin-right:auto; }
 .player-hud { display:grid; grid-template-columns:48px minmax(0,1fr)83px; gap:12px; align-items:center; min-width:0; }
-.player-portrait { display:flex; align-items:center; justify-content:center; background:var(--card-tint); width:48px; height:48px; border:1px solid #e8d9df; }
+.player-portrait { position:relative; display:flex; align-items:center; justify-content:center; background:var(--card-tint); width:48px; height:48px; border:1px solid #e8d9df; }
 .player-portrait>svg { width:52px; height:46px; }
+.player-portrait>.defense-preview { position:absolute; inset:0; width:100%; height:100%; padding:5px; color:#3476f6; background:#ffffffd9; }
 .player-vitals { min-width:0; }
 .player-select { display:flex; align-items:center; min-width:0; position:relative; }
 .player-select select { appearance:none; width:100%; min-width:0; font-size:13px; font-weight:800; border:0; background:none; color:var(--ink); padding:2px 25px 2px 0; text-overflow:ellipsis; cursor:pointer; }
@@ -55,9 +56,11 @@
 .player-health>strong { font-size:11px; font-weight:800; white-space:nowrap; }
 .player-health small { font-size:8px; color:#b88d9e; font-weight:500; }
 .player-ep { text-align:center; border-left:1px solid var(--line); padding-left:13px; }
-.player-ep>span { display:flex; align-items:center; justify-content:center; gap:3px; font-size:7px; font-weight:750; color:#be859b; }
+.player-ep>span { display:flex; align-items:center; justify-content:center; gap:3px; font-size:7px; font-weight:750; color:#be859b; white-space:nowrap; }
 .player-ep strong { display:block; font-size:22px; color:var(--red); font-weight:850; line-height:1.4; }
 .player-ep small { font-size:8px; color:#b78a9e; font-weight:500; }
+.ep-gauge { height:3px; margin-top:2px; background:#ead5dc; }
+.ep-gauge>span { display:block; height:100%; background:var(--red); }
 .raid-skills { min-height:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
 .raid-skill { min-height:44px; min-width:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; position:relative; border:1px solid var(--ink); background:#fff; color:var(--ink); padding:8px 13px; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
 .raid-skill.chosen { color:#fff; border:2px solid var(--red); background:var(--ink); box-shadow:0 3px 12px #0000000b; }
@@ -80,6 +83,7 @@
 @keyframes raid-shake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-5px); } 50% { transform:translateX(5px); } 75% { transform:translateX(-3px); } }
 
 @media (max-width:760px) {
+  .player-ep>span>svg { display:none; }.player-ep strong { line-height:1.25; }
   .battle-preview-label { font-size:7px; padding:3px 6px; }
   .raid-console { gap:8px; }.enemy-field { padding:10px 13px 8px; grid-template-rows:58px minmax(0,1fr)16px; gap:2px; }
   .enemy-hud { gap:12px; }.boss-status { padding-right:65px; width:calc(100% - 75px); }.boss-type { font-size:5px; letter-spacing:1.1px; }.boss-status h2 { font-size:16px; margin:1px 0 5px; }.boss-health { width:calc(100% + 65px); height:4px; }.boss-health-label { top:13px; }.boss-health-label strong { font-size:14px; }.boss-health-label small { font-size:7px; }.boss-health-label>span { font-size:6px; margin-right:4px; }
@@ -99,5 +103,5 @@
   .raid-controls { position:relative; grid-template-columns:160px minmax(0,1fr)155px; grid-template-rows:minmax(44px,1fr)14px; padding:7px 12px; gap:4px 12px; }.player-hud { grid-column:1; grid-row:1; grid-template-columns:34px minmax(0,1fr); gap:6px; align-self:center; }.player-portrait { width:34px; height:34px; }.player-portrait>svg { width:36px; height:32px; }.player-select select { font-size:9px; padding-right:12px; min-height:20px; }.player-select>svg { width:9px; }.player-health { gap:4px; }.player-health>span { font-size:5px; }.player-health>strong { font-size:7px; }.player-health small { font-size:5px; }.player-health>div { height:3px; }.player-ep { grid-column:2; border:0; padding:0; display:flex; align-items:center; justify-content:flex-start; gap:5px; }.player-ep>span { font-size:5px; }.player-ep strong { font-size:11px; }.player-ep small { font-size:5px; }.player-ep svg { width:8px; height:8px; }
   .raid-skills { grid-column:2; grid-row:1; gap:6px; }.raid-skill { min-height:44px; padding:3px 6px; gap:0; }.skill-topline { font-size:4px; top:3px; left:5px; right:5px; letter-spacing:.4px; }.skill-topline svg { height:8px; width:8px; }.raid-skill .skill-symbol { width:13px; height:13px; margin-top:7px; }.raid-skill>strong { font-size:9px; }.skill-bottomline { font-size:5px; }.raid-skill.chosen:after { top:-4px; height:2px; }.raid-feedback { grid-column:1/-1; grid-row:2; font-size:7px; line-height:14px; }.raid-confirm { grid-column:3; grid-row:1; min-height:44px; padding:5px 10px; gap:7px; }.confirm-selection { display:none; }.confirm-action { width:100%; justify-content:center; font-size:11px; gap:8px; }.confirm-action>svg { width:18px; height:18px; }
 }
-@media (max-height:500px) and (min-width:600px) { .raid-turn { flex-direction:row; } }
+@media (max-height:500px) and (min-width:600px) { .raid-turn { flex-direction:row; }.ep-gauge { width:24px; margin:0; } }
 @media (prefers-reduced-motion:reduce) { .is-attacking .attack-beam,.is-attacking .target-frame,.is-attacking .enemy-fallback-art { animation:none!important; } }
