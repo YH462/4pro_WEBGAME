@@ -25,10 +25,13 @@ test("guest entry, persistent session, dictionary and nickname update", async ({
   await page.goto("/collection");
   await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
   await expect(page.locator(".collection-card")).toHaveCount(5);
-  await page.getByRole("button", { name: "フォレストゴーレムを選択" }).click();
-  await page.getByRole("link", { name: "詳しく見る" }).click();
+  await expect(page.getByRole("list", { name: "キャラクター一覧" }).locator(":scope > li")).toHaveCount(12);
+  await page.getByRole("link", { name: "フォレストゴーレムの詳細を見る（未獲得）", exact: true }).click();
   await expect(page.getByRole("heading", { name: "フォレストゴーレム" })).toBeVisible();
   await expect(page.locator(".stat-card strong").first()).toHaveText("170");
+  for (const label of ["HP", "攻撃", "防御", "チャージ効率"]) {
+    await expect(page.getByRole("group", { name: label, exact: true })).toBeVisible();
+  }
   await page.getByRole("tab", { name: "固有技", exact: true }).click();
   await expect(page.locator(".skill-list > div")).toHaveCount(3);
   await page.goto("/profile");
@@ -75,7 +78,7 @@ test("DB ownership is isolated, duplicate fixtures are prevented, mobile layout 
   await db.playerCharacter.upsert({ where: { playerId_characterId: key }, update: {}, create: key });
   expect(await db.playerCharacter.count({ where: key })).toBe(1);
   await page.goto("/collection");
-  await expect(page.locator(".owned-tag.owned")).toHaveCount(1);
+  await expect(page.getByRole("list", { name: "キャラクター一覧" }).getByRole("link", { name: /獲得済み/ })).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const other = await browser.newContext();
   try {

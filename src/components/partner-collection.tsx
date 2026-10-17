@@ -1,13 +1,53 @@
-"use client";
-import { useState } from "react";
+import Link from "next/link";
 import { Check, LockKeyhole } from "lucide-react";
-import { PartnerPanel } from "./partner-panel";
 import { CharacterArt } from "./character-art";
 import type { PartnerView } from "@/lib/character-presentation";
+import styles from "./partner-collection.module.css";
+
+const departmentStyles: Record<string, string> = {
+  mechanical: styles.mechanical,
+  electrical: styles.electrical,
+  control: styles.control,
+  civil: styles.civil,
+};
 
 export function PartnerCollection({ partners }: { partners: PartnerView[] }) {
-  const [selected, setSelected] = useState(0);
-  const partner = partners[selected];
-  if (!partner) return <div className="empty-panel">パートナーの情報を準備しています。</div>;
-  return <div className="collection-browser"><PartnerPanel key={partner.id} partner={partner}/><div className="catalog-selector" role="group" aria-label="パートナーを選択">{partners.map((item, index) => <button type="button" key={item.id} className={`collection-card element-${item.element.toLowerCase()} ${index === selected ? "selected" : ""}`} onClick={() => setSelected(index)} aria-pressed={index === selected} aria-label={`${item.name}を選択`}><span className="selector-number">0{item.number}</span><CharacterArt element={item.element} locked={!item.owned}/><span className="selector-label">{item.department}</span><span className="selector-status">{item.owned ? <Check size={12}/> : <LockKeyhole size={11}/>}</span></button>)}</div></div>;
+  const emptySlots = Array.from({ length: Math.max(0, 12 - partners.length) });
+
+  return (
+    <ul className={styles.grid} aria-label="キャラクター一覧">
+      {partners.map((partner) => (
+        <li key={partner.id} className={styles.slot}>
+          <Link
+            href={`/collection/${partner.id}`}
+            className={`collection-card ${styles.hexagon} ${departmentStyles[partner.departmentId ?? ""] ?? ""} ${partner.isLegendary ? styles.legendary : ""} ${partner.owned ? styles.owned : styles.locked}`}
+            aria-label={`${partner.name}の詳細を見る${partner.owned ? "（獲得済み）" : "（未獲得）"}`}
+          >
+            <span className={styles.innerFill} aria-hidden="true"/>
+            <div className={styles.content}>
+              <span className={styles.number}>{String(partner.number).padStart(3, "0")}</span>
+              <CharacterArt element={partner.element} locked={!partner.owned} className={styles.art}/>
+              <strong>{partner.department}</strong>
+              <span className={styles.name}>{partner.owned ? partner.name : "未獲得"}</span>
+              <span className={styles.status}>
+                {partner.owned ? <><Check size={12}/>獲得済み</> : <LockKeyhole size={12}/>}
+              </span>
+            </div>
+          </Link>
+        </li>
+      ))}
+      {emptySlots.map((_, index) => (
+        <li key={`empty-${index}`} className={styles.slot}>
+          <div className={`${styles.hexagon} ${styles.placeholder}`} aria-label={`キャラクター枠${partners.length + index + 1}：準備中`}>
+            <span className={styles.innerFill} aria-hidden="true"/>
+            <div className={styles.content}>
+              <span className={styles.number}>{String(partners.length + index + 1).padStart(3, "0")}</span>
+              <LockKeyhole className={styles.placeholderIcon} aria-hidden="true"/>
+              <span className={styles.placeholderLabel}>準備中</span>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
