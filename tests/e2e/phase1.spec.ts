@@ -17,10 +17,11 @@ test("guest entry, persistent session, dictionary and nickname update", async ({
   await expect(page.getByRole("heading", { name: "冒険の準備" })).toBeVisible();
   await page.getByLabel("ニックネーム").fill("テスト冒険者");
   await page.getByRole("button", { name: "ゲストではじめる" }).click();
-  await expect(page.getByRole("heading", { name: "こんにちは、テスト冒険者さん。" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "お知らせ", exact: true })).toBeVisible();
   const { player } = await (await page.request.get("/api/me")).json(); playerIds.push(player.id);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "こんにちは、テスト冒険者さん。" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "お知らせ", exact: true })).toBeVisible();
+  expect((await (await page.request.get("/api/me")).json()).player.nickname).toBe("テスト冒険者");
   await page.goto("/collection");
   await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
   await expect(page.locator(".collection-card")).toHaveCount(5);

@@ -1,15 +1,67 @@
 import Link from "next/link";
-import { Check, ArrowUpRight, Radio, ScanLine } from "lucide-react";
+import { Check, ArrowUpRight, LockKeyhole } from "lucide-react";
 import { CharacterArt } from "./character-art";
+import styles from "./exhibition-map.module.css";
 
-type MapPartner = { id: string; name: string; element: string; department: { name: string } | null; owned: boolean };
-export function ExhibitionMap({ partners, hasPlayer }: { partners: MapPartner[]; hasPlayer: boolean }) {
-  return <section className="exhibition-map" aria-label="4学科の展示マップ">
-    <div className="map-corner map-corner-tl"/><div className="map-corner map-corner-br"/>
-    <div className="map-heading"><span><Radio size={14}/> EXHIBITION MAP</span><span>4つの展示をめぐろう</span></div>
-    <svg className="map-paths" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true"><path className="map-path-shadow" d="M250 160H420L500 300 580 160H750M250 440H420L500 300 580 440H750"/><path className="map-path" d="M250 160H420L500 300 580 160H750M250 440H420L500 300 580 440H750"/><path className="map-route" d="M250 160V440H750V160Z"/></svg>
-    <div className="map-hub"><div className="hub-hex"><span>4</span><strong>PRO</strong></div><span className="hub-caption">4つの力を、ひとつに。</span></div>
-    {partners.map((partner, index) => <Link key={partner.id} href={hasPlayer ? `/collection/${partner.id}` : "/start"} className={`map-station station-${index + 1} element-${partner.element.toLowerCase()} ${partner.owned ? "station-owned" : ""}`} aria-label={`${partner.department?.name}：${partner.name}${partner.owned ? "（獲得済み）" : ""}`}><span className="station-number">0{index + 1}</span><div className="station-portrait"><CharacterArt element={partner.element}/></div><div className="station-label"><span>{partner.department?.name}<ArrowUpRight size={13}/></span><small>{partner.name}</small></div><span className="station-status">{partner.owned ? <><Check size={11}/>獲得済み</> : <><ScanLine size={11}/>展示で出会う</>}</span></Link>)}
-    <div className="map-legend"><span className="signal-dot"/> タップしてパートナーを確認</div><span className="map-coordinates">4 DEPARTMENTS / 1 ADVENTURE</span>
-  </section>;
+type MapPartner = {
+  id: string;
+  name: string;
+  element: string;
+  department: { id: string; name: string } | null;
+  owned: boolean;
+};
+
+// Position follows the department, even when character master data is reordered.
+const areas = [
+  { id: "mechanical", name: "機械科", position: styles.topLeft },
+  { id: "electrical", name: "電気情報", position: styles.topRight },
+  { id: "control", name: "電子制御", position: styles.bottomLeft },
+  { id: "civil", name: "建設システム", position: styles.bottomRight },
+];
+
+export function ExhibitionMap({ partners, legend, hasPlayer }: {
+  partners: MapPartner[];
+  legend?: MapPartner;
+  hasPlayer: boolean;
+}) {
+  return (
+    <section className={styles.map} aria-label="4学科の展示マップ">
+      {areas.map((area) => {
+        const partner = partners.find((item) => item.department?.id === area.id);
+        const name = partner?.department?.name ?? area.name;
+        return (
+          <Link
+            key={area.id}
+            href={hasPlayer ? (partner ? `/collection/${partner.id}` : "/collection") : "/start"}
+            className={`${styles.area} ${area.position} ${partner?.owned ? "" : styles.locked} element-${(partner?.element ?? "LEGEND").toLowerCase()}`}
+            aria-label={`${name}：${partner?.owned ? `${partner.name}（獲得済み）` : "未獲得"}`}
+          >
+            <div className={styles.content}>
+              <div className={styles.art}><CharacterArt element={partner?.element ?? "LEGEND"} locked={!partner?.owned}/></div>
+              <h2>{name}<ArrowUpRight size={16}/></h2>
+              <span className={styles.characterName}>{partner?.owned ? partner.name : "未獲得"}</span>
+              {partner?.owned && <span className={`${styles.status} ${styles.owned}`}><Check size={12}/>獲得済み</span>}
+            </div>
+          </Link>
+        );
+      })}
+
+      <Link
+        href={hasPlayer ? "/collection/four-pro" : "/start"}
+        className={`${styles.hub} ${legend?.owned ? "" : styles.locked}`}
+        aria-label={`4プロ：${legend?.owned ? "獲得済み" : "全学科コンプリートで解放"}`}
+      >
+        <CharacterArt element={legend?.element ?? "LEGEND"} locked={!legend?.owned}/>
+        <h2>{legend?.name ?? "4プロ"}</h2>
+        <span className={styles.hubStatus}>
+          {legend?.owned ? <><Check size={12}/>獲得済み</> : <><LockKeyhole size={12}/>4学科を集めて解放</>}
+        </span>
+      </Link>
+
+      <svg className={styles.dividers} viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M500 0V186M0 300H250M750 300H1000M500 414V600"/>
+        <path className={styles.hubOutline} d="M250 300L400 186H600L750 300L600 414H400Z"/>
+      </svg>
+    </section>
+  );
 }

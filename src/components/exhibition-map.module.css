@@ -1,0 +1,111 @@
+.map {
+  --mechanical: #f3c4cc;
+  --electrical: #c6daf7;
+  --control: #f9e7a8;
+  --civil: #c3e2cf;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  min-height: 0;
+  border: 1px solid #393337;
+  background: #fff;
+  box-shadow: 0 8px 25px #0000000b;
+  isolation: isolate;
+}
+
+.area {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: radial-gradient(ellipse at 50% 30%, #ffffff55, transparent 75%), var(--area-color);
+  color: var(--ink);
+}
+
+.topLeft { --area-color: var(--mechanical); grid-area: 1 / 1; clip-path: polygon(0 0, 100% 0, 100% 62%, 80% 62%, 50% 100%, 0 100%); }
+.topRight { --area-color: var(--electrical); grid-area: 1 / 2; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 100%, 20% 62%, 0 62%); }
+.bottomLeft { --area-color: var(--control); color: var(--ink); grid-area: 2 / 1; clip-path: polygon(0 0, 50% 0, 80% 38%, 100% 38%, 100% 100%, 0 100%); }
+.bottomRight { --area-color: var(--civil); grid-area: 2 / 2; clip-path: polygon(50% 0, 100% 0, 100% 100%, 0 100%, 0 38%, 20% 38%); }
+
+.content {
+  position: absolute;
+  inset: 4% 8% auto;
+  height: 64%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.bottomLeft .content, .bottomRight .content { top: auto; bottom: 4%; }
+.art { flex: 1; min-height: 0; width: 100%; max-height: 145px; }
+.art > svg { display: block; height: 100%; width: 100%; filter: drop-shadow(0 4px 3px #4a26321c); }
+.content h2 { display: flex; align-items: center; gap: 6px; font-size: clamp(14px, 1.6vw, 23px); font-weight: 800; line-height: 1.4; }
+.content h2 > svg { color: currentColor; }
+.characterName { color: #51464c; font-size: 10px; }
+.status { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+.owned { font-weight: 700; }
+.area.locked { --area-color: #e5e5e5; color: #555; }
+
+.hub {
+  position: absolute;
+  inset: 31% 25%;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-block: 8px;
+  background: #fff;
+  clip-path: polygon(30% 0, 70% 0, 100% 50%, 70% 100%, 30% 100%, 0 50%);
+}
+
+.hub::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: -1;
+  clip-path: inherit;
+  background: conic-gradient(#759de0 0deg 90deg, #75b394 90deg 180deg, #f2d46a 180deg 270deg, #e27383 270deg 360deg);
+}
+
+.hub.locked::before { background: #d5d5d5; }
+.hub > svg { flex: 0 1 100px; min-height: 0; width: 60%; }
+.hub h2 { color: var(--ink); background: #fff; padding: 1px 10px; font-size: clamp(20px, 2vw, 30px); font-weight: 850; line-height: 1.2; }
+.hubStatus { display: flex; align-items: center; gap: 4px; color: var(--ink); background: #fff; padding: 1px 5px; font-size: 9px; }
+.dividers { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.dividers path { fill: none; stroke: #ffffffd9; stroke-width: 3; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.dividers .hubOutline { stroke: #393337; stroke-width: 1.5; }
+.area:hover { background: linear-gradient(#ffffff55, #ffffff55), var(--area-color); }
+.hub:not(.locked):hover h2 { color: var(--red); }
+.area:focus-visible, .hub:focus-visible { outline: none; box-shadow: inset 0 0 0 4px var(--ink), inset 0 0 0 7px #fff; }
+
+@media (max-width: 760px) {
+  .content { inset-inline: 4%; gap: 2px; height: 67%; }
+  .content h2 { font-size: 15px; gap: 3px; }
+  .content h2 > svg { width: 12px; height: 12px; }
+  .characterName, .status { font-size: 8px; }
+  .status > svg { width: 10px; height: 10px; }
+  .hub > svg { flex-basis: 70px; width: 68%; }
+  .hub h2 { font-size: 21px; }
+  .hubStatus { font-size: 7px; gap: 2px; }
+  .hubStatus > svg { width: 9px; height: 9px; }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .content { height: 74%; gap: 0; }
+  .characterName { display: none; }
+  .content h2 { font-size: 13px; }
+  .content h2 > svg { width: 12px; height: 12px; }
+  .status { font-size: 8px; }
+  .status > svg { width: 10px; height: 10px; }
+  .hub { gap: 0; padding-block: 4px; }
+  .hub::before { inset: 4px; }
+  .hub > svg { flex-basis: 28px; }
+  .hub h2 { font-size: 16px; }
+  .hubStatus { font-size: 7px; }
+  .hubStatus > svg { width: 8px; height: 8px; }
+}

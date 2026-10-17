@@ -73,5 +73,5 @@ test("a device without WebGL keeps the enemy and command UI usable", async ({ pa
   await page.getByRole("button", { name: /演出を試す/ }).click();
   await expect(page.getByRole("status")).toHaveText("固有技 2の演出を確認しました。");
   await page.getByRole("link", { name: "ホーム HOME", exact: true }).click();
-  await expect(page.locator(".exhibition-map")).toBeVisible();
+  await expect(page.getByRole("region", { name: "4学科の展示マップ", exact: true })).toBeVisible();
 });

@@ -59,16 +59,16 @@
 .player-ep strong { display:block; font-size:22px; color:var(--red); font-weight:850; line-height:1.4; }
 .player-ep small { font-size:8px; color:#b78a9e; font-weight:500; }
 .raid-skills { min-height:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-.raid-skill { min-height:44px; min-width:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; position:relative; border:1px solid #e5d0db; background:linear-gradient(145deg,#fff,#fff6f9); color:#aa7a90; padding:8px 13px; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
-.raid-skill.chosen { color:var(--red); border:2px solid var(--red); background:linear-gradient(145deg,#fff6f9,#ffe7ee); box-shadow:0 3px 12px #df26380b; }
+.raid-skill { min-height:44px; min-width:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; position:relative; border:1px solid var(--ink); background:#fff; color:var(--ink); padding:8px 13px; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
+.raid-skill.chosen { color:#fff; border:2px solid var(--red); background:var(--ink); box-shadow:0 3px 12px #0000000b; }
 .raid-skill.chosen:after { content:""; position:absolute; left:calc(50% - 6px); top:-7px; width:12px; height:3px; background:var(--red); }
 .skill-topline { display:flex; align-items:center; justify-content:space-between; position:absolute; top:7px; left:10px; right:10px; font-size:6px; letter-spacing:1px; }
 .raid-skill .skill-symbol { margin-top:12px; }
 .raid-skill>strong { font-size:13px; font-weight:800; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.skill-bottomline { font-size:7px; color:#b18b9e; }
+.skill-bottomline { font-size:7px; opacity:.7; }
 .raid-feedback { font-size:10px; color:#a9778d; text-align:center; line-height:18px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
 .raid-confirm { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:5px 20px; border:0; background:var(--red); color:#fff; box-shadow:0 5px 15px #de203a20; touch-action:manipulation; }
-.raid-confirm:hover { background:#c91d34; }
+.raid-confirm:hover { background:var(--ink); }
 .raid-confirm:disabled { opacity:.75; cursor:wait; }
 .confirm-selection { text-align:left; min-width:0; }
 .confirm-selection>span { display:block; font-size:5px; letter-spacing:1.4px; opacity:.6; }

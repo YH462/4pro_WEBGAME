@@ -1,6 +1,15 @@
-type Props = { element: string; className?: string; muted?: boolean };
+type Props = { element: string; className?: string; muted?: boolean; locked?: boolean };
 // Original SVG illustrations; no network assets or font downloads are required.
-export function CharacterArt({ element, className = "", muted = false }: Props) {
+export function CharacterArt({ element, className = "", muted = false, locked = false }: Props) {
+  if (locked) {
+    return <svg viewBox="0 0 240 200" aria-hidden="true" className={className} data-character-locked="true">
+      <ellipse cx="120" cy="177" rx="57" ry="8" fill="#777" opacity=".14"/>
+      <circle cx="120" cy="98" r="72" fill="#bcbcbc" opacity=".18"/>
+      <circle cx="120" cy="65" r="27" fill="#8a8a8a"/>
+      <path d="M120 100c-32 0-53 24-53 58v12h106v-12c0-34-21-58-53-58Z" fill="#8a8a8a"/>
+      <text x="120" y="153" textAnchor="middle" fill="#fff" fontSize="46" fontWeight="800">?</text>
+    </svg>;
+  }
   const colors: Record<string, string[]> = { FOREST: ["#9ad3a5", "#355b4a", "#d8f6ad"], THUNDER: ["#ffd475", "#d68a33", "#fff6cb"], FLAME: ["#ff9e7d", "#b64c51", "#ffe0b5"], AQUA: ["#9bdce9", "#398dad", "#d9fbfc"], LEGEND: ["#d8c3ff", "#8266bf", "#fff1b5"] };
   const [light, dark, eye] = colors[element] || colors.LEGEND;
   return <svg viewBox="0 0 240 200" aria-hidden="true" className={`${className} ${muted ? "art-muted" : ""}`}>

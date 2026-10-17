@@ -1,0 +1,47 @@
+.screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 80px;
+  padding: 12px 20px;
+  background: #fff;
+  border: 1px solid var(--ink);
+  border-left: 5px solid var(--red);
+}
+
+.notice h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: var(--red);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.notice h1 > svg { width: 18px; height: 18px; }
+.notice p { min-width: 0; font-size: 22px; font-weight: 500; line-height: 1.65; color: var(--ink); }
+.notice p span { margin-left: 12px; }
+
+@media (max-width: 760px) {
+  .screen { gap: 8px; }
+  .notice { display: block; min-height: 0; padding: 6px 10px; line-height: 1.45; }
+  .notice h1 { display: inline-flex; vertical-align: middle; margin-right: 8px; font-size: 12px; gap: 4px; }
+  .notice h1 > svg { width: 14px; height: 14px; }
+  .notice p { display: inline; font-size: 18px; line-height: 1.45; }
+  .notice p span { margin-left: .4em; }
+}
+
+@media (max-height: 500px) and (min-width: 600px) {
+  .screen { gap: 6px; }
+  .notice { min-height: 48px; padding: 6px 12px; gap: 12px; }
+  .notice h1 { font-size: 14px; }
+  .notice h1 > svg { width: 16px; height: 16px; }
+  .notice p { font-size: 16px; }
+}
