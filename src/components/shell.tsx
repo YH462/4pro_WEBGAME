@@ -14,7 +14,7 @@ export function Shell({ children, active = "/" }: { children: React.ReactNode; a
     <header className="game-header">
       <Link href="/" className="brand" aria-label="4PRO ホーム"><span className="brand-number">4</span><span className="brand-word">PRO</span><span className="brand-slash" /></Link>
       <span className="header-event">4学科合同プロジェクト</span>
-      <div className="header-tools"><HelpButton/><Link href="/profile" className={`profile-link ${active === "/profile" ? "selected" : ""}`} aria-label="プロフィール"><UserRound size={20}/><span>マイページ</span></Link></div>
+      <div className="header-tools"><HelpButton/><Link href="/profile" className={`profile-link ${active === "/profile" ? "selected" : ""}`} aria-label="プロフィール" title="アカウント"><UserRound size={20}/></Link></div>
     </header>
     <main className="game-main">{children}</main>
     <footer className={styles.footer}>

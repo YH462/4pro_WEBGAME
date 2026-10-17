@@ -7,7 +7,7 @@ export type PartnerView = {
   id: string; name: string; description: string; element: string;
   department: string; departmentId: string | null; isLegendary: boolean; number: number; owned: boolean;
   stats: [NumericStat, NumericStat, NumericStat, ChargeStat];
-  skills: { id: string; slot: number; name: string; confirmed: boolean }[];
+  specialMove: { id: string; name: string; confirmed: boolean } | null;
 };
 export function presentCharacter(character: Character & { department: Department | null; skills: Skill[] }, owned?: PlayerCharacter): PartnerView {
   const baseStats = [
@@ -24,5 +24,7 @@ export function presentCharacter(character: Character & { department: Department
     growth: chargeGrowth,
     value: chargeBase === null ? null : chargeBase + chargeGrowth,
   }];
-  return { id: character.id, name: character.name, description: character.description, element: character.element, department: character.department?.name ?? "レジェンド", departmentId: character.departmentId, isLegendary: character.isLegendary, number: character.sortOrder, owned: !!owned, stats, skills: character.skills.map(({ id, slot, name, confirmed }) => ({ id, slot, name, confirmed })) };
+  const skill = character.skills.find((item) => item.slot === 1);
+  const specialMove = skill ? { id: skill.id, name: skill.confirmed ? skill.name : "必殺技", confirmed: skill.confirmed } : null;
+  return { id: character.id, name: character.name, description: character.description, element: character.element, department: character.department?.name ?? "レジェンド", departmentId: character.departmentId, isLegendary: character.isLegendary, number: character.sortOrder, owned: !!owned, stats, specialMove };
 }

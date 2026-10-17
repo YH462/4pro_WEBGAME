@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PlayerCharacter } from "@prisma/client";
+import type { PlayerCharacter, Skill } from "@prisma/client";
 import { presentCharacter } from "../../src/lib/character-presentation";
 import { characters } from "../../src/lib/master-data";
 
@@ -24,5 +24,22 @@ describe("character stat presentation", () => {
 
   it("distinguishes a configured zero from an undecided rate", () => {
     expect(presentCharacter({ ...character, baseSpecialChargeRate: 0 }).stats[3].value).toBe(0);
+  });
+});
+
+describe("single special move presentation", () => {
+  const first: Skill = { id: "move-1", characterId: character.id, slot: 1, name: "旧固有技1", confirmed: false, effect: null };
+  const legacy = { ...first, id: "move-2", slot: 2, name: "旧固有技2", confirmed: true };
+
+  it("uses only slot one even when legacy skills arrive first", () => {
+    expect(presentCharacter({ ...character, skills: [legacy, first] }).specialMove).toEqual({ id: first.id, name: "必殺技", confirmed: false });
+  });
+
+  it("keeps the confirmed special move name", () => {
+    expect(presentCharacter({ ...character, skills: [{ ...first, name: "確定済みの必殺技", confirmed: true }] }).specialMove?.name).toBe("確定済みの必殺技");
+  });
+
+  it("does not substitute a legacy skill when the special move is absent", () => {
+    expect(presentCharacter({ ...character, skills: [legacy] }).specialMove).toBeNull();
   });
 });

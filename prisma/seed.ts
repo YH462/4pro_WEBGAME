@@ -9,8 +9,8 @@ try {
     for (const department of departments) await tx.department.upsert({ where: { id: department.id }, update: {}, create: department });
     for (const character of characters) {
       await tx.character.upsert({ where: { id: character.id }, update: {}, create: character });
-      for (const slot of [1, 2, 3]) await tx.skill.upsert({ where: { id: `${character.id}-${slot}` }, update: {}, create: { id: `${character.id}-${slot}`, characterId: character.id, slot, name: `固有技 ${slot}（仕様確認待ち）` } });
+      await tx.skill.upsert({ where: { characterId_slot: { characterId: character.id, slot: 1 } }, update: {}, create: { id: `${character.id}-1`, characterId: character.id, slot: 1, name: "必殺技（仕様確認待ち）" } });
     }
   });
-  console.log("Seed complete: event, 4 departments, 5 characters, 15 pending skill slots.");
+  console.log("Seed complete: event, 4 departments, 5 characters, 1 special move per character.");
 } finally { await db.$disconnect(); }
