@@ -21,5 +21,5 @@ export default async function RaidScreenPage({ searchParams }: { searchParams: P
     url,
     qrImage: await QRCode.toDataURL(url, { errorCorrectionLevel: "M", margin: 4, scale: 12, color: { dark: "#000000", light: "#ffffff" } }),
   })));
-  return showcase ? <RaidShowcase entryTargets={entryTargets}/> : <RaidScreen local={local} entryTargets={entryTargets}/>;
+  return showcase ? <RaidShowcase entryTargets={entryTargets}/> : <RaidScreen local={local} canSync={cfg.simulator} entryTargets={entryTargets}/>;
 }

@@ -2,11 +2,12 @@ import * as THREE from "three";
 import { buildBoss } from "./battle-arena";
 import { counterImpactMs, counterLaunchMs, showcaseCounterFrame, type ShowcaseFrame } from "./raid-showcase-playback";
 import { showcaseImpactMs } from "./raid-showcase-scenes";
+import { characterColors, raidMemberPosition, type RaidArenaContext } from "./raid-screen-playback";
 
 const clamp = THREE.MathUtils.clamp;
 const ease = (value: number) => 1 - (1 - clamp(value, 0, 1)) ** 3;
 
-/** PC-only presentation arena. Mobile battle renderers retain their existing behavior. */
+/** Shared screen arena; the standalone demo uses its original four-player fixture. */
 export function createShowcaseArena(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -112,10 +113,11 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     x: Math.sin(i * 19.7) * 3.4, y: .5 + (Math.sin(i * 5.3) + 1) * 1.5, z: Math.cos(i * 12.3) * 2.4,
   }));
 
-  const allies = [-2.5, -.9, .9, 2.5].map((x, i) => {
+  const allies = Array.from({ length: 20 }, (_, i) => {
+    const x = [-2.5, -.9, .9, 2.5][i % 4];
     const ally = new THREE.Group();
     const body = new THREE.Group(); body.position.y = .24; ally.add(body);
-    const color = [0xffb532, 0xee447a, 0x36c68b, 0x36a5e7][i];
+    const color = [0xffb532, 0xee447a, 0x36c68b, 0x36a5e7][i % 4];
     const suit = new THREE.MeshStandardMaterial({ color, metalness: .35, roughness: .48 });
     const torso = new THREE.Mesh(new THREE.ConeGeometry(.15, .4, 5), suit);
     torso.position.y = .12; body.add(torso);
@@ -132,10 +134,11 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       arm.position.set(side * .2, .18, -.06); arm.rotation.x = -.75; body.add(arm); arms.push(arm);
       const hand = new THREE.Object3D(); hand.position.y = -.14; arm.add(hand); hands.push(hand);
     }
-    ally.scale.setScalar(.8); ally.position.set(x * .9, 0, 2.75 + Math.abs(x) * .08); ally.rotation.y = Math.atan2(-x, 3.5); scene.add(ally);
-    return { root: ally, body, arms, hands, legs, home: ally.position.clone() };
+    ally.scale.setScalar(.8); ally.position.set(x * .9, 0, 2.75 + Math.abs(x) * .08); ally.rotation.y = Math.atan2(-x, 3.5); ally.visible = i < 4; scene.add(ally);
+    return { root: ally, body, arms, hands, legs, suit, home: ally.position.clone() };
   });
-  const attacker = allies[2];
+  let actorIndex = 2;
+  let attacker = allies[actorIndex];
   const castArmAngle = 1.05;
   // Derive both origins from the actual hands in the held casting pose.
   // Keeping that pose during flight avoids rebuilding tube geometry each frame.
@@ -165,7 +168,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
 
   const breath = new THREE.Group(); scene.add(breath);
   const mouth = new THREE.Vector3(-.32, 1.17, 1.95);
-  const targets = allies.map(({ home }) => home.clone().add(new THREE.Vector3(0, .38, 0)));
+  let targets = allies.slice(0, 4).map(({ home }) => home.clone().add(new THREE.Vector3(0, .38, 0)));
   const teamCenter = new THREE.Vector3(0, .38, 2.9);
   const fanEdge = new THREE.CatmullRomCurve3(targets);
   // Every point on the widening front reaches the team at the same playback time.
@@ -222,7 +225,8 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     ring.position.copy(mouth); scene.add(ring); return ring;
   });
   const counterLight = new THREE.PointLight(0x5bd8ff, 0, 5); scene.add(counterLight);
-  const counterImpacts = targets.map((target) => {
+  const counterImpacts = allies.map(({ home }) => {
+    const target = home.clone().add(new THREE.Vector3(0, .38, 0));
     const flash = sprite(0xc5faff); flash.position.copy(target);
     const halo = sprite(0x30baff); halo.position.copy(target);
     const splash = new THREE.Mesh(new THREE.RingGeometry(.38, .405, 64), blueMaterial(0x58cfff));
@@ -239,8 +243,62 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
 
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let disposed = false;
-  const draw = (frame: ShowcaseFrame) => {
+  let contextKey = "";
+  let counterIndices = [0, 1, 2, 3];
+  const syncContext = (context: RaidArenaContext) => {
+    const nextKey = JSON.stringify([context.members.map((member) => [member.id, member.characterId]), context.actorId, context.counterIds]);
+    if (nextKey === contextKey) return;
+    contextKey = nextKey;
+    allies.forEach((ally, i) => {
+      const member = context.members[i]; ally.root.visible = Boolean(member);
+      if (!member) return;
+      const position = raidMemberPosition(i, context.members.length);
+      ally.home.set(position.x, 0, position.z);
+      ally.root.position.copy(ally.home); ally.root.rotation.y = Math.atan2(-position.x, 3.5);
+      ally.root.scale.setScalar(context.members.length > 10 ? .6 : .8);
+      ally.suit.color.set(characterColors[member.characterId] ?? 0xb18aff);
+    });
+    actorIndex = context.members.findIndex((member) => member.id === context.actorId);
+    attacker = allies[Math.max(0, actorIndex)];
+    attacker.root.position.copy(attacker.home);
+    attacker.body.rotation.set(0, 0, 0); attacker.body.position.y = .24;
+    attacker.arms.forEach((arm) => { arm.rotation.set(castArmAngle, 0, 0); });
+    attacker.root.updateWorldMatrix(true, true);
+    trails.forEach((trail, i) => {
+      const origin = attacker.hands[i].getWorldPosition(new THREE.Vector3());
+      const side = i === 0 ? -1 : 1;
+      trail.path.v0.copy(origin); trail.path.v1.copy(origin).add(new THREE.Vector3(side * .35, .65, -.2));
+      trail.path.updateArcLengths();
+      for (const [mesh, radius, segments] of [[trail.mesh, .075, 6], [trail.core, .018, 5], [trail.bloom, .17, 6]] as const) {
+        mesh.geometry.dispose(); mesh.geometry = new THREE.TubeGeometry(trail.path, 80, radius, segments, false);
+      }
+      attacker.hands[i].add(trail.launchGlow);
+    });
+    counterIndices = context.members.flatMap((member, i) => context.counterIds.includes(member.id) ? [i] : []);
+    // A narrow front for a single target; the demo retains its full-team fan.
+    targets = (counterIndices.length ? counterIndices : [Math.max(0, actorIndex)]).map((i) => allies[i].home.clone().add(new THREE.Vector3(0, .38, 0)));
+    const sorted = [...targets].sort((a, b) => a.x - b.x);
+    fanEdge.points = sorted.length === 1 ? [sorted[0].clone().add(new THREE.Vector3(-.18, 0, 0)), sorted[0].clone().add(new THREE.Vector3(.18, 0, 0))] : sorted;
+    const positions = fanGeometry.attributes.position;
+    for (let row = 0; row <= fanRows; row++) for (let column = 0; column <= fanColumns; column++) {
+      sampleFan(row / fanRows, column / fanColumns, point);
+      positions.setXYZ(row * (fanColumns + 1) + column, point.x, point.y, point.z);
+    }
+    positions.needsUpdate = true; fanGeometry.computeBoundingSphere();
+    breathStrands.forEach((mesh, i) => {
+      const end = sampleFan(1, i / 6, new THREE.Vector3());
+      const middle = mouth.clone().lerp(end, .5); middle.y += .36;
+      mesh.geometry.dispose(); mesh.geometry = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(mouth, middle, end), 40, .022, 5, false);
+    });
+    counterImpacts.forEach(({ flash, halo, splash }, i) => {
+      const target = targets[i] ?? targets[0];
+      flash.position.copy(target); halo.position.copy(target); splash.position.copy(target); splash.position.y = .025;
+    });
+    teamCenter.set(0, 0, 0); targets.forEach((target) => teamCenter.add(target)); teamCenter.divideScalar(targets.length);
+  };
+  const draw = (frame: ShowcaseFrame, context?: RaidArenaContext) => {
     if (disposed) return;
+    if (context) syncContext(context);
     const cue = frame.cue;
     const time = frame.visualMs / 1000;
     const reduced = motion.matches;
@@ -267,6 +325,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       boss.scale.setScalar(1.35 * (1 - ease(Math.max(0, time - 1.5) / 1.5) * .3));
     }
     camera.position.copy(baseCamera);
+    if (context) { camera.position.z += 1.2 + Math.max(0, context.members.length - 10) * .03; camera.position.y += .25; }
     if (counter) {
       const wide = reduced ? 1 : ease(time / .65) * (1 - ease((time - 2.7) / .7));
       camera.position.z += wide * 1.5;
@@ -286,7 +345,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     }
     camera.lookAt(look);
     trails.forEach(({ mesh, core, bloom, orb, launchGlow, path }, i) => {
-      const visible = attacking && time < showcaseImpactMs / 1000 + 1.5 && (critical || i === 0);
+      const visible = attacking && actorIndex >= 0 && time < showcaseImpactMs / 1000 + 1.5 && (critical || i === 0);
       mesh.visible = core.visible = bloom.visible = orb.visible = visible;
       const progress = clamp(frame.visualMs / showcaseImpactMs, 0, 1);
       for (const trail of [mesh, core, bloom]) trail.geometry.setDrawRange(0, Math.floor(progress * 80) * (trail === core ? 5 : 6) * 6);
@@ -352,9 +411,9 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
           starPositions[i * 3 + 2] = target.z + seed.z * spread * .6;
         }
       } else if (cue === "heal") {
-        starPositions[i * 3] = allies[2].home.x + Math.sin(i * 2.3 + time) * .5;
+        starPositions[i * 3] = attacker.home.x + Math.sin(i * 2.3 + time) * .5;
         starPositions[i * 3 + 1] = (i * .07 + time * .65) % 2.3;
-        starPositions[i * 3 + 2] = allies[2].home.z + Math.cos(i * 2.3 + time) * .5;
+        starPositions[i * 3 + 2] = attacker.home.z + Math.cos(i * 2.3 + time) * .5;
       } else {
         starPositions[i * 3] = seed.x * 1.5;
         starPositions[i * 3 + 1] = (seed.y + time * .14 + i * .03) % 4;
@@ -389,13 +448,15 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     }
     debris.instanceMatrix.needsUpdate = true;
     const heal = cue === "heal" ? Math.max(0, Math.sin(clamp(time / 3, 0, 1) * Math.PI)) : 0;
+    healing.position.set(attacker.home.x, .02, attacker.home.z);
+    healingGlow.position.set(attacker.home.x, .55, attacker.home.z);
     healing.material.opacity = heal; healing.scale.setScalar(1 + heal * .35);
     healingGlow.material.opacity = heal * .7; healingGlow.scale.set(1.4, 2.2, 1);
     allies.forEach(({ root, body, arms, legs, home }, i) => {
       // All four react at arrival; vary the pose without staggering the hit.
-      const recoil = counter && !reduced ? counterFrame.recoil * [.9, 1, .95, 1.08][i] : 0;
-      const slide = counter && !reduced ? counterFrame.slide : 0;
-      const cast = attacking && i === 2 ? reduced ? 1 : 1 - ease((time - showcaseImpactMs / 1000 - 1.5) / .5) : 0;
+      const recoil = counter && counterIndices.includes(i) && !reduced ? counterFrame.recoil * [.9, 1, .95, 1.08][i % 4] : 0;
+      const slide = counter && counterIndices.includes(i) && !reduced ? counterFrame.slide : 0;
+      const cast = attacking && i === actorIndex ? reduced ? 1 : 1 - ease((time - showcaseImpactMs / 1000 - 1.5) / .5) : 0;
       root.position.copy(home);
       root.position.y = reduced ? 0 : cue === "victory" ? Math.abs(Math.sin(time * 5 + i)) * .15 : Math.sin(time * 3 + i) * .02 * (1 - cast);
       root.position.x += slide * (home.x - mouth.x) * .07; root.position.z += slide * (.29 + i % 2 * .04);
@@ -438,13 +499,13 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     });
     counterLight.position.copy(counterFrame.impact > 0 ? teamCenter : mouth);
     counterLight.intensity = counter && !reduced ? charge * 6 + counterFrame.impact * 24 : 0;
-    counterImpacts.forEach(({ flash, halo, splash }) => {
-      flash.visible = halo.visible = counter;
+    counterImpacts.forEach(({ flash, halo, splash }, i) => {
+      flash.visible = halo.visible = counter && i < targets.length;
       flash.scale.setScalar(reduced ? .3 : .35 + counterFrame.impact * .95);
       halo.scale.setScalar(reduced ? .4 : .8 + counterFrame.impact * 1.4);
       flash.material.opacity = counterFrame.impact * (reduced ? .1 : .8);
       halo.material.opacity = counterFrame.impact * (reduced ? .06 : .25);
-      splash.visible = counter && !reduced;
+      splash.visible = counter && i < targets.length && !reduced;
       splash.scale.setScalar(1 + ease(counterFrame.afterHit / .75) * 2.8);
       splash.material.opacity = counterFrame.impact * .85;
     });

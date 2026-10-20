@@ -25,17 +25,21 @@ export function useLocalRaid(enabled: boolean, personal = false) {
   const applied = useRef(0);
   const mounted = useRef(true);
   const latest = useRef<{ roomId: string; revision: number } | null>(null);
+  const pending = useRef<{ roomId: string; turn: number } | null>(null);
   const accept = useCallback((body: ResponseBody, id: number) => {
     if (!mounted.current) return;
     if (latest.current?.roomId === body.state.roomId && body.state.revision < latest.current.revision) return;
     if (latest.current?.roomId !== body.state.roomId && id < applied.current) return;
     applied.current = Math.max(id, applied.current);
     latest.current = { roomId: body.state.roomId, revision: body.state.revision };
+    const turn = body.state.me?.lastResult?.turn;
+    pending.current = turn && turn > body.state.revealedTurn ? { roomId: body.state.roomId, turn } : null;
     setState(body.state); setError("");
   }, []);
   const refresh = useCallback(async () => {
     const id = ++sequence.current;
-    const body = await request(`/api/local-raid${personal ? "?personal=1" : ""}`);
+    const wait = personal && pending.current;
+    const body = await request(`/api/local-raid${personal ? `?personal=1${wait ? `&waitForReveal=${wait.turn}&roomId=${encodeURIComponent(wait.roomId)}` : ""}` : ""}`);
     accept(body, id);
   }, [personal, accept]);
 

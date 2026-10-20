@@ -19,6 +19,11 @@ describe("local raid room", () => {
     expect(room.snapshot("one").me?.hp).toBe(150);
     expect(room.snapshot("two").me?.hp).toBe(135);
     expect(room.snapshot().me).toBeNull();
+    const state = room.snapshot();
+    expect(state.members).toHaveLength(2);
+    expect(response.result).toMatchObject({ participantId: state.members[0].id, characterId: "forest-golem", bossHpBefore: 450, bossHpAfter: 350 });
+    expect(state.members[0].id).not.toBe("one");
+    expect(state.results).toHaveLength(1);
   });
 
   it("limits healing to the actor's missing HP and preserves the other player's HP", () => {
@@ -37,6 +42,7 @@ describe("local raid room", () => {
     const replay = command("one", "same");
     expect(replay.result).toEqual(first.result);
     expect(room.snapshot()).toMatchObject({ bossHp: 350, turn: 1 });
+    expect(room.snapshot().results).toHaveLength(1);
     expect(() => command("one", "same", "heal")).toThrow("同じ送信ID");
   });
 
@@ -77,8 +83,12 @@ describe("local raid room", () => {
     const snapshot = room.snapshot("one");
     snapshot.me!.hp = 999;
     snapshot.lastResult!.amount = 999;
+    snapshot.members[0].hp = 999;
+    snapshot.results[0].amount = 999;
     expect(room.snapshot("one").me?.hp).toBe(150);
     expect(room.snapshot().lastResult?.amount).toBe(100);
+    expect(room.snapshot().members[0].hp).toBe(150);
+    expect(room.snapshot().results[0].amount).toBe(100);
   });
 });
 

@@ -91,7 +91,7 @@ test("two independent phones share a screen, heal only themselves, and reconnect
     await phoneA.getByRole("button", { name: "回復を選択", exact: true }).click();
     await phoneA.getByRole("button", { name: /じゃんけんで送信/ }).click();
     await phoneA.getByRole("button", { name: "この手で送信", exact: true }).click();
-    await expect(phoneA.locator(".raid-rps-result")).toContainText(/自己回復 (15|20)/);
+    await expect(phoneA.locator(".raid-rps-result")).toContainText(/自己回復 (15|20)/, { timeout: 15000 });
     await phoneA.getByRole("button", { name: "閉じて続ける", exact: true }).click();
     const healed = await snapshot(alpha.request, true);
     expect(healed.bossHp).toBe(attacked.bossHp);
@@ -107,5 +107,88 @@ test("two independent phones share a screen, heal only themselves, and reconnect
     await expect.poll(async () => (await snapshot(request)).participants).toBe(2);
     for (const phone of [phoneA, phoneB]) await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "170");
     for (const phone of [phoneA, phoneB]) await expect(phone.getByRole("button", { name: /じゃんけんで送信/ })).toBeEnabled();
+  } finally { await alpha.close(); await beta.close(); }
+});
+
+test("phones reveal results only after their screen hand, including queued actions and reloads", async ({ browser, page, request }) => {
+  test.setTimeout(90000);
+  await request.post("/api/local-raid", { headers, data: { type: "reset" } });
+  const alpha = await browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const beta = await browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  try {
+    for (const context of [alpha, beta, page.context()]) await context.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      Object.defineProperty(HTMLCanvasElement.prototype, "getContext", { value: function (this: HTMLCanvasElement, type: string, ...args: unknown[]) {
+        if (type.startsWith("webgl") || type === "experimental-webgl") return null;
+        return Reflect.apply(original, this, [type, ...args]);
+      } });
+    });
+    await guest(alpha.request, "公開待ちA"); await guest(beta.request, "公開待ちB");
+    const phoneA = await alpha.newPage(), phoneB = await beta.newPage();
+    await phoneA.goto("/battle/raid?sync=local"); await phoneB.goto("/battle/raid?sync=local");
+    await page.clock.install();
+    await page.goto("/raid/screen?sync=local");
+    await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toHaveAttribute("data-renderer", "fallback");
+    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+    const submit = async (phone: typeof phoneA) => {
+      await phone.getByRole("button", { name: /じゃんけんで送信/ }).click();
+      await phone.getByRole("button", { name: "この手で送信", exact: true }).click();
+      await expect(phone.locator(".raid-rps-result")).toContainText("スクリーンのじゃんけんを待っています");
+    };
+    await submit(phoneA); await submit(phoneB);
+    const commands = (await snapshot(request)).results;
+    const main = page.getByRole("main", { name: "会場レイドスクリーン" });
+    const hand = page.locator("[data-rps-hand]");
+    const waitRps = async (actor: string) => {
+      for (let i = 0; i < 20; i++) {
+        if (await main.getAttribute("data-cue") === "rps" && await main.getAttribute("data-actor-id") === actor) return;
+        await page.clock.runFor(100);
+      }
+      await expect(main).toHaveAttribute("data-actor-id", actor);
+    };
+    await waitRps(commands[0].participantId);
+    await page.clock.runFor(1000);
+    await expect(hand).toHaveAttribute("data-revealed", "false");
+    for (const phone of [phoneA, phoneB]) {
+      await expect(phone.locator(".raid-rps-result")).not.toContainText("ボス：");
+      await expect(phone.getByRole("progressbar", { name: "ボスHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "450");
+      await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "170");
+    }
+    await expect(page.locator("footer")).not.toContainText("最新結果");
+    // A lost reveal acknowledgement must be retried; an elapsed phone-side timer is insufficient.
+    let rejectOnce = true;
+    await page.route("**/api/local-raid", (route) => {
+      if (route.request().method() === "POST" && route.request().postDataJSON().type === "reveal" && rejectOnce) {
+        rejectOnce = false; return route.abort();
+      }
+      return route.continue();
+    });
+    await page.clock.runFor(1200);
+    await expect(hand).toHaveAttribute("data-revealed", "true");
+    await expect.poll(() => rejectOnce).toBe(false);
+    await expect(phoneA.locator(".raid-rps-result")).not.toContainText("ボス：");
+    await page.clock.runFor(600);
+    await expect(phoneA.locator(".raid-rps-result")).toContainText(`攻撃 ${commands[0].amount}`);
+    await expect(phoneB.locator(".raid-rps-result")).not.toContainText("ボス：");
+    expect((await snapshot(request)).revealedTurn).toBe(1);
+    await phoneB.reload();
+    await expect(phoneB.locator(".raid-feedback")).toContainText("スクリーンのじゃんけんを待っています");
+    // Reopening the screen must resume the unpublished action rather than silently skipping it.
+    await page.reload();
+    await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toHaveAttribute("data-renderer", "fallback");
+    await waitRps(commands[1].participantId);
+    await expect(hand).toHaveAttribute("data-revealed", "false");
+    await expect(phoneB.getByRole("progressbar", { name: "自分のHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "170");
+    for (let i = 0; i < 25 && await hand.getAttribute("data-revealed") !== "true"; i++) await page.clock.runFor(100);
+    await expect(hand).toHaveAttribute("data-revealed", "true");
+    await expect(phoneB.locator(".raid-feedback")).toContainText(`攻撃 ${commands[1].amount}`);
+    expect((await snapshot(request)).revealedTurn).toBe(2);
+    // Reset while a new action waits must release the outstanding poll and close the obsolete dialog.
+    await phoneA.getByRole("button", { name: "閉じて続ける", exact: true }).click();
+    await submit(phoneA);
+    await request.post("/api/local-raid", { headers, data: { type: "reset" } });
+    await expect(phoneA.getByRole("dialog")).not.toBeVisible();
+    await expect(phoneA.getByRole("button", { name: /じゃんけんで送信/ })).toBeEnabled();
+    await expect(phoneA.getByRole("progressbar", { name: "自分のHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "170");
   } finally { await alpha.close(); await beta.close(); }
 });

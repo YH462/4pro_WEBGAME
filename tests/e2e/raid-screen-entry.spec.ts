@@ -5,7 +5,10 @@ import { privateIpv4 } from "../../src/lib/local-network";
 
 const db = new PrismaClient();
 const players: string[] = [];
-test.afterEach(async () => { await db.player.deleteMany({ where: { id: { in: players.splice(0) } } }); });
+test.afterEach(async ({ request }) => {
+  await db.player.deleteMany({ where: { id: { in: players.splice(0) } } });
+  await request.post("/api/local-raid", { headers: { origin: "http://localhost:3000" }, data: { type: "reset" } });
+});
 test.afterAll(async () => { await db.$disconnect(); });
 
 test("screen QR decodes to a LAN entry link and a new phone reaches the synced raid", async ({ page, browser }, testInfo) => {
@@ -70,7 +73,7 @@ test("screen QR decodes to a LAN entry link and a new phone reaches the synced r
   } finally { await phone.close(); }
 });
 
-test("preview QR stays separate from local sync and remains visible in result scenes", async ({ page }) => {
+test("the normal screen keeps the effect-check page separate and waits for real participants", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/raid/screen");
   const card = page.getByRole("region", { name: "レイド参加案内" });
@@ -78,8 +81,9 @@ test("preview QR stays separate from local sync and remains visible in result sc
   await expect(link).toHaveAttribute("href", /\/battle\/raid$/);
   await expect(card).toContainText("操作プレビュー");
   await page.getByRole("button", { name: "表示設定", exact: true }).click();
-  await page.getByRole("button", { name: /討伐成功/ }).click();
+  await expect(page.getByRole("link", { name: "演出確認ページを開く", exact: true })).toHaveAttribute("href", "/raid/screen?demo=effects");
   await page.getByRole("button", { name: "表示設定を閉じる" }).click();
   await expect(card.getByRole("img", { name: "レイド参加用QRコード", exact: true })).toBeVisible();
-  await expect(page.getByLabel("討伐結果", { exact: true })).toContainText("討伐成功");
+  await expect(page.getByRole("list", { name: "参加者とキャラクター" }).getByRole("listitem")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "連続デモ", exact: true })).toHaveCount(0);
 });
