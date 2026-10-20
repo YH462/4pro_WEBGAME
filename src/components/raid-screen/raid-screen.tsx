@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronRight, Expand, Flag, Hand, HandFist, Heart, Maximize, Pause, Play, Radio, RotateCcw, Scissors, Settings2, Shield, Smartphone, Swords, Trophy, Users, Waves, X, Zap } from "lucide-react";
+import { Check, ChevronRight, Expand, Flag, Hand, HandFist, Heart, Maximize, Pause, Play, Radio, RotateCcw, Scissors, Settings2, Smartphone, Swords, Trophy, Users, Waves, X } from "lucide-react";
 import { ArenaScene } from "@/components/battle/arena-scene";
 import { raidScreenPhases as phases, raidScreenPreview as preview, type RaidScreenPhase } from "@/lib/raid-screen-preview";
 import { raidRpsRules } from "@/lib/raid-rps";
 import { raidHands } from "@/lib/raid-rps";
 import { useLocalRaid } from "@/components/battle/use-local-raid";
+import type { RaidEntryTarget } from "@/lib/raid-entry";
+import { RaidJoinCard } from "./raid-join-card";
 import styles from "./raid-screen.module.css";
 
 const actionIcons = { attacker: Swords, healer: Heart };
 const number = (value: number) => value.toLocaleString("ja-JP");
 
-export function RaidScreen({ local = false }: { local?: boolean }) {
+export function RaidScreen({ local = false, entryTargets = [] }: { local?: boolean; entryTargets?: RaidEntryTarget[] }) {
   const [previewPhaseId, setPhaseId] = useState<RaidScreenPhase>("command");
   const { state: live, error: syncError, send } = useLocalRaid(local);
   const [syncActionError, setSyncActionError] = useState("");
@@ -134,24 +136,13 @@ export function RaidScreen({ local = false }: { local?: boolean }) {
           <div className={styles.stageCaption}><span><Flag /> ALL FOR ONE, ONE FOR ALL.</span><span>4学科の力を、ひとつに。</span></div>
         </section>
 
-        <aside className={styles.intel} aria-label={victory ? "討伐結果" : "ボスの行動予告"}>
+        <aside className={styles.intel} aria-label="参加案内とバトル状況">
           <div className={styles.turn}><span>{local ? "ACTION COUNT" : "CURRENT TURN"}</span><strong>{String(turn).padStart(2, "0")}</strong><span>{local ? "1操作ごとの簡易同期テスト" : "力を合わせて、打ち破れ。"}</span></div>
-          {victory ? <>
-            <div className={`${styles.forecast} ${styles.result}`}>
-              <div className={styles.forecastHeading}><Trophy /> RAID RESULT<span>討伐結果</span></div><Trophy /><h2>最高のチームワーク！</h2>
-              <p>{alive}人が生存。<br />仲間とつかんだ勝利！</p>
-              <dl><div><dt>参加人数</dt><dd>{participants} 人</dd></div><div><dt>生存人数</dt><dd>{alive} 人</dd></div><div><dt>ボス残りHP</dt><dd>0</dd></div></dl>
-            </div>
-            <div className={styles.bossCondition}><span>BOSS STATUS</span><div><Check />討伐完了 <strong>CLEAR</strong></div></div>
-          </> : <>
-            <div className={styles.forecast}>
-              <div className={styles.forecastHeading}><Zap />{local ? "COUNTER ATTACK" : "NEXT ATTACK"}<span>{local ? "反撃" : "次の攻撃"}</span></div>
-              <div className={styles.waveIcon}><Waves /></div><span className={styles.attackType}>{local ? "行動した参加者に反撃" : "味方全体に攻撃"}</span><h2>アクアブレス</h2>
-              <p>{local ? <>1操作ごとに<br />自分へ20ダメージ。</> : <>強力な水のブレスが<br />全員に襲いかかる！</>}</p>
-              <div className={styles.advice}><Heart /><span>自分のHPを見て<br /><strong>攻撃か回復を選ぼう！</strong></span></div>
-            </div>
-            <div className={styles.bossCondition}><span>{local ? "LOCAL TEST RULE" : "BOSS STATUS"}</span><div><Shield />{local ? "同期テスト" : "重装甲"}<strong>{local ? "仮の戦闘数値" : "防御力 UP"}</strong></div></div>
-          </>}
+          <RaidJoinCard targets={entryTargets} local={local}/>
+          <div className={styles.bossCondition} aria-label={victory ? "討伐結果" : "ボスの行動予告"}>
+            <span>{victory ? "RAID RESULT" : local ? "COUNTER ATTACK" : "NEXT ATTACK"}</span>
+            <div>{victory ? <Trophy /> : <Waves />}{victory ? "討伐成功" : "アクアブレス"}<strong>{victory ? `${alive} / ${participants} 人が生存` : local ? "行動後に自分へ20ダメージ" : "味方全体に攻撃"}</strong></div>
+          </div>
         </aside>
       </div>
 
