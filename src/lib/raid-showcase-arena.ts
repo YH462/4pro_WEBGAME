@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { buildBoss } from "./battle-arena";
-import type { ShowcaseCue } from "./raid-showcase-scenes";
+import { counterImpactMs, counterLaunchMs, showcaseCounterFrame, type ShowcaseFrame } from "./raid-showcase-playback";
+import { showcaseImpactMs } from "./raid-showcase-scenes";
 
 const clamp = THREE.MathUtils.clamp;
 const ease = (value: number) => 1 - (1 - clamp(value, 0, 1)) ** 3;
@@ -81,17 +82,6 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   const halo = sprite(0xff9c22);
   const impact = new THREE.Vector3(.95, 1.9, 1.75);
   impactLight.position.copy(impact).add(new THREE.Vector3(0, .3, .5));
-  const paths = [-1, 1].map((side) => new THREE.CubicBezierCurve3(
-    new THREE.Vector3(side * 5.5, .2, 4), new THREE.Vector3(side * 4, 2.5, 2.6),
-    new THREE.Vector3(side * 2, 2.6, 1.7), impact,
-  ));
-  const trails = paths.map((path) => {
-    const geometry = new THREE.TubeGeometry(path, 80, .075, 6, false);
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffde7c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-    const core = new THREE.Mesh(new THREE.TubeGeometry(path, 80, .018, 5, false), new THREE.MeshBasicMaterial({ color: 0xfffff0, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
-    const bloom = new THREE.Mesh(new THREE.TubeGeometry(path, 80, .17, 6, false), new THREE.MeshBasicMaterial({ color: 0xffae28, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-    scene.add(mesh, core, bloom); return { mesh, core, bloom, orb: sprite(0xffd55a), path };
-  });
   const shock = new THREE.Mesh(new THREE.RingGeometry(.7, .708, 96), new THREE.MeshBasicMaterial({ color: 0xffd469, side: THREE.DoubleSide, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   shock.position.copy(impact); shock.quaternion.copy(camera.quaternion); scene.add(shock);
   const groundShock = new THREE.Mesh(new THREE.RingGeometry(.7, .708, 96), new THREE.MeshBasicMaterial({ color: 0xffd469, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
@@ -124,48 +114,142 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
 
   const allies = [-2.5, -.9, .9, 2.5].map((x, i) => {
     const ally = new THREE.Group();
+    const body = new THREE.Group(); body.position.y = .24; ally.add(body);
     const color = [0xffb532, 0xee447a, 0x36c68b, 0x36a5e7][i];
     const suit = new THREE.MeshStandardMaterial({ color, metalness: .35, roughness: .48 });
     const torso = new THREE.Mesh(new THREE.ConeGeometry(.15, .4, 5), suit);
-    torso.position.y = .36; ally.add(torso);
+    torso.position.y = .12; body.add(torso);
     const head = new THREE.Mesh(new THREE.IcosahedronGeometry(.12, 1), ivory);
-    head.position.y = .67; ally.add(head);
+    head.position.y = .43; body.add(head);
+    const legs: THREE.Mesh[] = [];
+    const arms: THREE.Mesh[] = [];
+    const hands: THREE.Object3D[] = [];
     for (const side of [-1, 1]) {
       const leg = new THREE.Mesh(new THREE.BoxGeometry(.09, .24, .12), armor);
       leg.position.set(side * .09, .12, 0); ally.add(leg);
+      legs.push(leg);
       const arm = new THREE.Mesh(new THREE.BoxGeometry(.09, .28, .1), suit);
-      arm.position.set(side * .2, .42, -.06); arm.rotation.x = -.75; ally.add(arm);
+      arm.position.set(side * .2, .18, -.06); arm.rotation.x = -.75; body.add(arm); arms.push(arm);
+      const hand = new THREE.Object3D(); hand.position.y = -.14; arm.add(hand); hands.push(hand);
     }
-    ally.scale.setScalar(.8); ally.position.set(x * .9, 0, 2.75 + Math.abs(x) * .08); ally.rotation.y = Math.atan2(-x, 3.5); scene.add(ally); return ally;
+    ally.scale.setScalar(.8); ally.position.set(x * .9, 0, 2.75 + Math.abs(x) * .08); ally.rotation.y = Math.atan2(-x, 3.5); scene.add(ally);
+    return { root: ally, body, arms, hands, legs, home: ally.position.clone() };
+  });
+  const attacker = allies[2];
+  const castArmAngle = 1.05;
+  // Derive both origins from the actual hands in the held casting pose.
+  // Keeping that pose during flight avoids rebuilding tube geometry each frame.
+  attacker.arms.forEach((arm) => { arm.rotation.x = castArmAngle; });
+  attacker.root.updateWorldMatrix(true, true);
+  const paths = attacker.hands.map((hand, i) => {
+    const origin = hand.getWorldPosition(new THREE.Vector3());
+    const side = i === 0 ? -1 : 1;
+    return new THREE.CubicBezierCurve3(
+      origin, origin.clone().add(new THREE.Vector3(side * .35, .65, -.2)),
+      impact.clone().add(new THREE.Vector3(side * .55, .3, .15)), impact,
+    );
+  });
+  attacker.arms.forEach((arm) => { arm.rotation.x = -.75; });
+  const trails = paths.map((path, i) => {
+    const geometry = new THREE.TubeGeometry(path, 80, .075, 6, false);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffde7c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const core = new THREE.Mesh(new THREE.TubeGeometry(path, 80, .018, 5, false), new THREE.MeshBasicMaterial({ color: 0xfffff0, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+    const bloom = new THREE.Mesh(new THREE.TubeGeometry(path, 80, .17, 6, false), new THREE.MeshBasicMaterial({ color: 0xffae28, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const launchGlow = sprite(0x65dcff); attacker.hands[i].add(launchGlow);
+    scene.add(mesh, core, bloom); return { mesh, core, bloom, orb: sprite(0xffd55a), launchGlow, path };
   });
   const healing = new THREE.Mesh(new THREE.RingGeometry(.43, .49, 64), new THREE.MeshBasicMaterial({ color: 0x46ffae, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
-  healing.rotation.x = -Math.PI / 2; healing.position.copy(allies[2].position).add(new THREE.Vector3(0, .02, 0)); scene.add(healing);
+  healing.rotation.x = -Math.PI / 2; healing.position.copy(allies[2].home).add(new THREE.Vector3(0, .02, 0)); scene.add(healing);
   const healingGlow = sprite(0x38ff9d);
-  healingGlow.position.copy(allies[2].position).add(new THREE.Vector3(0, .55, 0));
-  const water = new THREE.Mesh(new THREE.TorusGeometry(.9, .17, 8, 72), new THREE.MeshBasicMaterial({ color: 0x73e2ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-  scene.add(water);
+  healingGlow.position.copy(allies[2].home).add(new THREE.Vector3(0, .55, 0));
+
+  const breath = new THREE.Group(); scene.add(breath);
+  const mouth = new THREE.Vector3(-.32, 1.17, 1.95);
+  const targets = allies.map(({ home }) => home.clone().add(new THREE.Vector3(0, .38, 0)));
+  const teamCenter = new THREE.Vector3(0, .38, 2.9);
+  const fanEdge = new THREE.CatmullRomCurve3(targets);
+  // Every point on the widening front reaches the team at the same playback time.
+  const sampleFan = (progress: number, across: number, point: THREE.Vector3) => {
+    fanEdge.getPoint(across, point);
+    point.lerpVectors(mouth, point, progress);
+    point.y += Math.sin(progress * Math.PI) * .18;
+    return point;
+  };
+  const blueMaterial = (color: number, additive = false) => new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity: 0, depthWrite: false, toneMapped: false,
+    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, side: THREE.DoubleSide,
+  });
+  const fanRows = 40, fanColumns = 32;
+  const fanGeometry = new THREE.BufferGeometry();
+  const fanPositions: number[] = [], fanColors: number[] = [], fanIndices: number[] = [];
+  const point = new THREE.Vector3();
+  for (let row = 0; row <= fanRows; row++) {
+    for (let column = 0; column <= fanColumns; column++) {
+      sampleFan(row / fanRows, column / fanColumns, point);
+      fanPositions.push(point.x, point.y, point.z);
+      const shine = Math.sin(column / fanColumns * Math.PI);
+      fanColors.push(.25 + shine * .4, .75 + shine * .2, 1);
+      if (row < fanRows && column < fanColumns) {
+        const a = row * (fanColumns + 1) + column, b = a + fanColumns + 1;
+        fanIndices.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    }
+  }
+  fanGeometry.setAttribute("position", new THREE.Float32BufferAttribute(fanPositions, 3));
+  fanGeometry.setAttribute("color", new THREE.Float32BufferAttribute(fanColors, 3));
+  fanGeometry.setIndex(fanIndices);
+  const fanMaterial = blueMaterial(0xffffff); fanMaterial.vertexColors = true;
+  const fanSheet = new THREE.Mesh(fanGeometry, fanMaterial); breath.add(fanSheet);
+  const breathStrands = Array.from({ length: 7 }, (_, i) => {
+    const end = sampleFan(1, i / 6, new THREE.Vector3());
+    const middle = mouth.clone().lerp(end, .5); middle.y += .36;
+    const path = new THREE.QuadraticBezierCurve3(mouth, middle, end);
+    const mesh = new THREE.Mesh(new THREE.TubeGeometry(path, 40, .022, 5, false), blueMaterial(i % 2 ? 0xb9faff : 0x67d8ff));
+    breath.add(mesh); return mesh;
+  });
+  const breathWaves = Array.from({ length: 7 }, () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(2 * (fanColumns + 1) * 3), 3));
+    geometry.setIndex(fanIndices.slice(0, fanColumns * 6));
+    const wave = new THREE.Mesh(geometry, blueMaterial(0x9aeaff));
+    wave.frustumCulled = false; breath.add(wave); return wave;
+  });
+  const chargeGlow = sprite(0x32b8ff);
+  const chargeCore = sprite(0xeaffff);
+  chargeGlow.position.copy(mouth); chargeCore.position.copy(mouth);
+  const chargeRings = [0, 1].map(() => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.6, .015, 6, 64), blueMaterial(0x64d9ff));
+    ring.position.copy(mouth); scene.add(ring); return ring;
+  });
+  const counterLight = new THREE.PointLight(0x5bd8ff, 0, 5); scene.add(counterLight);
+  const counterImpacts = targets.map((target) => {
+    const flash = sprite(0xc5faff); flash.position.copy(target);
+    const halo = sprite(0x30baff); halo.position.copy(target);
+    const splash = new THREE.Mesh(new THREE.RingGeometry(.38, .405, 64), blueMaterial(0x58cfff));
+    splash.rotation.x = -Math.PI / 2; splash.position.copy(target); splash.position.y = .025; scene.add(splash);
+    return { flash, halo, splash };
+  });
+  const splashStreaks = new THREE.InstancedMesh(new THREE.ConeGeometry(.045, .5, 4), blueMaterial(0x96eaff), 80);
+  splashStreaks.frustumCulled = false; scene.add(splashStreaks);
+  const direction = new THREE.Vector3();
   const confetti = new THREE.InstancedMesh(new THREE.PlaneGeometry(.075, .16), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), 100);
   confetti.frustumCulled = false;
   for (let i = 0; i < 100; i++) confetti.setColorAt(i, new THREE.Color([0xffc849, 0xff496d, 0x65e4ce, 0xffffff][i % 4]));
   scene.add(confetti);
 
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let cue: ShowcaseCue = "idle";
-  let startedAt = performance.now();
-  let pausedAt: number | null = null;
-  let frame = 0; let disposed = false; let lastDraw = 0;
-  const draw = (now: number) => {
+  let disposed = false;
+  const draw = (frame: ShowcaseFrame) => {
     if (disposed) return;
-    frame = requestAnimationFrame(draw);
-    if (document.hidden || now - lastDraw < 1000 / 40) return;
-    lastDraw = now;
-    const time = ((pausedAt ?? now) - startedAt) / 1000;
+    const cue = frame.cue;
+    const time = frame.visualMs / 1000;
     const reduced = motion.matches;
     const attacking = cue === "attack" || cue === "critical";
     const critical = cue === "critical";
-    const hit = time - .65;
-    // Hold the first impact briefly before the recoil and fragments accelerate.
-    const burst = Math.max(0, hit - (hit > .09 ? .09 : hit));
+    const counter = cue === "counter";
+    const counterFrame = showcaseCounterFrame(frame.visualMs);
+    const hit = time - showcaseImpactMs / 1000;
+    const burst = Math.max(0, hit);
     const envelope = hit >= 0 ? Math.max(0, 1 - burst / 1.5) : 0;
     const color = critical ? 0xffc345 : 0x65dcff;
     boss.position.set(0, reduced ? 0 : Math.sin(time * 2.5) * .045, 0);
@@ -183,21 +267,37 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       boss.scale.setScalar(1.35 * (1 - ease(Math.max(0, time - 1.5) / 1.5) * .3));
     }
     camera.position.copy(baseCamera);
+    if (counter) {
+      const wide = reduced ? 1 : ease(time / .65) * (1 - ease((time - 2.7) / .7));
+      camera.position.z += wide * 1.5;
+      camera.position.y += wide * .35;
+    }
     if (attacking && critical && hit >= 0 && hit < .7 && !reduced) {
       camera.position.x += Math.sin(hit * 65) * .065 * envelope;
       camera.position.y += Math.cos(hit * 73) * .04 * envelope;
     }
+    if (counter && !reduced) {
+      // A single short impulse at arrival, fading before the player regains balance.
+      const kick = counterFrame.impact;
+      camera.position.x += Math.sin(counterFrame.afterHit * 61) * .085 * kick;
+      camera.position.y += Math.sin(counterFrame.afterHit * 79) * .05 * kick;
+      camera.position.z += kick * .1;
+      boss.rotation.x = -.09 * counterFrame.charge + .08 * counterFrame.beam;
+    }
     camera.lookAt(look);
-    trails.forEach(({ mesh, core, bloom, orb, path }, i) => {
-      const visible = attacking && time < 2 && (critical || i === 0);
+    trails.forEach(({ mesh, core, bloom, orb, launchGlow, path }, i) => {
+      const visible = attacking && time < showcaseImpactMs / 1000 + 1.5 && (critical || i === 0);
       mesh.visible = core.visible = bloom.visible = orb.visible = visible;
-      const progress = clamp(time / .65, 0, 1);
+      const progress = clamp(frame.visualMs / showcaseImpactMs, 0, 1);
       for (const trail of [mesh, core, bloom]) trail.geometry.setDrawRange(0, Math.floor(progress * 80) * (trail === core ? 5 : 6) * 6);
-      mesh.material.color.set(color); mesh.material.opacity = time < .65 ? .85 : envelope * .65;
-      core.material.opacity = (time < .65 ? 1 : envelope) * .95;
-      bloom.material.color.set(color); bloom.material.opacity = (time < .65 ? 1 : envelope) * .2;
-      orb.position.copy(path.getPoint(progress)); orb.scale.setScalar((critical ? .65 : .4) * (time < .65 ? 1 : envelope));
+      mesh.material.color.set(color); mesh.material.opacity = frame.phase === "flight" ? .85 : envelope * .65;
+      core.material.opacity = (frame.phase === "flight" ? 1 : envelope) * .95;
+      bloom.material.color.set(color); bloom.material.opacity = (frame.phase === "flight" ? 1 : envelope) * .2;
+      orb.position.copy(path.getPoint(progress)); orb.scale.setScalar((critical ? .65 : .4) * (frame.phase === "flight" ? 1 : envelope));
       orb.material.color.set(color); orb.material.opacity = reduced ? .25 : .85;
+      launchGlow.visible = visible && frame.phase === "flight";
+      launchGlow.material.color.set(color); launchGlow.material.opacity = (1 - progress) * (reduced ? .15 : .9);
+      launchGlow.scale.setScalar(critical ? .65 : .45);
     });
     for (const item of [flare, halo]) { item.visible = attacking && hit >= 0; item.position.copy(impact); item.material.color.set(color); }
     flare.scale.setScalar((critical ? 3.4 : 1.8) * (reduced ? .25 : envelope));
@@ -219,10 +319,10 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     }
     sparkGeometry.attributes.position.needsUpdate = true;
     // Four-point glints and radial streaks retain detail around the bright impact core.
-    const glitterCount = critical ? sparkCount : attacking ? 130 : cue === "heal" ? 100 : cue === "victory" ? 240 : 36;
+    const glitterCount = critical || counter ? sparkCount : attacking ? 130 : cue === "heal" ? 100 : cue === "victory" ? 240 : 36;
     starGeometry.setDrawRange(0, glitterCount);
-    starMaterial.size = attacking ? .2 : .13;
-    starMaterial.opacity = attacking ? envelope : cue === "heal" || cue === "victory" ? .8 : .28;
+    starMaterial.size = attacking || counter ? .2 : .13;
+    starMaterial.opacity = attacking ? envelope : counter ? Math.max(counterFrame.charge * .85, counterFrame.beam, counterFrame.impact) : cue === "heal" || cue === "victory" ? .8 : .28;
     glitter.visible = !reduced && (!attacking || hit >= 0);
     for (let i = 0; i < glitterCount; i++) {
       const seed = seeds[i];
@@ -231,17 +331,37 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
         starPositions[i * 3] = impact.x + seed.x * spread;
         starPositions[i * 3 + 1] = impact.y + seed.y * spread - spread * spread * .8;
         starPositions[i * 3 + 2] = impact.z + seed.z * spread;
+      } else if (counter) {
+        if (frame.visualMs < counterLaunchMs) {
+          // Spiral inward rather than covering the boss with a solid flash.
+          const radius = .12 + (1 - (i / sparkCount + time * .85) % 1) * 1.15;
+          starPositions[i * 3] = mouth.x + Math.sin(i * 2.4 + time * 4) * radius;
+          starPositions[i * 3 + 1] = mouth.y + Math.cos(i * 2.4 + time * 4) * radius * .75;
+          starPositions[i * 3 + 2] = mouth.z + seed.z * radius * .25;
+        } else if (frame.visualMs < counterImpactMs) {
+          const progress = counterFrame.flight * ((i % 53) / 53);
+          sampleFan(progress, ((i * 37) % sparkCount) / (sparkCount - 1), direction);
+          starPositions[i * 3] = direction.x + Math.sin(i * 2.1 + time * 12) * .05;
+          starPositions[i * 3 + 1] = direction.y + Math.cos(i * 2.1 + time * 12) * .14;
+          starPositions[i * 3 + 2] = direction.z + seed.z * .035;
+        } else {
+          const target = targets[i % targets.length];
+          const spread = .08 + counterFrame.afterHit * (1 + i % 7 * .12);
+          starPositions[i * 3] = target.x + seed.x * spread * .45;
+          starPositions[i * 3 + 1] = Math.max(.02, target.y + seed.y * spread - spread * spread * 2);
+          starPositions[i * 3 + 2] = target.z + seed.z * spread * .6;
+        }
       } else if (cue === "heal") {
-        starPositions[i * 3] = allies[2].position.x + Math.sin(i * 2.3 + time) * .5;
+        starPositions[i * 3] = allies[2].home.x + Math.sin(i * 2.3 + time) * .5;
         starPositions[i * 3 + 1] = (i * .07 + time * .65) % 2.3;
-        starPositions[i * 3 + 2] = allies[2].position.z + Math.cos(i * 2.3 + time) * .5;
+        starPositions[i * 3 + 2] = allies[2].home.z + Math.cos(i * 2.3 + time) * .5;
       } else {
         starPositions[i * 3] = seed.x * 1.5;
         starPositions[i * 3 + 1] = (seed.y + time * .14 + i * .03) % 4;
         starPositions[i * 3 + 2] = seed.z + 1;
       }
       const twinkle = .5 + .5 * Math.sin(time * 5 + i * 2.7) ** 6;
-      starColors[i * 3] = (cue === "heal" ? .45 : 1) * twinkle;
+      starColors[i * 3] = (cue === "heal" ? .45 : counter ? .35 + (i % 4) * .2 : 1) * twinkle;
       starColors[i * 3 + 1] = (cue === "heal" ? 1 : critical || cue === "victory" ? .72 + (i % 3) * .13 : .95) * twinkle;
       starColors[i * 3 + 2] = (cue === "heal" ? .7 : critical || cue === "victory" ? .2 + (i % 4) * .22 : 1) * twinkle;
     }
@@ -271,12 +391,73 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     const heal = cue === "heal" ? Math.max(0, Math.sin(clamp(time / 3, 0, 1) * Math.PI)) : 0;
     healing.material.opacity = heal; healing.scale.setScalar(1 + heal * .35);
     healingGlow.material.opacity = heal * .7; healingGlow.scale.set(1.4, 2.2, 1);
-    allies.forEach((ally, i) => { ally.position.y = reduced ? 0 : cue === "victory" ? Math.abs(Math.sin(time * 5 + i)) * .15 : Math.sin(time * 3 + i) * .02; });
-    water.visible = cue === "counter";
-    const waterT = clamp((time - .6) / 1.5, 0, 1);
-    water.position.set(0, 1.2, .8 + waterT * 7); water.quaternion.copy(camera.quaternion);
-    water.scale.setScalar(.2 + waterT * 4); water.material.opacity = reduced ? .2 : Math.sin(waterT * Math.PI) * .8;
-    if (cue === "counter" && !reduced) boss.rotation.x = -Math.sin(clamp(time / 2.5, 0, 1) * Math.PI) * .15;
+    allies.forEach(({ root, body, arms, legs, home }, i) => {
+      // All four react at arrival; vary the pose without staggering the hit.
+      const recoil = counter && !reduced ? counterFrame.recoil * [.9, 1, .95, 1.08][i] : 0;
+      const slide = counter && !reduced ? counterFrame.slide : 0;
+      const cast = attacking && i === 2 ? reduced ? 1 : 1 - ease((time - showcaseImpactMs / 1000 - 1.5) / .5) : 0;
+      root.position.copy(home);
+      root.position.y = reduced ? 0 : cue === "victory" ? Math.abs(Math.sin(time * 5 + i)) * .15 : Math.sin(time * 3 + i) * .02 * (1 - cast);
+      root.position.x += slide * (home.x - mouth.x) * .07; root.position.z += slide * (.29 + i % 2 * .04);
+      root.position.y += recoil * .1;
+      body.rotation.x = recoil * .72;
+      body.rotation.z = recoil * (i % 2 ? -.18 : .18);
+      body.position.y = .24 - recoil * .045;
+      arms.forEach((arm, index) => {
+        arm.rotation.x = -.75 + (critical || index === 0 ? cast * (castArmAngle + .75) : 0) + recoil * 1.6;
+        arm.rotation.z = (index ? 1 : -1) * recoil * .65;
+      });
+      legs.forEach((leg, index) => { leg.rotation.x = recoil * (index ? -.65 : .45); leg.position.z = index ? slide * -.12 : 0; });
+    });
+    breath.visible = counter;
+    fanSheet.geometry.setDrawRange(0, Math.floor(counterFrame.flight * fanRows) * fanColumns * 6);
+    fanMaterial.opacity = counterFrame.beam * (reduced ? .06 : .2);
+    breathStrands.forEach((mesh) => {
+      mesh.geometry.setDrawRange(0, Math.floor(counterFrame.flight * 40) * 5 * 6);
+      mesh.material.opacity = counterFrame.beam * (reduced ? .08 : .68);
+    });
+    breathWaves.forEach((wave, i) => {
+      const progress = ((frame.visualMs - counterLaunchMs) / (counterImpactMs - counterLaunchMs) - i * .13);
+      wave.visible = counter && progress > 0 && progress <= 1;
+      const positions = wave.geometry.attributes.position;
+      for (let row = 0; row < 2; row++) for (let column = 0; column <= fanColumns; column++) {
+        sampleFan(clamp(progress - row * .035, 0, 1), column / fanColumns, direction);
+        positions.setXYZ(row * (fanColumns + 1) + column, direction.x, direction.y, direction.z);
+      }
+      positions.needsUpdate = true;
+      wave.material.opacity = counterFrame.beam * (reduced ? .06 : .75);
+    });
+    const charge = counter ? counterFrame.charge : 0;
+    chargeGlow.material.opacity = charge * (reduced ? .15 : .6);
+    chargeCore.material.opacity = charge * (reduced ? .15 : .95);
+    chargeGlow.scale.setScalar(.4 + charge * 1.5); chargeCore.scale.setScalar(.1 + charge * .46);
+    chargeRings.forEach((ring, i) => {
+      ring.visible = counter && charge > 0 && !reduced;
+      ring.quaternion.copy(camera.quaternion); ring.rotateX(i ? .75 : -.6); ring.rotateY(time * (i ? -3 : 3));
+      ring.scale.setScalar(.3 + charge * .8); ring.material.opacity = charge * .7;
+    });
+    counterLight.position.copy(counterFrame.impact > 0 ? teamCenter : mouth);
+    counterLight.intensity = counter && !reduced ? charge * 6 + counterFrame.impact * 24 : 0;
+    counterImpacts.forEach(({ flash, halo, splash }) => {
+      flash.visible = halo.visible = counter;
+      flash.scale.setScalar(reduced ? .3 : .35 + counterFrame.impact * .95);
+      halo.scale.setScalar(reduced ? .4 : .8 + counterFrame.impact * 1.4);
+      flash.material.opacity = counterFrame.impact * (reduced ? .1 : .8);
+      halo.material.opacity = counterFrame.impact * (reduced ? .06 : .25);
+      splash.visible = counter && !reduced;
+      splash.scale.setScalar(1 + ease(counterFrame.afterHit / .75) * 2.8);
+      splash.material.opacity = counterFrame.impact * .85;
+    });
+    splashStreaks.visible = counter && !reduced;
+    splashStreaks.material.opacity = counterFrame.impact * .9;
+    for (let i = 0; i < 80; i++) {
+      const target = targets[i % targets.length];
+      const travel = counterFrame.afterHit;
+      transform.position.set(target.x + seeds[i].x * travel * .45, Math.max(.03, .2 + seeds[i].y * travel * 1.4 - travel * travel * 3), target.z + seeds[i].z * travel * .6);
+      transform.rotation.set(seeds[i].z, i * .7, seeds[i].x);
+      transform.scale.setScalar(counterFrame.impact * (.3 + i % 5 * .15)); transform.updateMatrix(); splashStreaks.setMatrixAt(i, transform.matrix);
+    }
+    splashStreaks.instanceMatrix.needsUpdate = true;
     confetti.visible = cue === "victory";
     for (let i = 0; i < 100; i++) {
       transform.position.set(Math.sin(i * 17.1) * 6, 4.5 - ((time * (reduced ? .05 : .8) + i * .17) % 5), Math.cos(i * 13.7) * 3);
@@ -285,20 +466,15 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     confetti.instanceMatrix.needsUpdate = true;
     renderer.render(scene, camera);
   };
-  frame = requestAnimationFrame(draw);
   return {
-    play(next: ShowcaseCue) { cue = next; startedAt = performance.now(); pausedAt = null; },
-    pause(value: boolean) {
-      if (value && pausedAt === null) pausedAt = performance.now();
-      else if (!value && pausedAt !== null) { startedAt += performance.now() - pausedAt; pausedAt = null; }
-    },
+    render: draw,
     resize(width: number, height: number) {
       if (disposed || width <= 0 || height <= 0) return;
       renderer.setSize(width, height, false); camera.aspect = width / height; camera.updateProjectionMatrix();
     },
     dispose() {
       if (disposed) return;
-      disposed = true; cancelAnimationFrame(frame);
+      disposed = true;
       const materials = new Set<THREE.Material>(); const geometries = new Set<THREE.BufferGeometry>();
       scene.traverse((object) => {
         const item = object as THREE.Mesh;
