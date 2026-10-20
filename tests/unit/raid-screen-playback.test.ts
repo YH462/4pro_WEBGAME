@@ -39,6 +39,12 @@ describe("shared screen action playback", () => {
     const waiting = raidPlaybackReducer(emptyRaidPlayback, { type: "snapshot", snapshot: room.snapshot() });
     expect(waiting.active?.turn).toBe(1); expect(waiting.hp).toBe(450);
     room.reveal(room.snapshot().roomId, 1);
+    const afterRps = raidPlaybackReducer(emptyRaidPlayback, { type: "snapshot", snapshot: room.snapshot() });
+    expect(raidScreenScene(afterRps).cue).toBe("critical");
+    room.impact(room.snapshot().roomId, 1, "action");
+    const afterAction = raidPlaybackReducer(emptyRaidPlayback, { type: "snapshot", snapshot: room.snapshot() });
+    expect(raidScreenScene(afterAction).cue).toBe("counter");
+    room.impact(room.snapshot().roomId, 1, "counter");
     const reload = raidPlaybackReducer(emptyRaidPlayback, { type: "snapshot", snapshot: room.snapshot() });
     expect(reload.active).toBeNull(); expect(reload.hp).toBe(350);
     const active = raidPlaybackReducer(initial, { type: "snapshot", snapshot: room.snapshot() });
@@ -54,6 +60,7 @@ describe("shared screen action playback", () => {
     expect(raidScreenScene(state)).toMatchObject({ cue: "heal", amount: heal.result.amount, actorId: heal.result.participantId });
     for (let i = 0; i < 4; i++) command(i % 2 ? "two" : "one", `kill-${i}`);
     room.reveal(room.snapshot().roomId, room.snapshot().lastResult!.turn);
+    room.impact(room.snapshot().roomId, room.snapshot().lastResult!.turn, "action");
     const loaded = raidPlaybackReducer(emptyRaidPlayback, { type: "snapshot", snapshot: room.snapshot() });
     expect(raidScreenScene(loaded)).toMatchObject({ cue: "victory", hp: 0 });
   });

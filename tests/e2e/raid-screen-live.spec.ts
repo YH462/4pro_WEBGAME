@@ -10,6 +10,7 @@ test("the shared WebGL arena fires from each participant and keeps queued operat
     if (route.request().method() === "POST") {
       const input = route.request().postDataJSON();
       if (input.type === "reveal") room.reveal(input.roomId, input.turn);
+      if (input.type === "impact") room.impact(input.roomId, input.turn, input.kind);
     }
     return route.fulfill({ json: { state: room.snapshot() } });
   });

@@ -7,6 +7,7 @@ import { isTemporaryCharacter } from "@/lib/master-data";
 import { LocalBattleConsole } from "@/components/battle/local-battle-console";
 import { config } from "@/lib/config";
 import { notFound, redirect } from "next/navigation";
+import styles from "@/components/battle/raid-mobile.module.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "協力レイド" };
@@ -19,5 +20,5 @@ export default async function RaidPreview({ searchParams }: { searchParams: Prom
   const ownedIds = new Set(player.characters.map((owned) => owned.characterId));
   const available = characters.filter((character) => ownedIds.size ? ownedIds.has(character.id) : !character.isLegendary && !isTemporaryCharacter(character.id));
   const partners = available.map((character) => presentCharacter(character, player.characters.find((owned) => owned.characterId === character.id)));
-  return <Shell active="/battle"><div className="battle-screen"><div className="screen-heading"><h1>レイドバトル</h1><span className="battle-preview-label">{local ? "ローカル同期テスト" : "操作体験 · 戦闘は準備中"}</span></div>{local ? <LocalBattleConsole partners={partners}/> : <BattleConsole partners={partners}/>}</div></Shell>;
+  return <Shell active="/battle"><div className={`battle-screen ${styles.page}`}><div className="screen-heading"><h1>レイドバトル</h1><span className={styles.badge}>{local ? "会場レイド" : "操作プレビュー"}</span></div>{local ? <LocalBattleConsole partners={partners}/> : <BattleConsole partners={partners}/>}</div></Shell>;
 }

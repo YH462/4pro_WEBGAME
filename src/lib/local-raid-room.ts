@@ -15,6 +15,8 @@ export class LocalRaidRoom {
   private bossHp: number = battlePreview.bossHp;
   private turn = 0;
   private revealedTurn = 0;
+  private actionTurn = 0;
+  private counterTurn = 0;
   private revealListeners = new Set<() => void>();
   private totalDamage = 0;
   private totalHealing = 0;
@@ -37,7 +39,7 @@ export class LocalRaidRoom {
       existing.maxHp = maxHp;
       existing.nickname = nickname;
     } else return this.snapshot(playerId);
-    this.revision++;
+    this.changed();
     return this.snapshot(playerId);
   }
 
@@ -74,18 +76,34 @@ export class LocalRaidRoom {
     this.results.push(result);
     if (this.results.length > 200) this.results.shift();
     this.receipts.set(key, { fingerprint, result });
-    this.revision++;
+    this.changed();
     return { state: this.snapshot(playerId), result };
   }
 
   // The screen calls this only after painting its actual RPS reveal. Duplicate acknowledgements are harmless.
   reveal(roomId: string, turn: number) {
+    return this.present(roomId, turn, "reveal");
+  }
+
+  impact(roomId: string, turn: number, kind: "action" | "counter") {
+    return this.present(roomId, turn, kind);
+  }
+
+  private changed() {
+    this.revision++;
+    this.revealListeners.forEach((notify) => notify());
+  }
+
+  private present(roomId: string, turn: number, stage: "reveal" | "action" | "counter") {
     if (roomId !== this.roomId) throw new LocalRaidError(409, "同期がリセットされました。");
     if (!Number.isSafeInteger(turn) || turn < 1 || turn > this.turn) throw new LocalRaidError(400, "公開する行動を確認してください。");
-    if (turn > this.revealedTurn) {
-      this.revealedTurn = turn;
-      this.revision++;
-      this.revealListeners.forEach((notify) => notify());
+    const revealed = Math.max(this.revealedTurn, turn);
+    const action = Math.max(this.actionTurn, stage === "reveal" ? turn - 1 : turn);
+    const noCounter = stage === "action" && this.results.find((result) => result.turn === turn)?.counterDamage === 0;
+    const counter = Math.max(this.counterTurn, stage === "counter" || noCounter ? turn : turn - 1);
+    if (revealed !== this.revealedTurn || action !== this.actionTurn || counter !== this.counterTurn) {
+      this.revealedTurn = revealed; this.actionTurn = action; this.counterTurn = counter;
+      this.changed();
     }
     return this.snapshot();
   }
@@ -93,6 +111,15 @@ export class LocalRaidRoom {
   // Hold a waiting phone's poll briefly so the reveal is delivered without another polling interval.
   waitForReveal(roomId: string, turn: number, signal?: AbortSignal) {
     if (roomId !== this.roomId || turn <= this.revealedTurn || signal?.aborted) return Promise.resolve();
+    return this.waitForChange(signal);
+  }
+
+  waitForRevision(roomId: string, revision: number, signal?: AbortSignal) {
+    if (roomId !== this.roomId || revision < this.revision || signal?.aborted) return Promise.resolve();
+    return this.waitForChange(signal);
+  }
+
+  private waitForChange(signal?: AbortSignal) {
     return new Promise<void>((resolve) => {
       const done = () => { clearTimeout(timer); this.revealListeners.delete(done); signal?.removeEventListener("abort", done); resolve(); };
       const timer = setTimeout(done, 3000);
@@ -106,12 +133,12 @@ export class LocalRaidRoom {
     this.bossHp = battlePreview.bossHp;
     this.turn = this.totalDamage = this.totalHealing = 0;
     this.revealedTurn = 0;
+    this.actionTurn = this.counterTurn = 0;
     this.lastResult = null;
     this.results = [];
     this.receipts.clear();
     this.members.clear(); // Connected phones rejoin the new room; closed phones disappear.
-    this.revision++;
-    this.revealListeners.forEach((notify) => notify());
+    this.changed();
     return this.snapshot();
   }
 
@@ -119,7 +146,7 @@ export class LocalRaidRoom {
     const members = [...this.members.values()];
     const me = playerId ? this.members.get(playerId) : undefined;
     return {
-      roomId: this.roomId, revision: this.revision, revealedTurn: this.revealedTurn, bossName: battlePreview.bossName,
+      roomId: this.roomId, revision: this.revision, revealedTurn: this.revealedTurn, actionTurn: this.actionTurn, counterTurn: this.counterTurn, bossName: battlePreview.bossName,
       bossHp: this.bossHp, bossMaxHp: battlePreview.bossHp, turn: Math.max(1, this.turn),
       participants: members.length, alive: members.filter((member) => member.hp > 0).length,
       attackCount: members.filter((member) => member.lastResult?.action === "attack").length,
@@ -133,5 +160,5 @@ export class LocalRaidRoom {
   }
 }
 
-const localGlobal = globalThis as typeof globalThis & { fourProLocalRaidV3?: LocalRaidRoom };
-export function localRaidRoom() { return localGlobal.fourProLocalRaidV3 ??= new LocalRaidRoom(); }
+const localGlobal = globalThis as typeof globalThis & { fourProLocalRaidV4?: LocalRaidRoom };
+export function localRaidRoom() { return localGlobal.fourProLocalRaidV4 ??= new LocalRaidRoom(); }

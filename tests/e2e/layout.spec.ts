@@ -67,12 +67,11 @@ test.describe("viewport-contained game screens", () => {
             await expectScreenFits(page);
           }
           if (route === "/battle/raid") {
-            const enemy = await page.getByRole("region", { name: "敵画面", exact: true }).boundingBox();
+            const character = await page.getByRole("region", { name: "自分のキャラクター", exact: true }).boundingBox();
             const controls = await page.getByRole("region", { name: "スマホ操作画面", exact: true }).boundingBox();
-            expect(enemy).not.toBeNull(); expect(controls).not.toBeNull();
-            expect(Math.abs(enemy!.height - controls!.height)).toBeLessThanOrEqual(2);
-            expect(enemy!.y + enemy!.height).toBeLessThanOrEqual(controls!.y);
-            for (const button of await page.locator(".raid-skills button, .raid-confirm").all()) {
+            expect(character).not.toBeNull(); expect(controls).not.toBeNull();
+            if (viewport.height > 500) expect(character!.y + character!.height).toBeLessThanOrEqual(controls!.y);
+            for (const button of await page.getByRole("region", { name: "スマホ操作画面", exact: true }).getByRole("button").all()) {
               const size = await button.boundingBox();
               expect(size!.height).toBeGreaterThanOrEqual(44);
               expect(size!.width).toBeGreaterThanOrEqual(44);

@@ -21,6 +21,7 @@ export type RaidScreenPresentation = {
   scene: RaidScreenScene; members: LocalRaidParticipant[]; bossName: string;
   local: boolean; status: string; title: string; message: string; pending: number;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
+  onImpact: (id: string, kind: "action" | "counter") => void;
 };
 
 export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntryTarget[]; screen?: RaidScreenPresentation }) {
@@ -33,6 +34,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   const bossHand = screen?.scene.bossHand ?? demoBossHand;
   const [rpsState, setRpsState] = useState<{ key: string; view: RpsView }>({ key: "", view: showcaseRpsFrame(0) });
   const [impactState, setImpactState] = useState<{ key: string; phase: ShowcaseFrame["phase"] }>({ key: "idle:0", phase: "idle" });
+  const [contact, setContact] = useState("");
   const [renderer, setRenderer] = useState<"loading" | "webgl" | "fallback">("loading");
   const [fullscreenError, setFullscreenError] = useState("");
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -101,6 +103,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
       if (health.current) health.current.style.width = width(frame.hpProgress);
       if (delayedHealth.current) delayedHealth.current.style.width = width(frame.delayedHpProgress);
       setImpactState((previous) => previous.key === key && previous.phase === frame.phase ? previous : { key, phase: frame.phase });
+      if ((cue === "counter" && frame.visualMs >= counterImpactMs) || (cue === "heal" && frame.visualMs >= 100)) setContact((previous) => previous === key ? previous : key);
       if (cue === "rps") {
         const { hand, revealed, beat } = showcaseRpsFrame(frame.visualMs, frame.bossHand);
         setRpsState((previous) => previous.key === key && previous.view.hand === hand && previous.view.revealed === revealed && previous.view.beat === beat ? previous : { key, view: { hand, revealed, beat } });
@@ -123,6 +126,10 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   useEffect(() => {
     if (cue === "rps" && rpsState.key === key && rpsState.view.revealed) onReveal?.(key);
   }, [cue, key, rpsState.key, rpsState.view.revealed, onReveal]);
+  const onImpact = screen?.onImpact;
+  useEffect(() => {
+    if ((attacking && phase === "reaction") || ((cue === "counter" || cue === "heal") && contact === key)) onImpact?.(key, cue === "counter" ? "counter" : "action");
+  }, [attacking, phase, cue, contact, key, onImpact]);
 
   function select(next: ShowcaseCue) { setAuto(false); setPaused(false); setCue(next); setIteration((value) => value + 1); }
   async function fullscreen() {
@@ -133,7 +140,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   }
 
   return <div className={styles.viewport}>
-    <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-paused={!screen && paused} data-impact-phase={phase} data-actor-id={screen?.scene.actorId ?? undefined} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
+    <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
       <div className={styles.honeycomb}/>
       <div className={styles.brand}>4<span>PRO</span><small>ONE TEAM. ONE RAID.</small></div>
       <div className={styles.demoBadge}>{screen?.status ?? "PC 演出デモ"}</div>

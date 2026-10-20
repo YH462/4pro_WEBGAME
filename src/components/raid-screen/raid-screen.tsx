@@ -14,26 +14,32 @@ export function RaidScreen({ local = false, canSync = false, entryTargets = [] }
   const [playback, dispatch] = useReducer(raidPlaybackReducer, emptyRaidPlayback);
   const [resetError, setResetError] = useState("");
   const [resetting, setResetting] = useState(false);
-  const [reveal, setReveal] = useState<{ roomId: string; turn: number } | null>(null);
+  const [publication, setPublication] = useState<{ roomId: string; turn: number; kind: "reveal" | "action" | "counter" } | null>(null);
   const settings = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (live) dispatch({ type: "snapshot", snapshot: live }); }, [live]);
   const complete = useCallback((id: string) => dispatch({ type: "complete", id }), []);
   const scene = raidScreenScene(playback);
   const active = playback.active;
   const onReveal = useCallback((id: string) => {
-    if (active && id === scene.id) setReveal({ roomId: playback.roomId, turn: active.turn });
+    if (active && id === scene.id) setPublication({ roomId: playback.roomId, turn: active.turn, kind: "reveal" });
+  }, [active?.turn, scene.id, playback.roomId]);
+  const onImpact = useCallback((id: string, kind: "action" | "counter") => {
+    if (active && id === scene.id) setPublication({ roomId: playback.roomId, turn: active.turn, kind });
   }, [active?.turn, scene.id, playback.roomId]);
   useEffect(() => {
-    if (!reveal || reveal.roomId !== live?.roomId || reveal.turn <= live.revealedTurn) return;
+    if (!publication || publication.roomId !== live?.roomId) return;
+    const cursor = publication.kind === "reveal" ? live.revealedTurn : publication.kind === "action" ? live.actionTurn : live.counterTurn;
+    if (publication.turn <= cursor) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const publish = async () => {
-      try { await send({ type: "reveal", ...reveal }); }
+      const { kind, ...target } = publication;
+      try { await send(kind === "reveal" ? { type: "reveal", ...target } : { type: "impact", kind, ...target }); }
       catch { if (!cancelled) timer = setTimeout(publish, 500); }
     };
     void publish();
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [reveal, live?.roomId, live?.revealedTurn, send]);
+  }, [publication, live?.roomId, live?.revealedTurn, live?.actionTurn, live?.counterTurn, send]);
   const visible = live ? visibleLocalRaid(live) : null;
   const last = visible?.lastResult;
   const members = (visible?.members ?? []).map((member) => member.id === active?.participantId ? { ...member, characterId: active.characterId, characterName: active.characterName } : member);
@@ -46,7 +52,7 @@ export function RaidScreen({ local = false, canSync = false, entryTargets = [] }
     : local ? "参加QRを読み取って、スマホから攻撃・回復を選ぼう。" : "開催前です。演出は右下の「演出確認ページ」から確認できます。");
   return <>
     <RaidShowcase entryTargets={entryTargets} screen={{ scene, members, local, status, title, message, pending: playback.pending.length, bossName: live?.bossName ?? "キング・アクア", failed,
-      onComplete: complete, onReveal, tools: <button type="button" onClick={() => settings.current?.showModal()}><Settings2/>{local ? "同期設定" : "表示設定"}</button> }}/>
+      onComplete: complete, onReveal, onImpact, tools: <button type="button" onClick={() => settings.current?.showModal()}><Settings2/>{local ? "同期設定" : "表示設定"}</button> }}/>
     <dialog className={styles.settings} aria-labelledby="screen-settings-title" ref={settings} onClick={(event) => { if (event.target === event.currentTarget) settings.current?.close(); }}>
       <div className={styles.settingsHeading}><h2 id="screen-settings-title">スクリーンの設定</h2><button type="button" aria-label="表示設定を閉じる" onClick={() => settings.current?.close()}><X/></button></div>
       <p>演出確認ページは独立して残しています。実際の参加人数・HP・行動結果は同期モードで表示します。</p>

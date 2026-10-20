@@ -43,6 +43,8 @@ export type LocalRaidSnapshot = {
   roomId: string;
   revision: number;
   revealedTurn: number;
+  actionTurn: number;
+  counterTurn: number;
   bossName: string;
   bossHp: number;
   bossMaxHp: number;

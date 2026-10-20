@@ -72,15 +72,14 @@ test("two independent phones share a screen, heal only themselves, and reconnect
     await guest(beta.request, "同期確認B");
     await phoneB.goto("/battle/raid?sync=local");
     await page.goto("/raid/screen?sync=local");
-    await expect.poll(async () => (await snapshot(request)).participants).toBe(2);
+    await expect.poll(async () => (await snapshot(request)).members.filter((member) => ["同期確認A", "同期確認B"].includes(member.nickname)).length).toBe(2);
     await expect(page.getByRole("progressbar", { name: "ボスHP", exact: true })).toHaveAttribute("aria-valuenow", "450");
     await expect(page.getByText("ローカル同期中", { exact: true })).toBeVisible();
 
-    await phoneA.getByRole("button", { name: /じゃんけんで送信/ }).click();
     await phoneA.getByRole("button", { name: "チョキを選択", exact: true }).click();
-    await phoneA.getByRole("button", { name: "この手で送信", exact: true }).click();
+    await phoneA.getByRole("button", { name: "攻撃で送信", exact: true }).click();
     await expect(phoneA.locator(".raid-rps-result")).toContainText(/攻撃 (25|50|100)/);
-    await phoneA.getByRole("button", { name: "閉じて続ける", exact: true }).click();
+    await expect(phoneA.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
     const attacked = await snapshot(request);
     expect(attacked.bossHp).toBeLessThan(450);
     await expect(page.getByRole("progressbar", { name: "ボスHP", exact: true })).toHaveAttribute("aria-valuenow", String(attacked.bossHp));
@@ -89,10 +88,10 @@ test("two independent phones share a screen, heal only themselves, and reconnect
     await expect(phoneB.getByRole("progressbar", { name: "自分のHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "170");
 
     await phoneA.getByRole("button", { name: "回復を選択", exact: true }).click();
-    await phoneA.getByRole("button", { name: /じゃんけんで送信/ }).click();
-    await phoneA.getByRole("button", { name: "この手で送信", exact: true }).click();
+    await phoneA.getByRole("button", { name: "グーを選択", exact: true }).click();
+    await phoneA.getByRole("button", { name: "回復で送信", exact: true }).click();
     await expect(phoneA.locator(".raid-rps-result")).toContainText(/自己回復 (15|20)/, { timeout: 15000 });
-    await phoneA.getByRole("button", { name: "閉じて続ける", exact: true }).click();
+    await expect(phoneA.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
     const healed = await snapshot(alpha.request, true);
     expect(healed.bossHp).toBe(attacked.bossHp);
     expect(healed.me?.hp).toBe(150 + healed.me!.lastResult!.amount - 20);
@@ -104,9 +103,9 @@ test("two independent phones share a screen, heal only themselves, and reconnect
     await page.getByRole("button", { name: "同期設定", exact: true }).click();
     await page.getByRole("button", { name: "同期をリセット", exact: true }).click();
     await expect(page.getByRole("progressbar", { name: "ボスHP", exact: true })).toHaveAttribute("aria-valuenow", "450");
-    await expect.poll(async () => (await snapshot(request)).participants).toBe(2);
+    await expect.poll(async () => (await snapshot(request)).members.filter((member) => ["同期確認A", "同期確認B"].includes(member.nickname)).length).toBe(2);
     for (const phone of [phoneA, phoneB]) await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "170");
-    for (const phone of [phoneA, phoneB]) await expect(phone.getByRole("button", { name: /じゃんけんで送信/ })).toBeEnabled();
+    for (const phone of [phoneA, phoneB]) await expect(phone.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
   } finally { await alpha.close(); await beta.close(); }
 });
 
@@ -131,16 +130,16 @@ test("phones reveal results only after their screen hand, including queued actio
     await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toHaveAttribute("data-renderer", "fallback");
     await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
     const submit = async (phone: typeof phoneA) => {
-      await phone.getByRole("button", { name: /じゃんけんで送信/ }).click();
-      await phone.getByRole("button", { name: "この手で送信", exact: true }).click();
-      await expect(phone.locator(".raid-rps-result")).toContainText("スクリーンのじゃんけんを待っています");
+      await phone.getByRole("button", { name: "グーを選択", exact: true }).click();
+      await phone.getByRole("button", { name: "攻撃で送信", exact: true }).click();
+      await expect(phone.locator(".raid-feedback")).toContainText("スクリーンのじゃんけんを待っています");
     };
     await submit(phoneA); await submit(phoneB);
     const commands = (await snapshot(request)).results;
     const main = page.getByRole("main", { name: "会場レイドスクリーン" });
     const hand = page.locator("[data-rps-hand]");
     const waitRps = async (actor: string) => {
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 120; i++) {
         if (await main.getAttribute("data-cue") === "rps" && await main.getAttribute("data-actor-id") === actor) return;
         await page.clock.runFor(100);
       }
@@ -184,11 +183,136 @@ test("phones reveal results only after their screen hand, including queued actio
     await expect(phoneB.locator(".raid-feedback")).toContainText(`攻撃 ${commands[1].amount}`);
     expect((await snapshot(request)).revealedTurn).toBe(2);
     // Reset while a new action waits must release the outstanding poll and close the obsolete dialog.
-    await phoneA.getByRole("button", { name: "閉じて続ける", exact: true }).click();
+    await expect(phoneA.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
     await submit(phoneA);
     await request.post("/api/local-raid", { headers, data: { type: "reset" } });
     await expect(phoneA.getByRole("dialog")).not.toBeVisible();
-    await expect(phoneA.getByRole("button", { name: /じゃんけんで送信/ })).toBeEnabled();
+    await expect(phoneA.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
     await expect(phoneA.getByRole("progressbar", { name: "自分のHP（同期）", exact: true })).toHaveAttribute("aria-valuenow", "170");
+  } finally { await alpha.close(); await beta.close(); }
+});
+
+test("a failed send retries the same command and a reloaded phone restores its partner", async ({ page, request }) => {
+  await request.post("/api/local-raid", { headers, data: { type: "reset" } });
+  await guest(page.request, "再送とキャラ復元");
+  await page.goto("/battle/raid?sync=local");
+  await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
+  await page.getByLabel("参加キャラクター").selectOption("flame-dragon");
+  await expect(page.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "120");
+  await expect(page.getByRole("button", { name: "グーを選択", exact: true })).toBeEnabled();
+  const sent: Array<Record<string, unknown>> = [];
+  await page.route("**/api/local-raid", (route) => {
+    if (route.request().method() === "POST" && route.request().postDataJSON().type === "command") {
+      sent.push(route.request().postDataJSON());
+      if (sent.length === 1) return route.abort();
+    }
+    return route.continue();
+  });
+  await page.getByRole("button", { name: "グーを選択", exact: true }).click();
+  await page.getByRole("button", { name: "攻撃で送信", exact: true }).click();
+  await expect(page.getByRole("button", { name: "同じ行動を再送する", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "回復を選択", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "同じ行動を再送する", exact: true }).click();
+  await expect(page.locator(".raid-feedback")).toContainText("スクリーンのじゃんけんを待っています");
+  expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0]);
+  const accepted = await snapshot(page.request, true);
+  expect(accepted.results).toHaveLength(1);
+  await page.reload();
+  await expect(page.getByLabel("参加キャラクター")).toHaveValue("flame-dragon");
+  await expect(page.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "120");
+  await expect(page.locator(".raid-feedback")).toContainText("スクリーンのじゃんけんを待っています");
+  expect((await snapshot(page.request, true)).me?.hp).toBe(100);
+  await request.post("/api/local-raid", { headers, data: { type: "reveal", roomId: accepted.roomId, turn: accepted.lastResult!.turn } });
+  await expect(page.locator(".raid-rps-result")).toContainText(`攻撃 ${accepted.lastResult!.amount}`);
+  await expect(page.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "120");
+  await request.post("/api/local-raid", { headers, data: { type: "impact", kind: "counter", roomId: accepted.roomId, turn: accepted.lastResult!.turn } });
+  await expect(page.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "100");
+  await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "じゃんけんの手を選ぼう", exact: true })).toBeDisabled();
+});
+
+test("phone HP and recoil follow actual screen impacts, with self-healing before the counter", async ({ browser, page, request }, testInfo) => {
+  test.setTimeout(90000);
+  await request.post("/api/local-raid", { headers, data: { type: "reset" } });
+  const alpha = await browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const beta = await browser.newContext({ baseURL: origin });
+  try {
+    await guest(alpha.request, "命中タイミングA"); await guest(beta.request, "命中タイミングB");
+    await beta.request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem" } });
+    const phone = await alpha.newPage();
+    await phone.goto("/battle/raid?sync=local");
+    await page.context().addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      Object.defineProperty(HTMLCanvasElement.prototype, "getContext", { value: function (this: HTMLCanvasElement, type: string, ...args: unknown[]) {
+        if (type.startsWith("webgl") || type === "experimental-webgl") return null;
+        return Reflect.apply(original, this, [type, ...args]);
+      } });
+    });
+    await page.clock.install(); await page.goto("/raid/screen?sync=local");
+    await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toHaveAttribute("data-renderer", "fallback");
+    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+    const main = page.getByRole("main", { name: "会場レイドスクリーン" });
+    const hp = phone.getByRole("progressbar", { name: "自分のHP（同期）", exact: true });
+    const character = phone.getByRole("region", { name: "自分のキャラクター", exact: true });
+    const drive = async (attribute: string, value: string) => {
+      for (let i = 0; i < 120 && await main.getAttribute(attribute) !== value; i++) await page.clock.runFor(100);
+      await expect(main).toHaveAttribute(attribute, value);
+    };
+    const reveal = async () => {
+      await drive("data-cue", "rps");
+      const hand = page.locator("[data-rps-hand]");
+      for (let i = 0; i < 30 && await hand.getAttribute("data-revealed") !== "true"; i++) await page.clock.runFor(100);
+      await expect(hand).toHaveAttribute("data-revealed", "true");
+      await expect(phone.locator(".raid-rps-result")).toContainText("ボス：");
+    };
+    await phone.getByRole("button", { name: "グーを選択", exact: true }).click();
+    await phone.getByRole("button", { name: "攻撃で送信", exact: true }).click();
+    await reveal();
+    await expect(hp).toHaveAttribute("aria-valuenow", "170");
+    await expect(character).toHaveAttribute("data-reaction", "idle");
+    await drive("data-impact-phase", "reaction");
+    const attacked = await snapshot(request);
+    await expect(phone.getByRole("progressbar", { name: "ボスHP（同期）" })).toHaveAttribute("aria-valuenow", String(attacked.bossHp));
+    await expect(hp).toHaveAttribute("aria-valuenow", "170");
+    await drive("data-cue", "counter"); await page.clock.runFor(1000);
+    await expect(main).toHaveAttribute("data-counter-impact", "false");
+    await expect(hp).toHaveAttribute("aria-valuenow", "170");
+    let rejectOnce = true;
+    await page.route("**/api/local-raid", (route) => {
+      if (route.request().method() === "POST") {
+        const input = route.request().postDataJSON();
+        if (input.type === "impact" && input.kind === "counter" && rejectOnce) { rejectOnce = false; return route.abort(); }
+      }
+      return route.continue();
+    });
+    await drive("data-counter-impact", "true");
+    await expect.poll(() => rejectOnce).toBe(false);
+    await expect(hp).toHaveAttribute("aria-valuenow", "170");
+    await page.clock.runFor(600);
+    await expect(hp).toHaveAttribute("aria-valuenow", "150");
+    await expect(character).toHaveAttribute("data-reaction", "counter");
+    await expect(phone.getByText("−20", { exact: true })).toBeVisible();
+    expect((await snapshot(beta.request, true)).me?.hp).toBe(170);
+    await phone.screenshot({ path: testInfo.outputPath("raid-mobile-counter-contact.png") });
+
+    // Reloading between hand reveal and damage must resume the unresolved effect, not skip it.
+    await phone.getByRole("button", { name: "回復を選択", exact: true }).click();
+    await phone.getByRole("button", { name: "グーを選択", exact: true }).click();
+    await phone.getByRole("button", { name: "回復で送信", exact: true }).click();
+    await reveal();
+    const healing = (await snapshot(request)).lastResult!;
+    await expect(hp).toHaveAttribute("aria-valuenow", "150");
+    await page.reload();
+    await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toHaveAttribute("data-renderer", "fallback");
+    await drive("data-cue", "heal");
+    for (let i = 0; i < 15 && (await snapshot(request)).actionTurn < healing.turn; i++) await page.clock.runFor(100);
+    await expect(hp).toHaveAttribute("aria-valuenow", String(150 + healing.amount));
+    await expect(character).toHaveAttribute("data-reaction", "heal");
+    await drive("data-cue", "counter"); await page.clock.runFor(1000);
+    await expect(main).toHaveAttribute("data-counter-impact", "false");
+    await expect(hp).toHaveAttribute("aria-valuenow", String(150 + healing.amount));
+    await drive("data-counter-impact", "true");
+    await expect(hp).toHaveAttribute("aria-valuenow", String(150 + healing.amount - healing.counterDamage));
+    await expect(character).toHaveAttribute("data-reaction", "counter");
   } finally { await alpha.close(); await beta.close(); }
 });

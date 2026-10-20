@@ -66,7 +66,7 @@ test("screen QR decodes to a LAN entry link and a new phone reaches the synced r
     players.push((await me.json()).player.id);
     await expect(mobile).toHaveURL(url.href);
     await expect(mobile.getByRole("heading", { name: "レイドバトル", exact: true })).toBeVisible();
-    await expect(mobile.getByRole("status")).toHaveText("接続済み。攻撃・回復を選んでスクリーンへ送信！");
+    await expect(mobile.locator(".raid-feedback")).toHaveText("攻撃・回復と、じゃんけんの手を選ぼう");
     await expect(mobile.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
     await expect(mobile.getByRole("button", { name: "回復を選択", exact: true })).toBeEnabled();
     expect((await mobile.request.get(`${url.origin}/api/me`)).status()).toBe(200);

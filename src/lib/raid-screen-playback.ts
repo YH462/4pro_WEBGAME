@@ -30,6 +30,14 @@ function steps(result: LocalRaidResult): ShowcaseCue[] {
   return ["rps", result.action === "heal" ? "heal" : result.multiplier === 2 ? "critical" : "attack",
     ...(result.counterDamage > 0 ? ["counter" as const] : []), ...(result.bossHpAfter === 0 ? ["victory" as const] : [])];
 }
+function resume(snapshot: LocalRaidSnapshot): RaidScreenPlayback {
+  const waiting = snapshot.results.filter((result) => result.turn > snapshot.counterTurn);
+  const active = waiting[0] ?? null;
+  const step = !active || active.turn > snapshot.revealedTurn ? 0 : active.turn > snapshot.actionTurn ? 1 : 2;
+  return { ...emptyRaidPlayback, roomId: snapshot.roomId, lastTurn: snapshot.lastResult?.turn ?? 0,
+    hp: active ? step === 0 ? active.bossHpBefore : active.bossHpAfter : snapshot.bossHp,
+    maxHp: snapshot.bossMaxHp, active, pending: waiting.slice(1), step };
+}
 export function raidScreenScene(state: RaidScreenPlayback): RaidScreenScene {
   const result = state.active;
   const cue = result ? steps(result)[state.step] : state.hp === 0 ? "victory" : state.hp <= state.maxHp * .2 ? "weaken" : "idle";
@@ -52,20 +60,16 @@ export function raidPlaybackReducer(state: RaidScreenPlayback, action: { type: "
   }
   const snapshot = action.snapshot;
   const lastTurn = snapshot.lastResult?.turn ?? 0;
-  // Reloading skips published history, but must still play hands that waiting phones have not seen.
+  // Resume from the first effect that has not landed, even if its RPS hand was already revealed.
   if (state.roomId !== snapshot.roomId) {
-    const waiting = snapshot.results.filter((result) => result.turn > snapshot.revealedTurn);
-    return { ...emptyRaidPlayback, roomId: snapshot.roomId, lastTurn, hp: waiting[0]?.bossHpBefore ?? snapshot.bossHp,
-      maxHp: snapshot.bossMaxHp, active: waiting[0] ?? null, pending: waiting.slice(1) };
+    return resume(snapshot);
   }
   if (lastTurn <= state.lastTurn) return state;
   const incoming = snapshot.results.filter((result) => result.turn > state.lastTurn);
   const pending = [...state.pending, ...incoming];
   // An exceptionally long disconnect/backlog catches up explicitly instead of inventing events.
   if (incoming[0]?.turn !== state.lastTurn + 1 || pending.length > 200) {
-    const waiting = snapshot.results.filter((result) => result.turn > snapshot.revealedTurn);
-    return { ...emptyRaidPlayback, roomId: snapshot.roomId, lastTurn, hp: waiting[0]?.bossHpBefore ?? snapshot.bossHp,
-      maxHp: snapshot.bossMaxHp, active: waiting[0] ?? null, pending: waiting.slice(1), skipped: true };
+    return { ...resume(snapshot), skipped: true };
   }
   return { ...state, lastTurn, skipped: false, active: state.active ?? pending[0] ?? null, pending: state.active ? pending : pending.slice(1) };
 }
