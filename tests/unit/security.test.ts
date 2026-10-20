@@ -37,13 +37,20 @@ describe("nickname input", () => {
   });
 });
 describe("initial master data", () => {
+  it("has 12 unique characters including seven clearly labelled drafts", () => {
+    expect(characters).toHaveLength(12);
+    expect(new Set(characters.map((character) => character.id)).size).toBe(12);
+    const drafts = characters.filter((character) => character.id.startsWith("temp-"));
+    expect(drafts).toHaveLength(7);
+    expect(drafts.every((character) => character.name.startsWith("仮キャラ") && character.departmentId === null && character.baseHp > 0)).toBe(true);
+  });
   it("maps four normal characters one-to-one to departments", () => {
-    const normal = characters.filter((character) => !character.isLegendary);
+    const normal = characters.filter((character) => !character.isLegendary && character.departmentId);
     expect(normal).toHaveLength(4);
     expect(new Set(normal.map((character) => character.departmentId))).toEqual(new Set(departments.map((department) => department.id)));
   });
   it("matches all requested baseline stats including the legend", () => {
-    expect(characters.map((character) => [character.baseHp, character.baseAttack, character.baseDefense, character.baseSpeed])).toEqual([[170, 27, 38, 15], [125, 33, 22, 30], [120, 40, 20, 25], [135, 29, 23, 23], [155, 36, 30, 26]]);
+    expect(characters.slice(0, 5).map((character) => [character.baseHp, character.baseAttack, character.baseDefense, character.baseSpeed])).toEqual([[170, 27, 38, 15], [125, 33, 22, 30], [120, 40, 20, 25], [135, 29, 23, 23], [155, 36, 30, 26]]);
     expect(characters.filter((character) => character.isLegendary).map((character) => character.name)).toEqual(["4プロ"]);
   });
 });

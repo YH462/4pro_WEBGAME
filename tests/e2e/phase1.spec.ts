@@ -24,7 +24,7 @@ test("guest entry, persistent session, dictionary and nickname update", async ({
   expect((await (await page.request.get("/api/me")).json()).player.nickname).toBe("テスト冒険者");
   await page.goto("/collection");
   await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
-  await expect(page.locator(".collection-card")).toHaveCount(5);
+  await expect(page.locator(".collection-card")).toHaveCount(12);
   await expect(page.getByRole("list", { name: "キャラクター一覧" }).locator(":scope > li")).toHaveCount(12);
   await page.getByRole("link", { name: "フォレストゴーレムの詳細を見る（未獲得）", exact: true }).click();
   await expect(page.getByRole("heading", { name: "フォレストゴーレム" })).toBeVisible();
@@ -108,7 +108,7 @@ test("health, master data and DB-backed rate limiting", async ({ page }) => {
   expect((await request.get("/api/health")).status()).toBe(200);
   const { player } = await start(request);
   const { characters } = await (await request.get("/api/characters")).json();
-  expect(characters).toHaveLength(5);
+  expect(characters).toHaveLength(12);
   for (const character of characters) { expect(character.specialMove).toMatchObject({ slot: 1, name: "必殺技", confirmed: false, effect: null }); expect(character).not.toHaveProperty("skills"); }
   await db.rateLimitBucket.upsert({ where: { key: `nickname:${player.id}` }, update: { hits: 20, expiresAt: new Date(Date.now() + 60_000) }, create: { key: `nickname:${player.id}`, hits: 20, expiresAt: new Date(Date.now() + 60_000) } });
   try {

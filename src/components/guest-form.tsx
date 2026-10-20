@@ -2,7 +2,7 @@
 import { useId, useState, type Ref } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LoaderCircle, X } from "lucide-react";
-export function GuestForm({ initialNickname = "", mode = "start", className = "", inputRef }: { initialNickname?: string; mode?: "start" | "edit"; className?: string; inputRef?: Ref<HTMLInputElement> }) {
+export function GuestForm({ initialNickname = "", mode = "start", className = "", inputRef, destination = "/" }: { initialNickname?: string; mode?: "start" | "edit"; className?: string; inputRef?: Ref<HTMLInputElement>; destination?: "/" | "/battle/raid?sync=local" }) {
   const router = useRouter();
   const [nickname, setNickname] = useState(initialNickname);
   const [busy, setBusy] = useState(false);
@@ -14,7 +14,7 @@ export function GuestForm({ initialNickname = "", mode = "start", className = ""
       const response = await fetch(mode === "start" ? "/api/guest" : "/api/me", { method: mode === "start" ? "POST" : "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "保存できませんでした。");
-      if (mode === "start") { router.replace("/"); router.refresh(); }
+      if (mode === "start") { router.replace(destination); router.refresh(); }
       else { setMessage("ニックネームを保存しました。"); router.refresh(); }
     } catch (error) { setMessage(error instanceof Error ? error.message : "接続を確認してください。"); }
     finally { setBusy(false); }

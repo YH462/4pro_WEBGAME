@@ -39,8 +39,8 @@ test("reads a real QR from camera frames and releases the camera before navigati
   await expect(page.getByRole("dialog", { name: "レイドQRを読み取る" })).not.toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { qrCameraState: { started: number } }).qrCameraState.started)).toBe(0);
   await page.getByRole("button", { name: "QRでレイドに参加", exact: true }).click();
-  await expect(page).toHaveURL(/\/battle$/);
-  await expect(page.getByRole("heading", { name: "バトル", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/battle\/raid$/);
+  await expect(page.getByRole("heading", { name: "レイドバトル", exact: true })).toBeVisible();
   const state = await page.evaluate(() => (window as unknown as { qrCameraState: { started: number; stopped: number } }).qrCameraState);
   expect(state.started).toBe(1);
   expect(state.stopped).toBeGreaterThanOrEqual(1);

@@ -5,8 +5,8 @@ export function raidQrDestination(value: string, origin: string): string | null 
   try {
     const url = new URL(text, origin);
     if (!["http:", "https:"].includes(url.protocol) || url.origin !== origin || url.username || url.password) return null;
-    if (url.pathname !== "/battle" && url.pathname !== "/battle/") return null;
-    return `/battle${url.search}`;
+    if (!["/battle", "/battle/", "/battle/raid", "/battle/raid/"].includes(url.pathname)) return null;
+    return `/battle/raid${url.search}`;
   } catch {
     return null;
   }

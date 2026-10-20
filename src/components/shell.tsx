@@ -6,7 +6,7 @@ import styles from "./navigation.module.css";
 const items = [
   { href: "/", label: "ホーム", sub: "HOME", icon: House },
   { href: "/collection", label: "キャラ図鑑", sub: "COLLECTION", icon: BookOpen },
-  { href: "/battle", label: "バトル", sub: "CO-OP RAID", icon: Swords },
+  { href: "/battle", label: "バトル", sub: "CPU BATTLE", icon: Swords },
 ];
 
 export function Shell({ children, active = "/" }: { children: React.ReactNode; active?: string }) {

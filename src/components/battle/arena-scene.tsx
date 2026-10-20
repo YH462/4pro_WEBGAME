@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { createBattleArena } from "@/lib/battle-arena";
 import { EnemyArt } from "./enemy-art";
 
-export function ArenaScene({ animationId }: { animationId: number }) {
+export function ArenaScene({ animationId, caption = "EXHIBITION RAID / TEST ARENA" }: { animationId: number; caption?: string }) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const arena = useRef<ReturnType<typeof createBattleArena> | null>(null);
@@ -40,5 +40,5 @@ export function ArenaScene({ animationId }: { animationId: number }) {
     };
   }, []);
   useEffect(() => { if (animationId > 0) arena.current?.attack(); }, [animationId]);
-  return <div className={`arena-scene arena-${mode}`} ref={root} data-renderer={mode}><EnemyArt/><canvas ref={canvas} aria-label="立体のキング・アクア" role="img"/><span className="arena-floor-label">EXHIBITION RAID / TEST ARENA</span></div>;
+  return <div className={`arena-scene arena-${mode}`} ref={root} data-renderer={mode}><EnemyArt/><canvas ref={canvas} aria-label="立体のキング・アクア" role="img"/><span className="arena-floor-label">{caption}</span></div>;
 }

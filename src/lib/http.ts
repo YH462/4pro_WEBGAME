@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { config } from "./config";
 import { db } from "./db";
+import { developmentOriginAllowed } from "./local-network";
 export class HttpError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -18,7 +19,9 @@ export async function api(action: () => Promise<NextResponse>) {
   }
 }
 export function checkOrigin(request: Request) {
-  if (request.headers.get("origin") !== config().origin) throw new HttpError(403, "この操作は会場アプリから実行してください。");
+  const cfg = config();
+  const origin = request.headers.get("origin");
+  if (origin !== cfg.origin && !developmentOriginAllowed(origin, cfg.APP_URL, cfg.simulator && cfg.ALLOW_INSECURE_LOCAL_HTTP === "true")) throw new HttpError(403, "この操作は会場アプリから実行してください。");
   if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") throw new HttpError(415, "JSON形式で送信してください。");
 }
 export async function readJson(request: Request) {

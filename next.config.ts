@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
+import { localNetworkHosts } from "./src/lib/local-network";
 const config: NextConfig = {
+  allowedDevOrigins: localNetworkHosts(),
   poweredByHeader: false,
   devIndicators: false,
   async headers() {
