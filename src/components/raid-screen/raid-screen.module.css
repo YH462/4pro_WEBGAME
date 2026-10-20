@@ -113,3 +113,4 @@
 .playback a { display:flex; align-items:center; justify-content:center; padding:11px 14px; font-size:12px; font-weight:700; border:1px solid #d9c8d1; background:#fff; }.phaseText { max-width:65%; }.phaseText h2,.phaseText p { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 @media (prefers-reduced-motion:reduce) { .screen * { transition:none!important; } }
 @media (max-width:600px) and (orientation:portrait) { .tools { bottom:.2cqw; }.tools button { font-size:1.3cqw; padding:.2cqw .5cqw; }.tools svg { width:1.5cqw; height:1.5cqw; }.bottomline { padding-right:20cqw; }.settings { padding:20px; }.settingsHeading h2 { font-size:19px; } }
+.tools a { display:flex; align-items:center; gap:.3cqw; background:#ffffffa8; border:1px solid #d4c6cd; color:#6e5963; border-radius:.2cqw; padding:.18cqw .45cqw; font-size:.55cqw; }.tools a:hover { background:#fff; color:var(--accent); }.bottomline { padding-right:16cqw; }

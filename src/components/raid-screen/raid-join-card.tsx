@@ -5,11 +5,11 @@ import { Expand, QrCode, Smartphone, X } from "lucide-react";
 import type { RaidEntryTarget } from "@/lib/raid-entry";
 import styles from "./raid-join-card.module.css";
 
-export function RaidJoinCard({ targets, local }: { targets: RaidEntryTarget[]; local: boolean }) {
+export function RaidJoinCard({ targets, local, compact = false }: { targets: RaidEntryTarget[]; local: boolean; compact?: boolean }) {
   const [selected, setSelected] = useState("");
   const target = targets.find((item) => item.url === selected) ?? targets[0];
   const enlarged = useRef<HTMLDialogElement>(null);
-  return <section className={styles.card} aria-label="レイド参加案内">
+  return <section className={`${styles.card} ${compact ? styles.compact : ""}`} aria-label="レイド参加案内">
     <div className={styles.eyebrow}><QrCode /><span>JOIN THE RAID</span><span>{local ? "LOCAL" : "PREVIEW"}</span></div>
     <h2>スマホで参加しよう！</h2>
     {target ? <>

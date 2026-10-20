@@ -6,11 +6,14 @@ import { headers } from "next/headers";
 import QRCode from "qrcode";
 import { localNetworkHosts } from "@/lib/local-network";
 import { raidEntryUrls } from "@/lib/raid-entry";
+import { RaidShowcase } from "@/components/raid-screen/raid-showcase";
 
 export const metadata: Metadata = { title: "会場レイドスクリーン" };
 
-export default async function RaidScreenPage({ searchParams }: { searchParams: Promise<{ sync?: string }> }) {
-  const local = (await searchParams).sync === "local";
+export default async function RaidScreenPage({ searchParams }: { searchParams: Promise<{ sync?: string; demo?: string }> }) {
+  const params = await searchParams;
+  const showcase = params.demo === "effects";
+  const local = !showcase && params.sync === "local";
   const cfg = config();
   if (local && !cfg.simulator) notFound();
   const urls = raidEntryUrls({ appUrl: cfg.APP_URL, local, lanHosts: localNetworkHosts(), requestHost: (await headers()).get("host") });
@@ -18,5 +21,5 @@ export default async function RaidScreenPage({ searchParams }: { searchParams: P
     url,
     qrImage: await QRCode.toDataURL(url, { errorCorrectionLevel: "M", margin: 4, scale: 12, color: { dark: "#000000", light: "#ffffff" } }),
   })));
-  return <RaidScreen local={local} entryTargets={entryTargets}/>;
+  return showcase ? <RaidShowcase entryTargets={entryTargets}/> : <RaidScreen local={local} entryTargets={entryTargets}/>;
 }

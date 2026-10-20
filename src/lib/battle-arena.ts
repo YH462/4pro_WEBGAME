@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { battlePreview } from "./battle-preview";
 
 /** Procedural armored turtle inspired by main:battle.html's cyber_turtle. */
-function buildBoss() {
+export function buildBoss() {
   const boss = new THREE.Group();
   const armor = new THREE.MeshStandardMaterial({ color: 0x403840, metalness: .72, roughness: .48, flatShading: true });
   const trim = new THREE.MeshStandardMaterial({ color: 0xe6dde1, metalness: .45, roughness: .3 });

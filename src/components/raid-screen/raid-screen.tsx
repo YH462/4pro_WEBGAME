@@ -153,7 +153,7 @@ export function RaidScreen({ local = false, entryTargets = [] }: { local?: boole
       </footer>
       <div className={styles.bottomline}><span>FOUR PRO PROJECT <i /> KOSEN FESTIVAL</span><span>{local ? syncError ? "通信切断・再接続中" : "ローカル同期テスト・500msごとに更新" : "表示サンプル・参加受付前"}</span></div>
 
-      <div className={styles.tools}><button type="button" onClick={() => settings.current?.showModal()}><Settings2 />{local ? "同期設定" : "表示設定"}</button><button type="button" aria-label={fullscreen ? "全画面表示を終了" : "全画面で表示"} onClick={toggleFullscreen}>{fullscreen ? <Maximize /> : <Expand />}</button></div>
+      <div className={styles.tools}><a href="/raid/screen?demo=effects"><Play />PC演出デモ</a><button type="button" onClick={() => settings.current?.showModal()}><Settings2 />{local ? "同期設定" : "表示設定"}</button><button type="button" aria-label={fullscreen ? "全画面表示を終了" : "全画面で表示"} onClick={toggleFullscreen}>{fullscreen ? <Maximize /> : <Expand />}</button></div>
     </main>
 
     <dialog className={styles.settings} aria-labelledby="screen-settings-title" ref={settings} onClick={(event) => { if (event.target === event.currentTarget) settings.current?.close(); }}>
