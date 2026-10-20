@@ -18,6 +18,7 @@ const handIcons = { rock: HandFist, scissors: Scissors, paper: Hand };
 type RpsView = Pick<ReturnType<typeof showcaseRpsFrame>, "hand" | "revealed" | "beat">;
 
 export type RaidScreenPresentation = {
+  collection?: { round: number; seconds: number; submitted: number; eligible: number };
   scene: RaidScreenScene; members: LocalRaidParticipant[]; bossName: string;
   local: boolean; status: string; title: string; message: string; pending: number;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
@@ -44,7 +45,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   const effects = useRef<HTMLDivElement>(null);
   const health = useRef<HTMLSpanElement>(null);
   const delayedHealth = useRef<HTMLSpanElement>(null);
-  const context: RaidArenaContext | undefined = screen ? { members: screen.members, actorId: screen.scene.actorId, counterIds: screen.scene.counterIds } : undefined;
+  const context: RaidArenaContext | undefined = screen ? { members: screen.members, actorId: screen.scene.actorId, counterIds: screen.scene.counterIds, actions: screen.scene.actions } : undefined;
   const latest = useRef({ auto: false, paused: false, context, complete: screen?.onComplete });
   latest.current = { auto: !screen && auto, paused: !screen && paused, context, complete: screen?.onComplete };
   const fixture = showcaseScenes.find((item) => item.id === cue)!;
@@ -140,7 +141,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   }
 
   return <div className={styles.viewport}>
-    <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
+    <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} data-actor-ids={screen?.scene.actions.map((action) => action.participantId).join(",")} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
       <div className={styles.honeycomb}/>
       <div className={styles.brand}>4<span>PRO</span><small>ONE TEAM. ONE RAID.</small></div>
       <div className={styles.demoBadge}>{screen?.status ?? "PC 演出デモ"}</div>
@@ -152,6 +153,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
       </header>
       <section className={styles.arena} aria-label="ボスとエフェクト" data-renderer={renderer}>
         <div className={styles.floor}/>
+        {screen?.collection && <div className={styles.collection} role="timer" aria-label="全員共通の入力受付"><span>ROUND {String(screen.collection.round).padStart(2, "0")} / INPUT TIME</span><strong>{screen.collection.seconds}<small>秒</small></strong><p>{screen.collection.submitted} / {screen.collection.eligible}人 送信済み</p><i style={{ width: `${screen.collection.seconds * 10}%` }}/></div>}
         {renderer !== "webgl" && <div className={styles.fallback}><EnemyArt/></div>}
         <canvas ref={canvas} aria-label="キング・アクアと攻撃エフェクト" role="img"/>
         <div ref={effects} key={key} className={styles.effects} style={{ "--impact-delay": `${showcaseImpactMs}ms`, "--counter-impact-delay": `${counterImpactMs}ms`, "--rps-reveal-delay": `${rpsRevealMs}ms` } as CSSProperties} aria-hidden="true">
@@ -182,7 +184,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
       </section>
       <div className={styles.members}><Users/><strong>{screen ? screen.members.length : 12}<small>人</small></strong><span>{screen ? `生存 ${screen.members.filter((member) => member.hp > 0).length} 人` : "DEMO TEAM"}</span></div>
       <div className={styles.qr}><RaidJoinCard targets={entryTargets} local={screen?.local ?? false} compact={!screen}/></div>
-      {screen && <ul className={styles.liveMembers} aria-label="参加者とキャラクター">{screen.members.map((member, i) => <li key={member.id} data-participant-id={member.id} data-character-id={member.characterId} data-active={screen.scene.actorId === member.id} style={{ "--member-color": `#${(characterColors[member.characterId] ?? 0xb18aff).toString(16).padStart(6, "0")}` } as CSSProperties}><b>{String(i + 1).padStart(2, "0")}</b><span>{member.nickname}<small>{member.characterName}</small></span><strong>{member.hp}<small> / {member.maxHp}</small></strong></li>)}</ul>}
+      {screen && <ul className={styles.liveMembers} aria-label="参加者とキャラクター">{screen.members.map((member, i) => <li key={member.id} data-participant-id={member.id} data-character-id={member.characterId} data-active={screen.scene.actions.some((action) => action.participantId === member.id)} style={{ "--member-color": `#${(characterColors[member.characterId] ?? 0xb18aff).toString(16).padStart(6, "0")}` } as CSSProperties}><b>{String(i + 1).padStart(2, "0")}</b><span>{member.nickname}<small>{member.characterName}</small></span><strong>{member.hp}<small> / {member.maxHp}</small></strong></li>)}</ul>}
       {!screen && <div className={styles.controls} aria-label="演出デモの操作">
         {cue === "rps" && <div className={styles.rpsPicker} role="group" aria-label="デモのボスの手"><span>デモの手</span>{raidHands.map(({ id, label }) => {
           const Icon = handIcons[id];

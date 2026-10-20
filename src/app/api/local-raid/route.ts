@@ -10,7 +10,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const inputSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("join"), characterId: z.string().min(1).max(80) }).strict(),
-  z.object({ type: z.literal("command"), roomId: z.uuid(), requestId: z.uuid(), action: z.enum(["attack", "heal"]), hand: z.enum(["rock", "scissors", "paper"]) }).strict(),
+  z.object({ type: z.literal("command"), roomId: z.uuid(), round: z.number().int().positive(), requestId: z.uuid(), action: z.enum(["attack", "heal"]), hand: z.enum(["rock", "scissors", "paper"]) }).strict(),
+  z.object({ type: z.literal("start"), roomId: z.uuid() }).strict(),
+  z.object({ type: z.literal("finish"), roomId: z.uuid(), turn: z.number().int().positive() }).strict(),
   z.object({ type: z.literal("reset") }).strict(),
   z.object({ type: z.literal("reveal"), roomId: z.uuid(), turn: z.number().int().positive() }).strict(),
   z.object({ type: z.literal("impact"), roomId: z.uuid(), turn: z.number().int().positive(), kind: z.enum(["action", "counter"]) }).strict(),
@@ -30,12 +32,6 @@ export async function GET(request: Request) {
       const revision = z.coerce.number().int().nonnegative().parse(params.get("waitForRevision"));
       await room.waitForRevision(roomId, revision, request.signal);
     }
-    if (personal && params.has("waitForReveal")) {
-      const roomId = z.uuid().parse(params.get("roomId"));
-      const turn = z.coerce.number().int().positive().parse(params.get("waitForReveal"));
-      const state = room.snapshot(player?.id);
-      if (state.me?.lastResult?.turn === turn) await room.waitForReveal(roomId, turn, request.signal);
-    }
     return json({ state: room.snapshot(player?.id) });
   });
 }
@@ -49,6 +45,8 @@ export async function POST(request: Request) {
     try {
       // Local development operator control; this is not the production staff interface.
       if (input.type === "reset") return json({ state: room.reset() });
+      if (input.type === "start") return json({ state: room.start(input.roomId) });
+      if (input.type === "finish") return json({ state: room.finish(input.roomId, input.turn) });
       if (input.type === "reveal") return json({ state: room.reveal(input.roomId, input.turn) });
       if (input.type === "impact") return json({ state: room.impact(input.roomId, input.turn, input.kind) });
       const player = await currentPlayer();

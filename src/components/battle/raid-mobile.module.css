@@ -80,3 +80,6 @@
   .controls { grid-column:2; grid-row:2; grid-template-rows:16px minmax(0,1fr)22px 44px; padding:4px 10px 6px; gap:3px; }.controlHeading>span { font-size:8px; }.commandArea { grid-template-rows:44px minmax(44px,1fr); gap:3px; }.handRow button { min-height:44px; }.handRow button>span { flex-direction:row; gap:6px; }.handRow button>span>svg:first-child { height:21px; width:21px; }.feedback { font-size:9px; }.waiting>svg { height:23px; width:23px; }.waiting>strong { font-size:18px; }.result>strong { font-size:24px; }.result>strong b { font-size:28px; }.confirm { min-height:44px; font-size:13px; }
 }
 @media (prefers-reduced-motion:reduce) { .console *,.console *:before,.console *:after { animation:none!important; transition:none!important; } }
+.countdown { color:#d02242; font-size:12px; letter-spacing:0; margin-left:7px; }.controlHeading>span>small { color:#9d7b88; font-size:8px; margin-left:5px; letter-spacing:0; }
+.sentCommand { display:flex; align-items:center; justify-content:center; gap:12px; color:#b02a45; }
+.sentCommand>div { display:flex; flex-direction:column; align-items:flex-start; gap:1px; }.sentCommand small { font-size:9px; color:#946075; }.sentCommand b { font-size:20px; line-height:1.3; color:#9e1835; }

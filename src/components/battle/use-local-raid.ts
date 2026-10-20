@@ -33,7 +33,7 @@ export function useLocalRaid(enabled: boolean, personal = false) {
     applied.current = Math.max(id, applied.current);
     latest.current = { roomId: body.state.roomId, revision: body.state.revision };
     const turn = body.state.me?.lastResult?.turn;
-    pending.current = turn && turn > body.state.counterTurn ? { roomId: body.state.roomId, revision: body.state.revision } : null;
+    pending.current = personal && (body.state.me?.submission || (turn && turn > body.state.counterTurn)) ? { roomId: body.state.roomId, revision: body.state.revision } : null;
     setState(body.state); setError("");
   }, []);
   const refresh = useCallback(async () => {

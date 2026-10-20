@@ -165,6 +165,20 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   healing.rotation.x = -Math.PI / 2; healing.position.copy(allies[2].home).add(new THREE.Vector3(0, .02, 0)); scene.add(healing);
   const healingGlow = sprite(0x38ff9d);
   healingGlow.position.copy(allies[2].home).add(new THREE.Vector3(0, .55, 0));
+  // Reused pools: every participant has their own hand origins and healing ring.
+  const teamBeams = allies.flatMap((ally, index) => ally.hands.map((hand, side) => {
+    const path = new THREE.CubicBezierCurve3(new THREE.Vector3(), new THREE.Vector3(), impact.clone(), impact.clone());
+    const make = (radius: number, color: number, additive = true) => {
+      const mesh = new THREE.Mesh(new THREE.TubeGeometry(path, 80, radius, 6, false), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+      mesh.visible = false; scene.add(mesh); return mesh;
+    };
+    const glow = sprite(0x65dcff); hand.add(glow); glow.visible = false;
+    return { index, side, path, mesh: make(.055, 0x65dcff), core: make(.015, 0xffffff, false), bloom: make(.12, 0x65dcff), glow, orb: sprite(0x65dcff) };
+  }));
+  const teamHealing = allies.map(() => {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(.36, .42, 48), new THREE.MeshBasicMaterial({ color: 0x46ffae, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; scene.add(ring); return { ring, glow: sprite(0x38ff9d) };
+  });
 
   const breath = new THREE.Group(); scene.add(breath);
   const mouth = new THREE.Vector3(-.32, 1.17, 1.95);
@@ -246,7 +260,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   let contextKey = "";
   let counterIndices = [0, 1, 2, 3];
   const syncContext = (context: RaidArenaContext) => {
-    const nextKey = JSON.stringify([context.members.map((member) => [member.id, member.characterId]), context.actorId, context.counterIds]);
+    const nextKey = JSON.stringify([context.members.map((member) => [member.id, member.characterId]), context.actorId, context.counterIds, context.actions]);
     if (nextKey === contextKey) return;
     contextKey = nextKey;
     allies.forEach((ally, i) => {
@@ -274,6 +288,16 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       }
       attacker.hands[i].add(trail.launchGlow);
     });
+    if (context.actions) {
+      allies.forEach((ally) => { ally.body.rotation.set(0, 0, 0); ally.body.position.y = .24; ally.arms.forEach((arm) => arm.rotation.set(castArmAngle, 0, 0)); ally.root.updateWorldMatrix(true, true); });
+      teamBeams.forEach((beam) => {
+        const origin = allies[beam.index].hands[beam.side].getWorldPosition(new THREE.Vector3());
+        const side = beam.side ? 1 : -1;
+        beam.path.v0.copy(origin); beam.path.v1.copy(origin).add(new THREE.Vector3(side * .35, .65, -.2));
+        beam.path.v2.copy(impact).add(new THREE.Vector3(side * .55, .3, .15)); beam.path.updateArcLengths();
+        for (const [mesh, radius] of [[beam.mesh, .055], [beam.core, .015], [beam.bloom, .12]] as const) { mesh.geometry.dispose(); mesh.geometry = new THREE.TubeGeometry(beam.path, 80, radius, 6, false); }
+      });
+    }
     counterIndices = context.members.flatMap((member, i) => context.counterIds.includes(member.id) ? [i] : []);
     // A narrow front for a single target; the demo retains its full-team fan.
     targets = (counterIndices.length ? counterIndices : [Math.max(0, actorIndex)]).map((i) => allies[i].home.clone().add(new THREE.Vector3(0, .38, 0)));
@@ -345,7 +369,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     }
     camera.lookAt(look);
     trails.forEach(({ mesh, core, bloom, orb, launchGlow, path }, i) => {
-      const visible = attacking && actorIndex >= 0 && time < showcaseImpactMs / 1000 + 1.5 && (critical || i === 0);
+      const visible = !context?.actions && attacking && actorIndex >= 0 && time < showcaseImpactMs / 1000 + 1.5 && (critical || i === 0);
       mesh.visible = core.visible = bloom.visible = orb.visible = visible;
       const progress = clamp(frame.visualMs / showcaseImpactMs, 0, 1);
       for (const trail of [mesh, core, bloom]) trail.geometry.setDrawRange(0, Math.floor(progress * 80) * (trail === core ? 5 : 6) * 6);
@@ -357,6 +381,23 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       launchGlow.visible = visible && frame.phase === "flight";
       launchGlow.material.color.set(color); launchGlow.material.opacity = (1 - progress) * (reduced ? .15 : .9);
       launchGlow.scale.setScalar(critical ? .65 : .45);
+    });
+    teamBeams.forEach((beam) => {
+      const member = context?.members[beam.index];
+      const action = context?.actions?.find((item) => item.participantId === member?.id && item.action === "attack");
+      const active = Boolean(action && attacking && time < 2.15 && (action.multiplier === 2 || beam.side === 0));
+      beam.mesh.visible = beam.core.visible = beam.bloom.visible = beam.orb.visible = active;
+      beam.glow.visible = active && frame.phase === "flight";
+      if (!active || !action) return;
+      const tint = action.multiplier === 2 ? 0xffc345 : 0x65dcff;
+      const strength = action.multiplier === .5 ? .55 : 1;
+      const progress = clamp(frame.visualMs / showcaseImpactMs, 0, 1);
+      for (const mesh of [beam.mesh, beam.core, beam.bloom]) mesh.geometry.setDrawRange(0, Math.floor(progress * 80) * 6 * 6);
+      beam.mesh.material.color.set(tint); beam.bloom.material.color.set(tint); beam.orb.material.color.set(tint); beam.glow.material.color.set(tint);
+      const opacity = (frame.phase === "flight" ? 1 : envelope) * strength;
+      beam.mesh.material.opacity = opacity * .8; beam.core.material.opacity = opacity; beam.bloom.material.opacity = opacity * .18;
+      beam.orb.position.copy(beam.path.getPoint(progress)); beam.orb.scale.setScalar(action.multiplier === 2 ? .55 : .35); beam.orb.material.opacity = opacity * .85;
+      beam.glow.scale.setScalar(.5); beam.glow.material.opacity = (1 - progress) * strength;
     });
     for (const item of [flare, halo]) { item.visible = attacking && hit >= 0; item.position.copy(impact); item.material.color.set(color); }
     flare.scale.setScalar((critical ? 3.4 : 1.8) * (reduced ? .25 : envelope));
@@ -447,16 +488,23 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       transform.scale.setScalar(envelope * (.4 + i % 3 * .3)); transform.updateMatrix(); debris.setMatrixAt(i, transform.matrix);
     }
     debris.instanceMatrix.needsUpdate = true;
-    const heal = cue === "heal" ? Math.max(0, Math.sin(clamp(time / 3, 0, 1) * Math.PI)) : 0;
+    const heal = !context?.actions && cue === "heal" ? Math.max(0, Math.sin(clamp(time / 3, 0, 1) * Math.PI)) : 0;
     healing.position.set(attacker.home.x, .02, attacker.home.z);
     healingGlow.position.set(attacker.home.x, .55, attacker.home.z);
     healing.material.opacity = heal; healing.scale.setScalar(1 + heal * .35);
     healingGlow.material.opacity = heal * .7; healingGlow.scale.set(1.4, 2.2, 1);
+    teamHealing.forEach(({ ring, glow }, i) => {
+      const action = context?.actions?.find((item) => item.participantId === context.members[i]?.id && item.action === "heal");
+      const pulse = action ? cue === "heal" ? Math.max(0, Math.sin(clamp(time / 2.4, 0, 1) * Math.PI)) : attacking && frame.phase === "reaction" ? envelope : 0 : 0;
+      ring.position.set(allies[i].home.x, .025, allies[i].home.z); glow.position.set(allies[i].home.x, .6, allies[i].home.z);
+      ring.material.opacity = pulse; ring.scale.setScalar(1 + pulse * .7); glow.material.opacity = pulse * .6; glow.scale.set(1.1, 1.8, 1);
+    });
     allies.forEach(({ root, body, arms, legs, home }, i) => {
       // All four react at arrival; vary the pose without staggering the hit.
       const recoil = counter && counterIndices.includes(i) && !reduced ? counterFrame.recoil * [.9, 1, .95, 1.08][i % 4] : 0;
       const slide = counter && counterIndices.includes(i) && !reduced ? counterFrame.slide : 0;
-      const cast = attacking && i === actorIndex ? reduced ? 1 : 1 - ease((time - showcaseImpactMs / 1000 - 1.5) / .5) : 0;
+      const ownAction = context?.actions?.find((item) => item.participantId === context.members[i]?.id && item.action === "attack");
+      const cast = attacking && (context?.actions ? Boolean(ownAction) : i === actorIndex) ? reduced ? 1 : 1 - ease((time - showcaseImpactMs / 1000 - 1.5) / .5) : 0;
       root.position.copy(home);
       root.position.y = reduced ? 0 : cue === "victory" ? Math.abs(Math.sin(time * 5 + i)) * .15 : Math.sin(time * 3 + i) * .02 * (1 - cast);
       root.position.x += slide * (home.x - mouth.x) * .07; root.position.z += slide * (.29 + i % 2 * .04);
@@ -465,7 +513,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       body.rotation.z = recoil * (i % 2 ? -.18 : .18);
       body.position.y = .24 - recoil * .045;
       arms.forEach((arm, index) => {
-        arm.rotation.x = -.75 + (critical || index === 0 ? cast * (castArmAngle + .75) : 0) + recoil * 1.6;
+        arm.rotation.x = -.75 + ((context?.actions ? ownAction?.multiplier === 2 : critical) || index === 0 ? cast * (castArmAngle + .75) : 0) + recoil * 1.6;
         arm.rotation.z = (index ? 1 : -1) * recoil * .65;
       });
       legs.forEach((leg, index) => { leg.rotation.x = recoil * (index ? -.65 : .45); leg.position.z = index ? slide * -.12 : 0; });

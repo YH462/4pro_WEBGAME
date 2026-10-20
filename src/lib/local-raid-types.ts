@@ -2,6 +2,7 @@ import type { RaidHand } from "./raid-rps";
 
 export type LocalRaidAction = "attack" | "heal";
 export type LocalRaidResult = {
+  submitted: boolean;
   id: string;
   participantId: string;
   characterId: string;
@@ -33,6 +34,8 @@ export type LocalRaidParticipant = {
 };
 
 export type LocalRaidMember = {
+  submission: { round: number; action: LocalRaidAction; hand: RaidHand } | null;
+  eligibleRound: number;
   characterId: string;
   hp: number;
   maxHp: number;
@@ -40,6 +43,9 @@ export type LocalRaidMember = {
 };
 
 export type LocalRaidSnapshot = {
+  serverNow: number;
+  round: { number: number; phase: "lobby" | "collecting" | "playing" | "finished"; closesAt: number | null; submitted: number; eligible: number };
+  rounds: LocalRaidRoundResult[];
   roomId: string;
   revision: number;
   revealedTurn: number;
@@ -58,5 +64,15 @@ export type LocalRaidSnapshot = {
   lastResult: LocalRaidResult | null;
   me: LocalRaidMember | null;
   members: LocalRaidParticipant[];
+  results: LocalRaidResult[];
+};
+
+export type LocalRaidRoundResult = {
+  turn: number;
+  boss: RaidHand;
+  bossHpBefore: number;
+  bossHpAfter: number;
+  damage: number;
+  healing: number;
   results: LocalRaidResult[];
 };
