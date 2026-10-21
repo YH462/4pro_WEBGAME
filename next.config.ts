@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
+import { localNetworkHosts } from "./src/lib/local-network";
 const config: NextConfig = {
+  allowedDevOrigins: localNetworkHosts(),
+  serverExternalPackages: ["qrcode"],
   poweredByHeader: false,
   devIndicators: false,
   async headers() {

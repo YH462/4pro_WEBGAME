@@ -7,4 +7,7 @@ export const battlePreview = {
   maxEp: 100,
   maxTurns: 10,
   animationMs: 900,
+  // Effect amounts are examples for the preview, not final character balance.
+  baseAttack: 50,
+  baseSelfHeal: 30,
 } as const;

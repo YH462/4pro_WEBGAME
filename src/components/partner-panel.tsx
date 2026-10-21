@@ -5,6 +5,7 @@ import { BarChart3, Check, FileText, Gauge, Heart, LockKeyhole, ScanLine, Shield
 import { CharacterArt } from "./character-art";
 import type { PartnerView } from "@/lib/character-presentation";
 import styles from "./partner-panel.module.css";
+import { isTemporaryCharacter } from "@/lib/master-data";
 
 const tabs = [
   { id: "stats", label: "ステータス", icon: BarChart3 },
@@ -126,7 +127,7 @@ export function PartnerPanel({ partner }: { partner: PartnerView }) {
           </div>}
           {tab === "about" && <div className={styles.about}>
             <p>{partner.description}</p>
-            <div><ScanLine size={23}/><span>{partner.isLegendary ? "4学科のパートナーをすべて集めると解放されます。" : `${partner.department}の展示で出会えるパートナーです。`}</span></div>
+            <div><ScanLine size={23}/><span>{isTemporaryCharacter(partner.id) ? "仮配置のキャラクターです。CPU対戦でお試しできます。" : partner.isLegendary ? "4学科のパートナーをすべて集めると解放されます。" : `${partner.department}の展示で出会えるパートナーです。`}</span></div>
             <small>キャラクター獲得は準備中です。</small>
           </div>}
         </div>

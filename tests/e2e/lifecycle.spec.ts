@@ -28,6 +28,6 @@ test("active events cannot be purged; explicit end, retention and confirmation a
     expect(await db.playerCharacter.count({ where: { playerId: player.id } })).toBe(0);
     expect(await db.rateLimitBucket.count({ where: { key: `nickname:${player.id}` } })).toBe(0);
     expect(await db.event.count({ where: { id } })).toBe(1);
-    expect(await db.character.count()).toBe(5);
+    expect(await db.character.count()).toBe(12);
   } finally { await db.event.deleteMany({ where: { id } }); await db.$disconnect(); }
 });

@@ -19,7 +19,7 @@ export default async function Home() {
       <div className={styles.screen}>
         <section className={styles.notice} aria-labelledby="home-notice-title">
           <h1 id="home-notice-title"><Megaphone size={18}/>お知らせ</h1>
-          <p>図鑑とプロフィールを利用できます。<span>キャラ獲得・育成・協力レイドは準備中です。</span></p>
+          <p>図鑑・プロフィール・CPU対戦を利用できます。<span>獲得・育成・レイドは準備中です。</span></p>
         </section>
         <ExhibitionMap
           hasPlayer={!!player}

@@ -26,5 +26,5 @@ export function presentCharacter(character: Character & { department: Department
   }];
   const skill = character.skills.find((item) => item.slot === 1);
   const specialMove = skill ? { id: skill.id, name: skill.confirmed ? skill.name : "必殺技", confirmed: skill.confirmed } : null;
-  return { id: character.id, name: character.name, description: character.description, element: character.element, department: character.department?.name ?? "レジェンド", departmentId: character.departmentId, isLegendary: character.isLegendary, number: character.sortOrder, owned: !!owned, stats, specialMove };
+  return { id: character.id, name: character.name, description: character.description, element: character.element, department: character.department?.name ?? (character.isLegendary ? "レジェンド" : "仮キャラ"), departmentId: character.departmentId, isLegendary: character.isLegendary, number: character.sortOrder, owned: !!owned, stats, specialMove };
 }

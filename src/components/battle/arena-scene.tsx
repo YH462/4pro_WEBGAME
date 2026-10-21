@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { createBattleArena } from "@/lib/battle-arena";
 import { EnemyArt } from "./enemy-art";
 
-export function ArenaScene({ animationId }: { animationId: number }) {
+export function ArenaScene({ animationId, caption = "EXHIBITION RAID / TEST ARENA", framing = "default" }: { animationId: number; caption?: string; framing?: "default" | "raid" }) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const arena = useRef<ReturnType<typeof createBattleArena> | null>(null);
@@ -24,7 +24,7 @@ export function ArenaScene({ animationId }: { animationId: number }) {
     void import("@/lib/battle-arena").then(({ createBattleArena }) => {
       if (cancelled || !target || !root.current) return;
       try {
-        arena.current = createBattleArena(target);
+        arena.current = createBattleArena(target, { framing });
         observer = new ResizeObserver(([entry]) => arena.current?.resize(entry.contentRect.width, entry.contentRect.height));
         observer.observe(root.current);
         arena.current.resize(root.current.clientWidth, root.current.clientHeight);
@@ -38,7 +38,7 @@ export function ArenaScene({ animationId }: { animationId: number }) {
       arena.current?.dispose();
       arena.current = null;
     };
-  }, []);
+  }, [framing]);
   useEffect(() => { if (animationId > 0) arena.current?.attack(); }, [animationId]);
-  return <div className={`arena-scene arena-${mode}`} ref={root} data-renderer={mode}><EnemyArt/><canvas ref={canvas} aria-label="立体のキング・アクア" role="img"/><span className="arena-floor-label">EXHIBITION RAID / TEST ARENA</span></div>;
+  return <div className={`arena-scene arena-${mode}`} ref={root} data-renderer={mode}><EnemyArt/><canvas ref={canvas} aria-label="立体のキング・アクア" role="img"/><span className="arena-floor-label">{caption}</span></div>;
 }

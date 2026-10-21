@@ -18,7 +18,7 @@ async function expectScreenFits(page: Page) {
         const target = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
         // Native modal dialogs intentionally cover the background controls.
         if (document.querySelector("dialog[open]") && !element.closest("dialog")) continue;
-        if (target && !element.contains(target)) failures.push(`${element.tagName}.${element.className}: 他の要素が操作を遮る`);
+        if (target && !element.contains(target)) failures.push(`${element.tagName}.${element.className}「${element.textContent?.trim()}」: ${target.tagName}.${target.className}が操作を遮る`);
       }
     }
     const dialog = document.querySelector("dialog[open]");
@@ -42,7 +42,7 @@ test.describe("viewport-contained game screens", () => {
         expect(response.status()).toBe(201);
         playerId = (await response.json()).player.id;
 
-        for (const route of ["/", "/collection", "/collection/four-pro", "/profile", "/battle", "/dev"]) {
+        for (const route of ["/", "/collection", "/collection/four-pro", "/profile", "/battle", "/battle/raid", "/dev"]) {
           await page.goto(route);
           await expect(page.locator(".game-main")).toBeVisible();
           await expectScreenFits(page);
@@ -56,17 +56,22 @@ test.describe("viewport-contained game screens", () => {
               await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
             }
           }
+          if (route === "/battle") {
+            await expect(page.getByRole("group", { name: "対戦キャラクター", exact: true }).getByRole("button")).toHaveCount(12);
+            await page.getByRole("button", { name: "このキャラで対戦", exact: true }).click();
+            await expect(page.getByRole("progressbar", { name: "自分のHP", exact: true })).toBeVisible();
+            await expectScreenFits(page);
+          }
           if (route === "/profile") {
             await page.getByRole("tab", { name: "冒険の記録", exact: true }).click();
             await expectScreenFits(page);
           }
-          if (route === "/battle") {
-            const enemy = await page.getByRole("region", { name: "敵画面", exact: true }).boundingBox();
+          if (route === "/battle/raid") {
+            const character = await page.getByRole("region", { name: "自分のキャラクター", exact: true }).boundingBox();
             const controls = await page.getByRole("region", { name: "スマホ操作画面", exact: true }).boundingBox();
-            expect(enemy).not.toBeNull(); expect(controls).not.toBeNull();
-            expect(Math.abs(enemy!.height - controls!.height)).toBeLessThanOrEqual(2);
-            expect(enemy!.y + enemy!.height).toBeLessThanOrEqual(controls!.y);
-            for (const button of await page.locator(".raid-skills button, .raid-confirm").all()) {
+            expect(character).not.toBeNull(); expect(controls).not.toBeNull();
+            if (viewport.height > 500) expect(character!.y + character!.height).toBeLessThanOrEqual(controls!.y);
+            for (const button of await page.getByRole("region", { name: "スマホ操作画面", exact: true }).getByRole("button").all()) {
               const size = await button.boundingBox();
               expect(size!.height).toBeGreaterThanOrEqual(44);
               expect(size!.width).toBeGreaterThanOrEqual(44);

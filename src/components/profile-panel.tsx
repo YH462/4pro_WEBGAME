@@ -10,7 +10,7 @@ const tabs = [
   { id: "records", label: "冒険の記録", icon: BookOpen },
 ] as const;
 
-export function ProfilePanel({ id, nickname, count }: { id: string; nickname: string; count: number }) {
+export function ProfilePanel({ id, nickname, count, total }: { id: string; nickname: string; count: number; total: number }) {
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("profile");
   const [copyMessage, setCopyMessage] = useState("");
   const input = useRef<HTMLInputElement>(null);
@@ -86,7 +86,7 @@ export function ProfilePanel({ id, nickname, count }: { id: string; nickname: st
           </div>
         </div> : <div className={styles.records}>
           <div className={styles.recordStats}>
-            <div className={`${styles.recordCard} ${styles.partners}`}><BookOpen size={28}/><strong>{count}<small> / 5</small></strong><span>パートナー</span></div>
+            <div className={`${styles.recordCard} ${styles.partners}`}><BookOpen size={28}/><strong>{count}<small> / {total}</small></strong><span>パートナー</span></div>
             <div className={`${styles.recordCard} ${styles.trophies}`}><Trophy size={28}/><strong>—</strong><span>討伐記録</span></div>
             <div className={`${styles.recordCard} ${styles.badges}`}><Award size={28}/><strong>—</strong><span>称号・バッジ</span></div>
           </div>

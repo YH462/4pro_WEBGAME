@@ -12,5 +12,5 @@ try {
       await tx.skill.upsert({ where: { characterId_slot: { characterId: character.id, slot: 1 } }, update: {}, create: { id: `${character.id}-1`, characterId: character.id, slot: 1, name: "必殺技（仕様確認待ち）" } });
     }
   });
-  console.log("Seed complete: event, 4 departments, 5 characters, 1 special move per character.");
+  console.log(`Seed complete: event, 4 departments, ${characters.length} characters (including 7 drafts), 1 special move per character.`);
 } finally { await db.$disconnect(); }
