@@ -1,24 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowUpRight, Check, ChevronDown, CircleHelp, Hand, HandFist, Heart, LoaderCircle, Monitor, Radio, Scissors, Sparkles, Swords, UsersRound, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Check, ChevronLeft, ChevronRight, ChevronsRight, CircleHelp, Crown, Droplets, Flame, Hand, HandFist, Heart, Leaf, LoaderCircle, Monitor, Radio, Repeat2, Scissors, Sparkles, Swords, Trophy, UsersRound, X, Zap } from "lucide-react";
 import type { PartnerView } from "@/lib/character-presentation";
 import type { LocalRaidAction, LocalRaidResult } from "@/lib/local-raid-types";
 import { visibleLocalRaid } from "@/lib/local-raid-presentation";
 import { battlePreview } from "@/lib/battle-preview";
 import { raidHands, raidRpsRules, resolveRaidRps, type RaidHand } from "@/lib/raid-rps";
-import { CharacterArt } from "../character-art";
 import { localRequestId, useLocalRaid } from "./use-local-raid";
 import { useRaidCountdown } from "./use-raid-countdown";
+import { PartnerScene } from "./partner-scene";
+import { RaidHpGauge } from "./raid-hp-gauge";
 import styles from "./raid-mobile.module.css";
 
 type ResultView = Pick<LocalRaidResult, "action" | "hand" | "boss" | "outcome" | "label" | "multiplier" | "amount" | "counterDamage"> & { key: string; submitted?: boolean };
 type Attempt = { type: "command"; roomId: string; round: number; requestId: string; action: LocalRaidAction; hand: RaidHand };
 const handIcons = { rock: HandFist, scissors: Scissors, paper: Hand };
 const colors: Record<string, string> = { FOREST: "#49a878", THUNDER: "#e1a52d", FLAME: "#e05d5c", AQUA: "#319fca", LEGEND: "#9d74d9" };
+const elements = { FOREST: { label:"森属性",Icon:Leaf }, THUNDER: { label:"雷属性",Icon:Zap }, FLAME: { label:"炎属性",Icon:Flame }, AQUA: { label:"水属性",Icon:Droplets }, LEGEND: { label:"レジェンド",Icon:Crown } };
 const handName = (hand: RaidHand) => raidHands.find((item) => item.id === hand)!.label;
 
 export function RaidMobileConsole({ partners, local = false }: { partners: PartnerView[]; local?: boolean }) {
+  const [interactive, setInteractive] = useState(false);
+  useEffect(() => { setInteractive(true); }, []);
   const { state: raw, error: connectionError, send } = useLocalRaid(local, true);
   const state = raw ? visibleLocalRaid(raw) : null;
   const [partnerId, setPartnerId] = useState(partners[0]?.id ?? "");
@@ -126,9 +131,9 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
   const bossHp = local ? state?.bossHp : battlePreview.bossHp;
   const bossMaxHp = state?.bossMaxHp ?? battlePreview.bossHp;
   const ended = local && (bossHp === 0 || hp <= 0);
-  const ready = !local || Boolean(state?.me && state.me.characterId === partnerId && !joining && !connectionError);
+  const ready = interactive && (!local || Boolean(state?.me && state.me.characterId === partnerId && !joining && !connectionError));
   const frozen = busy || joining || Boolean(attempt) || ended || !accepting;
-  const characterFrozen = busy || joining || Boolean(attempt) || ended || Boolean(local && raw?.round.phase !== "lobby" && !accepting);
+  const characterFrozen = !interactive || busy || joining || Boolean(attempt) || ended || Boolean(local && raw?.round.phase !== "lobby" && !accepting);
   const unsettled = Boolean(raw?.me?.lastResult && raw.me.lastResult.turn > raw.counterTurn);
   const feedback = local ? impact?.kind === "heal" ? "heal" : result?.submitted === false ? "idle" : result?.outcome ?? "idle" : result ? result.action === "heal" ? "heal" : result.outcome : "idle";
   const status = connectionError || error || (joining ? "レイドへ参加しています…" : local && !raw ? "会場に接続しています…"
@@ -163,34 +168,50 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
     finally { if (current === token.current) { setSending(false); locked.current = false; } }
   }
 
-  return <div className={styles.console} data-phase={phase}>
-    <section className={styles.bossStrip} aria-label="ボスの状況">
-      <div><span className={styles.live}><Radio size={10}/>{local ? connectionError ? "再接続中" : "LIVE" : "PREVIEW"}</span><strong>{state?.bossName ?? battlePreview.bossName}</strong></div>
-      <div className={styles.bossVitals}><span>HP <b>{bossHp ?? "—"}</b><small> / {bossMaxHp}</small></span><div role="progressbar" aria-label={`ボスHP（${local ? "同期" : "プレビュー"}）`} aria-valuemin={0} aria-valuemax={bossMaxHp} aria-valuenow={bossHp ?? bossMaxHp}><i style={{ width: `${(bossHp ?? bossMaxHp) / bossMaxHp * 100}%` }}/></div></div>
-      <span className={styles.people}><UsersRound size={13}/>{local ? state?.participants ?? "—" : "—"}<small>/20</small></span>
+  const victory = local && bossHp === 0;
+  const summary = result ?? (state?.me?.lastResult?.turn === raw?.round.number ? state?.me?.lastResult : null);
+  const selectedHand = sentCommand?.hand ?? hand;
+  const estimateBase = action === "attack" ? battlePreview.baseAttack : battlePreview.baseSelfHeal;
+  const effectLimit = action === "attack" ? bossHp ?? battlePreview.bossHp : Math.max(0, maxHp - hp);
+  const effectRange = [.5, 2].map((multiplier) => Math.min(effectLimit, estimateBase * multiplier));
+  const element = elements[partner.element as keyof typeof elements] ?? elements.LEGEND;
+  const ElementIcon = element.Icon;
+  function selectPartner(id: string) { if(characterFrozen || unsettled) return; setPartnerId(id); setHand(null); setError(""); }
+  function cyclePartner(direction: number) { selectPartner(partners[(partners.findIndex((item)=>item.id===partner.id)+direction+partners.length)%partners.length].id); }
+
+  return <div className={`${styles.console} ${styles.partnerLayout}`} data-phase={victory ? "victory" : phase}>
+    <section className={styles.bossPanel} aria-label="ボスの状況" data-defeated={victory}>
+      <div className={styles.bossHeading}><div><span className={styles.live}><Radio size={11}/>{local ? connectionError ? "再接続中" : raw ? "LIVE" : "接続中" : "PREVIEW"}</span><h2>{state?.bossName ?? battlePreview.bossName}</h2></div></div>
+      <div className={styles.bossHealth}><RaidHpGauge value={bossHp ?? null} max={bossMaxHp} caption="BOSS HP" label={`ボスHP（${local ? "同期" : "プレビュー"}）`}/></div>
+      <div className={styles.bossMeta}><span className={styles.round}><span>ROUND</span><strong>{raw?.round.number ? String(raw.round.number).padStart(2, "0") : "—"}</strong></span><span><UsersRound size={14}/>参加人数 <b>{state?.participants ?? "—"}</b><small>/ 20</small></span><span><Radio size={13}/>{local && raw?.round.phase === "collecting" ? `受付 あと${seconds}秒` : local ? connectionError ? "再接続しています" : raw ? "会場スクリーンと同期中" : "会場に接続中" : "操作プレビュー"}</span></div>
     </section>
 
     <section className={styles.hero} aria-label="自分のキャラクター" data-feedback={feedback} data-reaction={impact?.kind ?? "idle"} style={{ "--partner-color": colors[partner.element] ?? colors.LEGEND } as CSSProperties}>
-      <div className={styles.partnerHeading}><span>YOUR PARTNER</span><div className={styles.partnerSelect}><label className="sr-only" htmlFor="raid-mobile-partner">参加キャラクター</label><select id="raid-mobile-partner" value={partner.id} disabled={characterFrozen || unsettled} onChange={(event) => { setPartnerId(event.target.value); setHand(null); setError(""); }}>{partners.map((item) => <option key={item.id} value={item.id}>{item.name}{item.owned ? "" : "（体験）"}</option>)}</select><ChevronDown size={14}/></div></div>
+      <div className={styles.portraitHeading}><div className={styles.partnerIdentity}><div className={styles.partnerHeading}><span>YOUR PARTNER</span><span className={styles.partnerBadge}>{partner.owned ? "MY PARTNER" : "体験"}</span></div><h2>{partner.name}</h2><div className={styles.partnerTags}><span className={styles.elementBadge}><ElementIcon size={13}/>{element.label}</span><span title={partner.department}>{partner.department}</span></div></div><div className={styles.partnerSelect}><label className="sr-only" htmlFor="raid-mobile-partner">参加キャラクター</label><select id="raid-mobile-partner" value={partner.id} disabled={characterFrozen || unsettled} onChange={(event) => selectPartner(event.target.value)}>{partners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span aria-hidden="true"><Repeat2 size={15}/>パートナー変更</span></div></div>
       <div className={styles.characterStage}>
-        <div className={styles.orbit} aria-hidden="true"/>
-        <div key={impact?.key ?? result?.key ?? partner.id} className={styles.characterEffects} data-counter={impact?.kind === "counter"}>
-          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター`}><CharacterArt element={partner.element} portrait/></div>
-          {(result || impact) && <div className={styles.particles} aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <Sparkles key={i} style={{ "--i": i } as CSSProperties}/>)}</div>}
+        <div className={styles.stageScenery} aria-hidden="true"><div className={styles.portalFloor}/>{Array.from({length:6},(_,i)=><i key={i} style={{"--prism":i} as CSSProperties}/>)}</div>
+        <div className={styles.characterEffects} data-counter={impact?.kind === "counter"}>
+          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター（3Dモデル）`}><PartnerScene element={partner.element} characterId={partner.id}/></div>
+          {(result || impact) && <div key={impact?.key ?? result?.key} className={styles.particles} aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <Sparkles key={i} style={{ "--i": i } as CSSProperties}/>)}</div>}
           {(impact?.kind === "heal" || (!local && result?.action === "heal")) && <span className={styles.healNumber}>+{impact?.kind === "heal" ? impact.amount : result!.amount}<Heart size={18}/></span>}
           {impact?.kind === "counter" && <span className={styles.hitNumber}>−{impact.amount}</span>}
         </div>
-        <span className={styles.partnerTag}>{partner.owned ? "MY CHARACTER" : "TRIAL CHARACTER"}</span>
+        <button type="button" className={`${styles.partnerArrow} ${styles.previousPartner}`} aria-label="前のパートナー" disabled={characterFrozen || unsettled || partners.length<2} onClick={()=>cyclePartner(-1)}><ChevronLeft size={30}/></button><button type="button" className={`${styles.partnerArrow} ${styles.nextPartner}`} aria-label="次のパートナー" disabled={characterFrozen || unsettled || partners.length<2} onClick={()=>cyclePartner(1)}><ChevronRight size={30}/></button>
       </div>
-      <div className={styles.hpBlock} data-low={hp / maxHp <= .25}><div><span>自分のHP</span><strong>{hp}<small> / {maxHp}</small></strong></div><div className={styles.hpTrack} role="progressbar" aria-label={`自分のHP（${local ? "同期" : "プレビュー"}）`} aria-valuemin={0} aria-valuemax={maxHp} aria-valuenow={hp}><i style={{ width: `${hp / maxHp * 100}%` }}/></div></div>
+      <RaidHpGauge value={hp} max={maxHp} caption="自分のHP" label={`自分のHP（${local ? "同期" : "プレビュー"}）`}/>
     </section>
 
-    <section className={styles.controls} aria-label="スマホ操作画面">
-      <div className={styles.controlHeading}><span>{local && raw?.round.phase === "collecting" ? <>ROUND {String(raw.round.number).padStart(2, "0")} <b className={styles.countdown} role="timer" aria-label="入力締め切りまで">あと{seconds}秒</b> <small>{raw.round.submitted}/{raw.round.eligible}人送信済み</small></> : phase === "select" ? "YOUR COMMAND" : phase === "result" ? "BATTLE RESULT" : "LOOK UP!"}</span><button type="button" aria-label="レイドのルールを開く" onClick={() => help.current?.showModal()}><CircleHelp size={17}/></button></div>
+    {victory ? <section className={`${styles.controls} ${styles.victory}`} aria-label="討伐成功の結果">
+      <div className={styles.victoryHeading}><Trophy size={30}/><span>RAID COMPLETE</span><h2>討伐成功！</h2><p>みんなの力でボスを倒した！</p></div>
+      <div className={styles.victoryStats}><div><span>今回の勝敗</span><strong>{summary ? summary.submitted === false ? "未入力" : `${summary.label} ×${summary.multiplier}` : "—"}</strong></div><div><span>{summary?.action === "heal" ? "自己回復" : "攻撃値"}</span><strong>{summary?.amount ?? "—"}</strong></div><div><span>ボスの反撃</span><strong>{summary?.counterDamage ?? "—"}</strong></div></div>
+      <p>次のレイド開始は会場スクリーンでお知らせします。</p><Link className={styles.victoryLink} href="/">ホームへ戻る <ArrowUpRight size={18}/></Link>
+    </section> : <section className={styles.controls} aria-label="スマホ操作画面">
+      <div className={styles.controlHeading}><span>{local && raw?.round.phase === "collecting" ? <><b className={styles.countdown} role="timer" aria-label="入力締め切りまで">あと{seconds}秒</b><small>{raw.round.submitted}/{raw.round.eligible}人 送信済み</small></> : phase === "select" ? "COMMAND SELECT" : phase === "result" ? "BATTLE RESULT" : "LOOK UP!"}</span><button type="button" aria-label="レイドのルールを開く" onClick={() => help.current?.showModal()}><CircleHelp size={19}/></button></div>
       <div className={styles.commandArea}>
         {phase === "select" ? <>
           <div className={styles.actionRow} role="group" aria-label="行動を選ぶ">{([{ id: "attack", label: "攻撃", Icon: Swords }, { id: "heal", label: "回復", Icon: Heart }] as const).map(({ id, label, Icon }) => <button type="button" key={id} aria-label={`${label}を選択`} aria-pressed={action === id} disabled={frozen || !ready} onClick={() => setAction(id)}><Icon size={19}/><strong>{label}</strong>{action === id && <Check size={14}/>}</button>)}</div>
-          <div className={styles.handRow} role="group" aria-label="じゃんけんの手を選ぶ">{raidHands.map((item) => { const Icon = handIcons[item.id]; return <button type="button" key={item.id} aria-label={`${item.label}を選択`} aria-pressed={hand === item.id} disabled={frozen || !ready} onClick={() => setHand(item.id)}><span><Icon size={28}/><strong>{item.label}</strong>{hand === item.id && <Check className={styles.handCheck} size={12}/>}</span></button>; })}</div>
+          <div className={styles.handRow} role="group" aria-label="じゃんけんの手を選ぶ">{raidHands.map((item) => { const Icon = handIcons[item.id]; return <button type="button" key={item.id} aria-label={`${item.label}を選択`} aria-pressed={hand === item.id} disabled={frozen || !ready} onClick={() => setHand(item.id)}><span><Icon size={34}/><strong>{item.label}</strong></span>{hand === item.id && <Check className={styles.handCheck} size={20} aria-hidden="true"/>}</button>; })}</div>
+          <div className={styles.prediction} aria-label="選択中の手と効果の目安"><div><span>選択中 <b>{selectedHand ? handName(selectedHand) : "手を選ぼう"}</b></span><span>{action === "attack" ? "攻撃" : "回復"}の目安 <b>{effectRange[0]}–{effectRange[1]}</b></span></div><small>勝ち ×2 ・ あいこ ×1 ・ 負け ×0.5</small></div>
         </> : phase === "result" && result ? <div key={result.key} className={`${styles.result} raid-rps-result`} data-outcome={result.outcome}>
           <span>{result.submitted === false ? "今回は未入力" : `自分：${handName(result.hand)}`} / ボス：{handName(result.boss)}</span><strong>{result.label} {result.submitted !== false && <b>×{result.multiplier}</b>}</strong><span>{result.submitted === false ? "次のラウンドで行動を選ぼう" : <>{result.action === "attack" ? "攻撃" : "自己回復"} <b>{result.amount}</b></>}{local && <> ／ 全体攻撃 {result.counterDamage}</>}</span><small>{local ? "次の受付で自動で操作画面に戻ります" : "次の行動へ自動で切り替わります"}</small><i className={styles.resultTimer}/>
         </div> : <div className={`${styles.waiting} raid-rps-result`}>
@@ -199,10 +220,10 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
         </div>}
       </div>
       <p className={`${styles.feedback} raid-feedback`} role="status" aria-live="polite">{status}</p>
-      <button type="button" className={styles.confirm} disabled={busy || ended || joining || Boolean(connectionError) || (local && (!raw || !accepting)) || (ready && !hand)} onClick={() => { if (!ready && local) void join(); else void submit(); }}>
-        {sending || waiting ? <><LoaderCircle className={styles.spinner} size={18}/><span>{sending ? "送信中…" : "次の受付まで待機"}</span></> : result ? <><Check size={19}/><span>まもなく次の行動へ</span></> : ended ? <span>{bossHp === 0 ? "討伐成功！" : "戦闘不能"}</span> : <><span>{joining ? "参加中…" : local && !accepting ? "受付開始を待っています" : !ready ? "同期に参加する" : !hand ? "じゃんけんの手を選ぼう" : attempt ? "同じ行動を再送する" : `${action === "attack" ? "攻撃" : "回復"}で${local ? "送信" : "試す"}`}</span><ArrowUpRight size={21}/></>}
+      <button type="button" className={styles.confirm} disabled={!interactive || busy || ended || joining || Boolean(connectionError) || (local && (!raw || !accepting)) || (ready && !hand)} onClick={() => { if (!ready && local) void join(); else void submit(); }}>
+        {sending || waiting ? <><LoaderCircle className={styles.spinner} size={18}/><span>{sending ? "送信中…" : "次の受付まで待機"}</span></> : result ? <><Check size={19}/><span>まもなく次の行動へ</span></> : ended ? <span>戦闘不能</span> : <><Radio size={24} aria-hidden="true"/><span className={styles.confirmLabel}><small aria-hidden="true">{local ? "LOCAL SYNC" : "COMMAND PREVIEW"}</small><strong>{joining ? "参加中…" : local && !accepting ? "受付開始を待っています" : !ready ? "同期に参加する" : !hand ? "じゃんけんの手を選ぼう" : attempt ? "同じ行動を再送する" : local ? "じゃんけんで送信" : "じゃんけんで試す"}</strong></span><ChevronsRight size={24} aria-hidden="true"/></>}
       </button>
-    </section>
+    </section>}
     <dialog className={styles.help} ref={help} aria-labelledby="raid-mobile-rules"><header><h2 id="raid-mobile-rules">レイドの遊び方</h2><button type="button" aria-label="レイドのルールを閉じる" onClick={() => help.current?.close()}><X size={20}/></button></header><p>攻撃はボスへ。回復は自分へ。行動とじゃんけんの手を選んで送信しよう。</p><div className={styles.rules}>{Object.values(raidRpsRules).map((rule) => <span key={rule.label}>{rule.label}<b>×{rule.multiplier}</b></span>)}</div><p>{local ? "受付は全員共通で10秒、1人1回。締め切り後は同じボスの手で勝敗を判定します。送信後は会場スクリーンに注目！" : "操作プレビューです。HP・所持キャラクター・育成値は変わりません。"}</p>{local && <p>基本攻撃50・回復30、全体攻撃20。未入力は行動なしで、全体攻撃の対象になります。途中参加は次のラウンドから。回復は自分の最大HPが上限です。</p>}<a href={`/raid/screen${local ? "?sync=local" : ""}`} target="_blank" rel="noreferrer">スクリーンを開く <ArrowUpRight size={15}/></a></dialog>
   </div>;
 }

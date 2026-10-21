@@ -42,13 +42,16 @@ test("three phones share one countdown and hand, receive different outcomes, and
   await request.post("/api/local-raid", { headers, data: { type: "reset" } });
   const contexts = await Promise.all(Array.from({ length: 4 }, () => browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })));
   try {
-    await page.context().addInitScript(() => {
+    // Each real phone has its own GPU. Keep the network/round test independent of
+    // three software WebGL renderers competing on the same test PC.
+    const withoutWebGl = () => {
       const original = HTMLCanvasElement.prototype.getContext;
       Object.defineProperty(HTMLCanvasElement.prototype, "getContext", { value: function (this: HTMLCanvasElement, type: string, ...args: unknown[]) {
         if (type.startsWith("webgl") || type === "experimental-webgl") return null;
         return Reflect.apply(original, this, [type, ...args]);
       } });
-    });
+    };
+    await Promise.all([page.context(), ...contexts].map((context) => context.addInitScript(withoutWebGl)));
     for (let i = 0; i < contexts.length; i++) await guest(contexts[i].request, `一斉確認${i}`);
     const phones = await Promise.all(contexts.slice(0, 3).map((context) => context.newPage()));
     for (const phone of phones) await phone.goto("/battle/raid?sync=local");
@@ -62,12 +65,12 @@ test("three phones share one countdown and hand, receive different outcomes, and
     const initial = await snapshot(request);
     expect(initial.round.closesAt! - initial.serverNow).toBeGreaterThan(8000);
     for (const phone of phones) await expect(phone.getByRole("timer", { name: "入力締め切りまで" })).toContainText(/あと\d+秒/);
-    for (const [i, label] of ["グー", "チョキ", "パー"].entries()) {
+    await Promise.all(["グー", "チョキ", "パー"].map(async (label, i) => {
       await phones[i].getByRole("button", { name: `${label}を選択`, exact: true }).click();
-      await phones[i].getByRole("button", { name: "攻撃で送信", exact: true }).click();
+      await phones[i].getByRole("button", { name: "じゃんけんで送信", exact: true }).click();
       await expect(phones[i].locator(".raid-rps-result")).toContainText("送信完了");
       await expect(phones[i].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText(`攻撃 / ${label}`);
-    }
+    }));
     await phones[0].reload();
     await expect(phones[0].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText("攻撃 / グー");
     await phones[0].screenshot({ path: testInfo.outputPath("raid-mobile-submitted-hand.png") });
@@ -95,7 +98,7 @@ test("three phones share one countdown and hand, receive different outcomes, and
     // Self-healing is visible before the single counter; an unsubmitted teammate still receives it.
     await phones[0].getByRole("button", { name: "回復を選択", exact: true }).click();
     await phones[0].getByRole("button", { name: "グーを選択", exact: true }).click();
-    await phones[0].getByRole("button", { name: "回復で送信", exact: true }).click();
+    await phones[0].getByRole("button", { name: "じゃんけんで送信", exact: true }).click();
     await expect(phones[0].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText("回復 / グー");
     await expect.poll(async () => (await snapshot(request)).round.phase, { timeout: 15000, intervals: [200] }).toBe("playing");
     const heal = (await snapshot(contexts[0].request, true)).me!.lastResult!;

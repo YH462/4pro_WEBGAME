@@ -11,7 +11,7 @@ async function guest(page: Page) {
 test.afterEach(async () => { await db.player.deleteMany({ where: { id: { in: playerIds.splice(0) } } }); });
 test.afterAll(async () => { await db.$disconnect(); });
 
-test("the front-facing partner stays above HP while results return automatically to inline controls", async ({ page }, testInfo) => {
+test("the compact partner keeps HP visible while results return automatically to inline controls", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const id = await guest(page);
   await page.goto("/battle/raid");
@@ -20,13 +20,13 @@ test("the front-facing partner stays above HP while results return automatically
   const hp = page.getByRole("progressbar", { name: "自分のHP（プレビュー）", exact: true });
   await expect(character).toBeVisible(); await expect(hp).toHaveAttribute("aria-valuenow", "120");
   await expect(page.getByRole("button", { name: "じゃんけんの手を選ぼう", exact: true })).toBeDisabled();
-  const hero = await character.boundingBox(), health = await hp.boundingBox();
-  expect(hero!.y + hero!.height).toBeLessThanOrEqual(health!.y);
+  const health = await hp.boundingBox();
+  await expect(page.getByRole("region", { name: "自分のキャラクター" })).toContainText("120");
   await page.screenshot({ path: testInfo.outputPath("raid-mobile-select.png") });
   await page.getByRole("button", { name: "チョキを選択", exact: true }).click();
   await page.evaluate(() => { Math.random = () => .99; });
   await page.clock.install(); await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
-  await page.getByRole("button", { name: "攻撃で試す", exact: true }).click();
+  await page.getByRole("button", { name: "じゃんけんで試す", exact: true }).click();
   await expect(page.locator("[data-phase]")).toHaveAttribute("data-phase", "waiting");
   await expect(page.locator(".raid-rps-result")).not.toContainText("ボス：");
   await page.clock.runFor(2120);
@@ -42,7 +42,7 @@ test("the front-facing partner stays above HP while results return automatically
   await expect(page.getByRole("group", { name: "じゃんけんの手を選ぶ" }).locator('[aria-pressed="true"]')).toHaveCount(0);
   await page.getByRole("button", { name: "回復を選択", exact: true }).click();
   await page.getByRole("button", { name: "グーを選択", exact: true }).click();
-  await page.getByRole("button", { name: "回復で試す", exact: true }).click();
+  await page.getByRole("button", { name: "じゃんけんで試す", exact: true }).click();
   await page.clock.runFor(2120);
   await expect(page.locator(".raid-rps-result")).toContainText("負け ×0.5");
   await expect(page.locator(".raid-rps-result")).toContainText("自己回復 15");
@@ -63,7 +63,7 @@ test("owned partners use their DB growth and preview actions never change saved 
   await expect(page.getByRole("img", { name: /サンダーフォックス：正面/ })).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "自分のHP（プレビュー）" })).toHaveAttribute("aria-valuenow", "137");
   await page.getByRole("button", { name: "パーを選択", exact: true }).click();
-  await page.getByRole("button", { name: "攻撃で試す", exact: true }).click();
+  await page.getByRole("button", { name: "じゃんけんで試す", exact: true }).click();
   await expect(page.locator(".raid-rps-result")).toContainText(/攻撃 \d+/);
   expect(await db.playerCharacter.findMany({ where: { playerId: id }, orderBy: { characterId: "asc" } })).toEqual(before);
 });
@@ -79,10 +79,11 @@ test("the phone works without WebGL and with reduced motion, including automatic
   await page.emulateMedia({ reducedMotion: "reduce" });
   await guest(page); await page.goto("/battle/raid");
   await expect(page.getByRole("img", { name: /正面を向いた自分のキャラクター/ })).toBeVisible();
-  await expect(page.locator("canvas")).toHaveCount(0);
+  await expect(page.locator("[data-renderer]")).toHaveAttribute("data-renderer", "fallback");
+  await expect(page.locator('[data-renderer="fallback"] svg')).toBeVisible();
   await page.getByRole("button", { name: "回復を選択", exact: true }).click();
   await page.getByRole("button", { name: "パーを選択", exact: true }).click();
-  await page.getByRole("button", { name: "回復で試す", exact: true }).click();
+  await page.getByRole("button", { name: "じゃんけんで試す", exact: true }).click();
   await expect(page.locator(".raid-rps-result")).toContainText(/自己回復 \d+/);
   await expect(page.getByRole("button", { name: "回復を選択", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "レイドのルールを開く", exact: true }).click();
@@ -93,12 +94,13 @@ test("the phone works without WebGL and with reduced motion, including automatic
 });
 
 test("mobile commands stay visible and tappable on small phones, landscape and desktop", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
   await guest(page);
-  for (const size of [{ width: 360, height: 640 }, { width: 375, height: 667 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1440, height: 900 }]) {
+  for (const size of [{ width: 360, height: 640 }, { width: 375, height: 667 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(size);
     await page.goto("/battle/raid");
     await page.getByRole("button", { name: "チョキを選択", exact: true }).click();
-    await expect(page.getByRole("button", { name: "攻撃で試す", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "じゃんけんで試す", exact: true })).toBeEnabled();
     const failures = await page.evaluate(() => {
       const issues: string[] = [];
       if (document.documentElement.scrollHeight > innerHeight + 1 || document.documentElement.scrollWidth > innerWidth + 1) issues.push("page scrolls");
@@ -116,6 +118,28 @@ test("mobile commands stay visible and tappable on small phones, landscape and d
       return issues;
     });
     expect(failures, `${size.width}x${size.height}`).toEqual([]);
-    if (size.width <= 390 || size.height === 390) await page.screenshot({ path: testInfo.outputPath(`raid-mobile-${size.width}x${size.height}.png`) });
+    if (size.width <= 430 || size.height === 390 || size.width === 1440) await page.screenshot({ path: testInfo.outputPath(`raid-mobile-${size.width}x${size.height}.png`) });
   }
+});
+
+test("the selected partner has its own front-facing 3D portrait and the phone has no enemy model", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  await guest(page); await page.setViewportSize({ width:390,height:844 }); await page.goto("/battle/raid");
+  await expect(page.getByRole("img", { name:"立体のキング・アクア" })).toHaveCount(0);
+  await expect(page.locator(".enemy-fallback-art")).toHaveCount(0);
+  for(const id of ["forest-golem","thunder-fox","flame-dragon","aqua-spirit"]) {
+    await page.getByLabel("参加キャラクター").selectOption(id);
+    const portrait=page.locator(`[data-character-id="${id}"][data-facing="front"]`);
+    await expect(portrait).toHaveAttribute("data-renderer","webgl");
+    await page.evaluate(()=>new Promise<void>((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+    await page.screenshot({ path:testInfo.outputPath(`raid-partner-${id}.png`) });
+  }
+  await page.getByRole("button", { name:"次のパートナー",exact:true }).click();
+  await expect(page.getByLabel("参加キャラクター")).toHaveValue("forest-golem");
+  await expect(page.locator('[data-character-id="forest-golem"]')).toHaveAttribute("data-renderer","webgl");
+  await expect(page.getByRole("progressbar", { name:"自分のHP（プレビュー）" })).toHaveAttribute("aria-valuenow","170");
+  await page.getByRole("button", { name:"前のパートナー",exact:true }).click();
+  await expect(page.getByLabel("参加キャラクター")).toHaveValue("aqua-spirit");
+  await expect(page.locator('[data-character-id="aqua-spirit"]')).toHaveAttribute("data-renderer","webgl");
+  await expect(page.getByRole("progressbar", { name:"自分のHP（プレビュー）" })).toHaveAttribute("aria-valuenow","135");
 });

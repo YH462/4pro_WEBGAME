@@ -9,7 +9,10 @@ const ease = (value: number) => 1 - (1 - clamp(value, 0, 1)) ** 3;
 
 /** Shared screen arena; the standalone demo uses its original four-player fixture. */
 export function createShowcaseArena(canvas: HTMLCanvasElement) {
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
+  const options = { alpha: true, antialias: true, powerPreference: "high-performance" } as const;
+  const context = canvas.getContext("webgl2", options) as WebGL2RenderingContext | null;
+  if (!context) throw new Error("WebGL2 is unavailable; use the illustration fallback.");
+  const renderer = new THREE.WebGLRenderer({ canvas, context, ...options });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setClearColor(0xffffff, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
