@@ -96,7 +96,7 @@ test("the phone works without WebGL and with reduced motion, including automatic
 test("mobile commands stay visible and tappable on small phones, landscape and desktop", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   await guest(page);
-  for (const size of [{ width: 360, height: 640 }, { width: 375, height: 667 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }, { width: 1440, height: 900 }]) {
+  for (const size of [{ width: 360, height: 640 }, { width: 375, height: 667 }, { width:393,height:636 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(size);
     await page.goto("/battle/raid");
     await page.getByRole("button", { name: "チョキを選択", exact: true }).click();
@@ -108,7 +108,11 @@ test("mobile commands stay visible and tappable on small phones, landscape and d
     const failures = await page.evaluate(() => {
       const issues: string[] = [];
       if (document.documentElement.scrollHeight > innerHeight + 1 || document.documentElement.scrollWidth > innerWidth + 1) issues.push("page scrolls");
+      const portrait = document.querySelector("main [data-renderer]");
+      if (innerWidth < 600 && portrait && portrait.getBoundingClientRect().height < 140) issues.push("portrait is squeezed");
       for (const element of document.querySelectorAll("main button, main select, main [role=progressbar], main [role=img]")) {
+        // Short Safari viewports may scroll inside the battle page; every control must remain reachable.
+        element.scrollIntoView({ block:"nearest",inline:"nearest",behavior:"instant" });
         const bounds = element.getBoundingClientRect();
         if (!bounds.width || !bounds.height) continue;
         const label = element.getAttribute("aria-label") ?? element.textContent;
@@ -122,8 +126,24 @@ test("mobile commands stay visible and tappable on small phones, landscape and d
       return issues;
     });
     expect(failures, `${size.width}x${size.height}`).toEqual([]);
+    await page.locator(".battle-screen").evaluate((element)=>{element.scrollTop=0;});
     if (size.width <= 430 || size.height === 390 || size.width === 1440) await page.screenshot({ path: testInfo.outputPath(`raid-mobile-${size.width}x${size.height}.png`) });
   }
+});
+
+test("Safari toolbar height changes keep the partner large and the selected command usable",async({page},testInfo)=>{
+  await guest(page);await page.setViewportSize({width:393,height:852});await page.goto("/battle/raid");
+  await page.getByRole("button",{name:"チョキを選択",exact:true}).click();
+  await page.setViewportSize({width:393,height:636});
+  const portrait=page.locator('[data-character-id="forest-golem"]');
+  await expect.poll(async()=>Math.round((await portrait.boundingBox())?.height??0)).toBeGreaterThanOrEqual(140);
+  await portrait.scrollIntoViewIfNeeded();
+  await page.screenshot({path:testInfo.outputPath("raid-mobile-safari-short-portrait.png")});
+  await expect(page.getByRole("button",{name:"チョキを選択",exact:true})).toHaveAttribute("aria-pressed","true");
+  await page.getByRole("button",{name:"じゃんけんで試す",exact:true}).click();
+  await expect(page.locator('[data-phase]')).toHaveAttribute("data-phase","waiting");
+  await page.screenshot({path:testInfo.outputPath("raid-mobile-safari-short-controls.png")});
+  await expect(page.getByRole("progressbar",{name:"自分のHP（プレビュー）"})).toHaveAttribute("aria-valuenow","170");
 });
 
 test("the selected partner has its own front-facing 3D portrait and the phone has no enemy model", async ({ page }, testInfo) => {
