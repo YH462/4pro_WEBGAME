@@ -3,9 +3,8 @@ import { ZodError } from "zod";
 import { config } from "./config";
 import { db } from "./db";
 import { developmentOriginAllowed } from "./local-network";
-export class HttpError extends Error {
-  constructor(public status: number, message: string) { super(message); }
-}
+import { HttpError } from "./http-error";
+export { HttpError } from "./http-error";
 export function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
 }

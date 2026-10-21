@@ -26,7 +26,8 @@
     "db:studio": "prisma studio",
     "event:end": "tsx scripts/event-lifecycle.ts end",
     "event:purge": "tsx scripts/event-lifecycle.ts purge",
-    "simulator:grant": "tsx scripts/simulator-grant.ts"
+    "simulator:grant": "tsx scripts/simulator-grant.ts",
+    "nfc:tags": "tsx scripts/nfc-tags.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

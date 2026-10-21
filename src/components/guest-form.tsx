@@ -2,7 +2,8 @@
 import { useEffect, useId, useState, type Ref } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LoaderCircle, X } from "lucide-react";
-export function GuestForm({ initialNickname = "", mode = "start", className = "", inputRef, destination = "/" }: { initialNickname?: string; mode?: "start" | "edit"; className?: string; inputRef?: Ref<HTMLInputElement>; destination?: "/" | "/battle/raid?sync=local" }) {
+import type { StartDestination } from "@/lib/acquisition-links";
+export function GuestForm({ initialNickname = "", mode = "start", className = "", inputRef, destination = "/" }: { initialNickname?: string; mode?: "start" | "edit"; className?: string; inputRef?: Ref<HTMLInputElement>; destination?: StartDestination }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [nickname, setNickname] = useState(initialNickname);

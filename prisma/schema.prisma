@@ -20,6 +20,7 @@ model Event {
   purgeAt   DateTime?
   createdAt DateTime    @default(now())
   players   Player[]
+  acquisitionTags AcquisitionTag[]
 }
 
 model Player {
@@ -30,6 +31,7 @@ model Player {
   event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
   sessions   GuestSession[]
   characters PlayerCharacter[]
+  acquisitions AcquisitionLog[]
   @@index([eventId])
 }
 
@@ -49,6 +51,7 @@ model Department {
   name       String
   sortOrder  Int        @unique
   character  Character?
+  acquisitionTags AcquisitionTag[]
 }
 
 model Character {
@@ -68,6 +71,7 @@ model Character {
   department   Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   skills       Skill[]
   owners       PlayerCharacter[]
+  acquisitions AcquisitionLog[]
 }
 
 // Slot 1 is the character's single special move. Effects remain NULL until confirmed.
@@ -103,4 +107,32 @@ model RateLimitBucket {
   hits      Int
   expiresAt DateTime
   @@index([expiresAt])
+}
+
+model AcquisitionTag {
+  id           String @id @default(uuid())
+  eventId      String
+  departmentId String
+  tokenHash    String @unique @db.Char(64)
+  enabled      Boolean @default(true)
+  createdAt    DateTime @default(now())
+  event        Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  acquisitions AcquisitionLog[]
+  @@index([eventId])
+}
+
+model AcquisitionLog {
+  id          String @id @default(uuid())
+  playerId    String
+  tagId       String
+  characterId String
+  granted     Boolean
+  createdAt   DateTime @default(now())
+  player      Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  tag         AcquisitionTag @relation(fields: [tagId], references: [id], onDelete: Restrict)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  @@unique([playerId, tagId])
+  @@index([tagId])
+  @@index([characterId])
 }
