@@ -3,7 +3,6 @@ import { config } from "@/lib/config";
 import { db } from "@/lib/db";
 import { api, checkOrigin, HttpError, json, readJson } from "@/lib/http";
 import { currentPlayer } from "@/lib/session";
-import { isTemporaryCharacter } from "@/lib/master-data";
 import { localRaidRoom, LocalRaidError } from "@/lib/local-raid-room";
 
 export const runtime = "nodejs";
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
       if (input.type === "command") return json(room.command(player.id, input));
       const character = await db.character.findUnique({ where: { id: input.characterId } });
       const owned = player.characters.find((item) => item.characterId === input.characterId);
-      if (!character || (player.characters.length ? !owned : character.isLegendary || isTemporaryCharacter(character.id))) throw new HttpError(403, "このキャラクターは参加に使用できません。");
+      if (!character || (player.characters.length ? !owned : character.isLegendary || character.isDraft)) throw new HttpError(403, "このキャラクターは参加に使用できません。");
       return json({ state: room.join(player.id, character.id, character.baseHp + (owned?.hpGrowth ?? 0), player.nickname || character.name, character.name) });
     } catch (error) {
       if (error instanceof LocalRaidError) throw new HttpError(error.status, error.message);

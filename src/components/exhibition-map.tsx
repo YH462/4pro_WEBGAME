@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Check, ArrowUpRight, LockKeyhole } from "lucide-react";
+import { characterImageUrl } from "@/lib/character-edit-input";
 import { CharacterArt } from "./character-art";
 import styles from "./exhibition-map.module.css";
 
@@ -7,6 +8,7 @@ type MapPartner = {
   id: string;
   name: string;
   element: string;
+  imageId?:string|null;
   department: { id: string; name: string } | null;
   owned: boolean;
 };
@@ -37,7 +39,7 @@ export function ExhibitionMap({ partners, legend, hasPlayer }: {
             aria-label={`${name}：${partner?.owned ? `${partner.name}（獲得済み）` : "未獲得"}`}
           >
             <div className={styles.content}>
-              <div className={styles.art}><CharacterArt element={partner?.element ?? "LEGEND"} locked={!partner?.owned}/></div>
+              <div className={styles.art}><CharacterArt element={partner?.element ?? "LEGEND"} imageUrl={characterImageUrl(partner?.imageId)} locked={!partner?.owned}/></div>
               <h2>{name}<ArrowUpRight size={16}/></h2>
               <span className={styles.characterName}>{partner?.owned ? partner.name : "未獲得"}</span>
               {partner?.owned && <span className={`${styles.status} ${styles.owned}`}><Check size={12}/>獲得済み</span>}
@@ -51,7 +53,7 @@ export function ExhibitionMap({ partners, legend, hasPlayer }: {
         className={`${styles.hub} ${legend?.owned ? "" : styles.locked}`}
         aria-label={`4プロ：${legend?.owned ? "獲得済み" : "全学科コンプリートで解放"}`}
       >
-        <CharacterArt element={legend?.element ?? "LEGEND"} locked={!legend?.owned}/>
+        <CharacterArt element={legend?.element ?? "LEGEND"} imageUrl={characterImageUrl(legend?.imageId)} locked={!legend?.owned}/>
         <h2>{legend?.name ?? "4プロ"}</h2>
         <span className={styles.hubStatus}>
           {legend?.owned ? <><Check size={12}/>獲得済み</> : <><LockKeyhole size={12}/>4学科を集めて解放</>}

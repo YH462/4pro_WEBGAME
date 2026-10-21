@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ArrowRight, Check, RotateCcw, Shield, Sparkles, Swords } from "lucide-react";
 import type { PartnerView } from "@/lib/character-presentation";
 import { chooseCpuAction, cpuRules, createCpuBattle, damage, practiceFighter, resolveCpuTurn, type CpuAction, type CpuBattle } from "@/lib/cpu-battle";
-import { isTemporaryCharacter } from "@/lib/master-data";
 import { CharacterArt } from "../character-art";
 import { EnemyArt } from "./enemy-art";
 import styles from "./cpu-battle.module.css";
@@ -20,7 +19,7 @@ type Phase = "ready" | "player" | "cpu" | "settle";
 
 function PracticeArt({ partner, className }: { partner: PartnerView; className?: string }) {
   // Trial art is visible only in CPU practice; collection ownership stays unchanged.
-  if (!isTemporaryCharacter(partner.id)) return <CharacterArt element={partner.element} className={className}/>;
+  if (!partner.isDraft || Boolean(partner.imageUrl)) return <CharacterArt element={partner.element} imageUrl={partner.imageUrl} className={className}/>;
   const colors = ["#589d88", "#bd8241", "#cd5867", "#568dae"];
   const color = colors[partner.number % colors.length];
   return <svg viewBox="0 0 240 200" className={className} aria-hidden="true">

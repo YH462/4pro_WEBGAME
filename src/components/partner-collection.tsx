@@ -26,7 +26,7 @@ export function PartnerCollection({ partners }: { partners: PartnerView[] }) {
             <span className={styles.innerFill} aria-hidden="true"/>
             <div className={styles.content}>
               <span className={styles.number}>{String(partner.number).padStart(3, "0")}</span>
-              <CharacterArt element={partner.element} locked={!partner.owned} className={styles.art}/>
+              <CharacterArt element={partner.element} imageUrl={partner.imageUrl} locked={!partner.owned} className={styles.art}/>
               <strong>{partner.department}</strong>
               <span className={styles.name}>{partner.owned ? partner.name : "未獲得"}</span>
               <span className={styles.status}>

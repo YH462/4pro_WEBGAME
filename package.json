@@ -27,7 +27,8 @@
     "event:end": "tsx scripts/event-lifecycle.ts end",
     "event:purge": "tsx scripts/event-lifecycle.ts purge",
     "simulator:grant": "tsx scripts/simulator-grant.ts",
-    "nfc:tags": "tsx scripts/nfc-tags.ts"
+    "nfc:tags": "tsx scripts/nfc-tags.ts",
+    "admin:user": "tsx scripts/admin-user.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
@@ -37,6 +38,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sharp": "^0.35.5",
     "three": "^0.186.1",
     "zod": "^4.3.0"
   },

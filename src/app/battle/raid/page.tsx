@@ -3,7 +3,6 @@ import { BattleConsole } from "@/components/battle/battle-console";
 import { currentPlayer, requirePlayer } from "@/lib/session";
 import { db } from "@/lib/db";
 import { presentCharacter } from "@/lib/character-presentation";
-import { isTemporaryCharacter } from "@/lib/master-data";
 import { LocalBattleConsole } from "@/components/battle/local-battle-console";
 import { config } from "@/lib/config";
 import { notFound, redirect } from "next/navigation";
@@ -18,7 +17,7 @@ export default async function RaidPreview({ searchParams }: { searchParams: Prom
   if (!player) redirect("/start?next=local-raid");
   const characters = await db.character.findMany({ orderBy: { sortOrder: "asc" }, include: { department: true, skills: { where: { slot: 1 } } } });
   const ownedIds = new Set(player.characters.map((owned) => owned.characterId));
-  const available = characters.filter((character) => ownedIds.size ? ownedIds.has(character.id) : !character.isLegendary && !isTemporaryCharacter(character.id));
+  const available = characters.filter((character) => ownedIds.size ? ownedIds.has(character.id) : !character.isLegendary && !character.isDraft);
   const partners = available.map((character) => presentCharacter(character, player.characters.find((owned) => owned.characterId === character.id)));
   return <Shell active="/battle"><div className={`battle-screen ${styles.page}`}><div className="screen-heading"><h1>レイドバトル</h1><span className={styles.badge}>{local ? "会場レイド" : "操作プレビュー"}</span></div>{local ? <LocalBattleConsole partners={partners}/> : <BattleConsole partners={partners}/>}</div></Shell>;
 }

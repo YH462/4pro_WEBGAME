@@ -191,7 +191,7 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
       <div className={styles.characterStage}>
         <div className={styles.stageScenery} aria-hidden="true"><div className={styles.portalFloor}/>{Array.from({length:6},(_,i)=><i key={i} style={{"--prism":i} as CSSProperties}/>)}</div>
         <div className={styles.characterEffects} data-counter={impact?.kind === "counter"}>
-          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター（3Dモデル）`}><PartnerScene element={partner.element} characterId={partner.id}/></div>
+          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター（${partner.imageUrl?"キャラ画像":"3Dモデル"}）`}><PartnerScene element={partner.element} characterId={partner.id} imageUrl={partner.imageUrl}/></div>
           {(result || impact) && <div key={impact?.key ?? result?.key} className={styles.particles} aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <Sparkles key={i} style={{ "--i": i } as CSSProperties}/>)}</div>}
           {(impact?.kind === "heal" || (!local && result?.action === "heal")) && <span className={styles.healNumber}>+{impact?.kind === "heal" ? impact.amount : result!.amount}<Heart size={18}/></span>}
           {impact?.kind === "counter" && <span className={styles.hitNumber}>−{impact.amount}</span>}

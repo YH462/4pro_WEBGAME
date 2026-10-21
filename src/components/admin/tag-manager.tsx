@@ -1,0 +1,25 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import styles from "./admin.module.css";
+type Tag={id:string;enabled:boolean;createdAt:string;legacy:boolean;acquisitions:number};
+type Issued={tag:{id:string;url:string;createdAt:string;enabled:boolean};qrImage:string};
+export function AdminTagManager({characterId,isLegendary,origins,tags,eventActive}:{characterId:string;isLegendary:boolean;origins:string[];tags:Tag[];eventActive:boolean}) {
+  const router=useRouter(); const locked=useRef(false);
+  const [ready,setReady]=useState(false);useEffect(()=>{setReady(true);},[]);
+  const [origin,setOrigin]=useState(origins[0]??""),[busy,setBusy]=useState(""),[message,setMessage]=useState(""),[error,setError]=useState(""),[issued,setIssued]=useState<Issued|null>(null);
+  async function request(url:string,method:string,data:unknown) {
+    const response=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+    if(response.status===401){router.replace("/admin/login");throw new Error("ログインの有効期限が切れました。");}
+    const result=await response.json();if(!response.ok)throw new Error(result.error||"保存できませんでした。");return result;
+  }
+  async function issue() {
+    if(locked.current)return;locked.current=true;setBusy("issue");setError("");setMessage("");
+    try{setIssued(await request("/api/admin/tags","POST",{characterId,origin}));setMessage("タグを発行しました。URLまたはQRを保存してください。");router.refresh();}catch(reason){setError(reason instanceof Error?reason.message:"発行できませんでした。");}finally{locked.current=false;setBusy("");}
+  }
+  async function toggle(tag:Tag) {
+    if(locked.current)return;locked.current=true;setBusy(tag.id);setError("");setMessage("");
+    try{await request(`/api/admin/tags/${tag.id}`,"PATCH",{enabled:!tag.enabled});setMessage(tag.enabled?"タグを無効にしました。既存の所持キャラは保持されます。":"タグを有効にしました。");router.refresh();}catch(reason){setError(reason instanceof Error?reason.message:"変更できませんでした。");}finally{locked.current=false;setBusy("");}
+  }
+  return <><div className={styles.status} role="status">{error?<span className={styles.error}>{error}</span>:<span className={styles.success}>{message}</span>}</div><div className={styles.manager}><section className={styles.panel}><h2>{isLegendary?"解放条件":"新しい獲得タグ"}</h2>{isLegendary?<p className={styles.note}>学科キャラ4体をすべて獲得すると自動解放されます。学科なしの追加キャラは条件に含めません。</p>:<><p className={styles.note}>このキャラ専用のURLを発行します。同じキャラに複数のタグを用意できます。</p><label htmlFor="tag-origin">タグに書き込む接続先<select id="tag-origin" aria-label="タグに書き込む接続先" className={styles.origin} value={origin} disabled={!ready||Boolean(busy)} onChange={(event)=>setOrigin(event.target.value)}>{origins.map((value)=><option value={value} key={value}>{value}</option>)}</select></label>{origin.startsWith("http:")&&<p className={styles.note}>ローカル確認用です。スマホからはPCと同じネットワークで開いてください。会場用は固定のHTTPS URLで発行します。</p>}<button type="button" className={`${styles.button} ${styles.primary} ${styles.issue}`} disabled={!ready||Boolean(busy)||!eventActive||!origin} onClick={()=>void issue()}>{busy==="issue"?"発行しています…":"このキャラのタグを発行"}</button><p className={styles.note}>URLとQRは発行直後だけ表示します。保存してから画面を閉じてください。</p></>}{issued&&<div className={styles.issued}><strong>発行したタグ</strong><img src={issued.qrImage} alt="キャラ獲得用QRコード" width={250} height={250}/><p className={styles.url}>{issued.tag.url}</p><div className={styles.actions}><button type="button" className={styles.button} onClick={async()=>{try{await navigator.clipboard.writeText(issued.tag.url);setMessage("URLをコピーしました。");}catch{setError("自動コピーが使えません。表示されているURLを選択してコピーしてください。");}}}>URLをコピー</button><a className={styles.button} href={issued.qrImage} download={`nfc-${issued.tag.id}.png`}>QRを保存</a><button type="button" className={styles.button} onClick={()=>{const blob=new Blob([JSON.stringify(issued.tag,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`nfc-${issued.tag.id}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>URLを保存</button></div><a href={issued.tag.url} target="_blank" rel="noreferrer" className={styles.button}>獲得画面を確認</a></div>}</section><section className={styles.panel}><h2>発行済みタグ <small>({tags.length})</small></h2><p className={styles.note}>タグの対象キャラは発行後に変更できません。旧方式の学科タグもここで管理できます。</p>{tags.map((tag)=><article className={styles.tag} key={tag.id}><div className={styles.tagRow}><span className={tag.enabled?styles.enabled:styles.disabled}>{tag.enabled?"有効":"無効"}{tag.legacy&&" · 学科タグ"}</span><button type="button" className={`${styles.button} ${tag.enabled?styles.danger:""}`} disabled={!ready||Boolean(busy)||(!tag.enabled&&!eventActive)} aria-label={`${tag.id}を${tag.enabled?"無効":"有効"}にする`} onClick={()=>void toggle(tag)}>{busy===tag.id?"保存中…":tag.enabled?"無効にする":"有効にする"}</button></div><code>{tag.id}</code><p>{new Date(tag.createdAt).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"})} · 初回読み取り {tag.acquisitions}人</p></article>)}{!tags.length&&<p className={styles.empty}>発行済みタグはありません。</p>}</section></div></>;
+}

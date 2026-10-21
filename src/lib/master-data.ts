@@ -14,7 +14,7 @@ export const characters = [
   // Draft entries for building the 12-character experience. Replace these in place.
   ...[ [145,30,30,25], [130,37,24,30], [180,23,40,20], [115,42,19,35], [155,32,28,25], [140,34,26,30], [160,28,36,20] ].map(([baseHp, baseAttack, baseDefense, baseSpecialChargeRate], index) => ({
     id: `temp-${String(index + 6).padStart(2, "0")}`,
-    name: `仮キャラ ${String(index + 6).padStart(2, "0")}`,
+    name: `仮キャラ ${String(index + 6).padStart(2, "0")}`, isDraft:true,
     description: "CPU対戦を試すための仮キャラクターです。名前・見た目・能力値は今後変更します。",
     element: ["FOREST", "THUNDER", "FLAME", "AQUA"][index % 4],
     departmentId: null, baseHp, baseAttack, baseDefense, baseSpecialChargeRate,

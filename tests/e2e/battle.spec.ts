@@ -101,6 +101,10 @@ test("mobile commands stay visible and tappable on small phones, landscape and d
     await page.goto("/battle/raid");
     await page.getByRole("button", { name: "チョキを選択", exact: true }).click();
     await expect(page.getByRole("button", { name: "じゃんけんで試す", exact: true })).toBeEnabled();
+    // Measure settled hit areas after the brief tap/selection transform has finished.
+    await page.getByRole("button", { name: "チョキを選択", exact: true }).evaluate(async (button) => {
+      await Promise.all(button.getAnimations({ subtree:true }).map((animation) => animation.finished.catch(() => undefined)));
+    });
     const failures = await page.evaluate(() => {
       const issues: string[] = [];
       if (document.documentElement.scrollHeight > innerHeight + 1 || document.documentElement.scrollWidth > innerWidth + 1) issues.push("page scrolls");

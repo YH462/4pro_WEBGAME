@@ -11,6 +11,7 @@
 - Zod検証、Origin検証、DB共有レート制限、期限切れ／偽造セッション拒否
 - 明示的なイベント終了・保存期限後のゲスト削除・開発用所持フィクスチャ
 - Vitest単体テストとPlaywrightのPC／スマホE2E
+- 参加者と独立した管理者ログイン、キャラ一覧、学科なしのキャラにも対応した獲得タグ管理（[管理画面の使い方](docs/admin-management.md)）
 
 NFCのURLから4学科のキャラ獲得・4プロ自動解放まで追加しています。タグ用URL・QRの発行と実機確認の手順は [docs/nfc-acquisition.md](docs/nfc-acquisition.md) を参照してください。物理タグへの書き込み・実機NFCの動作確認は別途必要です。育成・スタッフ認証・正式なレイド受付・報酬は後続フェーズで、全MVPや20人レイドの完成状態ではありません。
 
@@ -80,6 +81,8 @@ QRのデコードには[スタンドアロンのjsQR](https://github.com/cozmo/j
 | `/`、`/start` | イベント案内、ゲストID発行、任意ニックネーム |
 | `/collection`、`/collection/[id]` | 六角形12枠の一覧（既存5体＋仮キャラ7体）、個別詳細、キャラごとの必殺技1枠 |
 | `/profile` | ニックネーム更新、プレイヤーID |
+| `/admin/login`、`/admin` | 管理者認証、キャラ一覧・検索 |
+| `/admin/characters/[id]` | キャラの名前・紹介・画像・基本値の編集、タグ発行、QR保存、有効・無効 |
 | `/acquire/[token]` | NFC／展示QRからのキャラ獲得、ゲスト開始後の復帰 |
 | `POST /api/acquisitions` | 自分の所持へ付与・4学科判定・4プロ自動解放 |
 | `/battle` | 全12体から1体を選ぶ、仮ルールのCPU対戦 |
@@ -125,7 +128,7 @@ npm run db:studio
 
 Prisma Studioで `Department` の名前、`Character` の基本値と学科対応を変更できます。対応交換はトランザクションで一度NULLにしてから変更してください。seedは既存マスタやイベント状態を上書きしません。`src/lib/master-data.ts` は初期投入値です。
 
-`Skill` は各キャラslot 1〜3。Ver.1.9／2.1が未提供のため `confirmed=false`、`effect=null`。効果を勝手に確定しません。スタッフ用マスタ編集画面と別認証はフェーズ4です。
+`Skill` は各キャラslot 1〜3。Ver.1.9／2.1が未提供のため `confirmed=false`、`effect=null`。効果を勝手に確定しません。キャラ名・画像・基本値は別認証の管理画面から編集できます。必殺技やレイド受付の管理は後続対応です。
 
 ## テスト
 

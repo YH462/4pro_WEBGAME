@@ -4,11 +4,12 @@ import type { createRaidPartnerArena } from "@/lib/raid-partner-arena";
 import { CharacterArt } from "../character-art";
 import styles from "./raid-mobile.module.css";
 
-export function PartnerScene({ element, characterId }: { element: string; characterId: string }) {
+export function PartnerScene({ element, characterId, imageUrl }: { element: string; characterId: string; imageUrl?:string|null }) {
   const canvas=useRef<HTMLCanvasElement>(null);
   const [view,setView]=useState({ element:"", mode:"loading" });
-  const mode=view.element===element ? view.mode : "loading";
+  const mode=imageUrl?"image":view.element===element ? view.mode : "loading";
   useEffect(() => {
+    if(imageUrl)return;
     let disposed=false, observer: ResizeObserver | undefined, arena: ReturnType<typeof createRaidPartnerArena> | undefined;
     const target=canvas.current!;
     const lost=(event:Event) => { event.preventDefault(); target.removeEventListener("webglcontextlost",lost); observer?.disconnect(); arena?.dispose(); arena=undefined; if(!disposed) setView({element,mode:"fallback"}); };
@@ -22,8 +23,8 @@ export function PartnerScene({ element, characterId }: { element: string; charac
       } catch { arena?.dispose(); arena=undefined; setView({element,mode:"fallback"}); }
     }).catch(()=>{ if(!disposed) setView({element,mode:"fallback"}); });
     return () => { disposed=true; target.removeEventListener("webglcontextlost",lost); observer?.disconnect(); arena?.dispose(); };
-  },[element]);
+  },[element,imageUrl]);
   return <div className={styles.partnerModel} data-renderer={mode} data-facing="front" data-character-id={characterId}>
-    <div className={styles.partnerFallback}><CharacterArt element={element} portrait/></div><canvas ref={canvas} key={element} aria-hidden="true"/>
+    <div className={styles.partnerFallback}><CharacterArt element={element} imageUrl={imageUrl} portrait/></div><canvas ref={canvas} key={`${element}:${imageUrl??"model"}`} aria-hidden="true"/>
   </div>;
 }

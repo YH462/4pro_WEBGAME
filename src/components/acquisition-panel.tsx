@@ -30,9 +30,9 @@ export function AcquisitionPanel({ token, department, character, owned }: { toke
     <div className="screen-heading"><h1>展示のパートナー</h1><span className={styles.department}>{department}</span></div>
     <div className={styles.card}>
       <span className={styles.eyebrow}>{done ? "YOUR NEW PARTNER" : "PARTNER FOUND"}</span>
-      <div className={styles.art} role="img" aria-label={character.name}><CharacterArt element={character.element} portrait/></div>
+      <div className={styles.art} role="img" aria-label={character.name}><CharacterArt element={character.element} imageUrl={character.imageUrl} portrait/></div>
       <h2>{character.name}</h2>
-      <p role="status">{result?.acquired ? "新しいパートナーが仲間になりました！" : done ? "このパートナーは獲得済みです。" : `${department}のパートナーを仲間にしよう！`}</p>
+      <p role="status">{result?.acquired ? "新しいパートナーが仲間になりました！" : done ? "このパートナーは獲得済みです。" : "このパートナーを仲間にしよう！"}</p>
       {result && <p className={styles.progress}>4学科のパートナー <b>{result.departmentCount} / 4</b></p>}
       {result?.legend && <div className={styles.legend} role="status"><Sparkles size={24}/><div><strong>4学科コンプリート！</strong><p>{result.legend.name}が仲間になりました！</p></div></div>}
       {error && <p role="alert" className={styles.error}>{error}</p>}
