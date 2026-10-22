@@ -66,8 +66,8 @@ test("three phones share one countdown and hand, receive different outcomes, and
     expect(initial.round.closesAt! - initial.serverNow).toBeGreaterThan(8000);
     for (const phone of phones) await expect(phone.getByRole("timer", { name: "入力締め切りまで" })).toContainText(/あと\d+秒/);
     await Promise.all(["グー", "チョキ", "パー"].map(async (label, i) => {
+      await phones[i].getByRole("button", { name: "攻撃を選択", exact: true }).click();
       await phones[i].getByRole("button", { name: `${label}を選択`, exact: true }).click();
-      await phones[i].getByRole("button", { name: "じゃんけんで送信", exact: true }).click();
       await expect(phones[i].locator(".raid-rps-result")).toContainText("送信完了");
       await expect(phones[i].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText(`攻撃 / ${label}`);
     }));
@@ -98,7 +98,6 @@ test("three phones share one countdown and hand, receive different outcomes, and
     // Self-healing is visible before the single counter; an unsubmitted teammate still receives it.
     await phones[0].getByRole("button", { name: "回復を選択", exact: true }).click();
     await phones[0].getByRole("button", { name: "グーを選択", exact: true }).click();
-    await phones[0].getByRole("button", { name: "じゃんけんで送信", exact: true }).click();
     await expect(phones[0].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText("回復 / グー");
     await expect.poll(async () => (await snapshot(request)).round.phase, { timeout: 15000, intervals: [200] }).toBe("playing");
     const heal = (await snapshot(contexts[0].request, true)).me!.lastResult!;
@@ -107,7 +106,7 @@ test("three phones share one countdown and hand, receive different outcomes, and
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(130 + heal.amount), { timeout: 8000 });
     expect((await snapshot(contexts[3].request, true)).me?.hp).toBe(150);
     await request.post("/api/local-raid", { headers, data: { type: "reset" } });
-    await expect(phones[0].getByRole("button", { name: "受付開始を待っています", exact: true })).toBeDisabled();
+    await expect(phones[0].getByRole("status").filter({ hasText: /^受付開始を待っています$/ })).toBeVisible();
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");
   } finally { for (const context of contexts) await context.close(); }
 });

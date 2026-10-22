@@ -151,13 +151,17 @@
 .localConsole .handRow button::before { background:#e3dfe2; }
 .localConsole .handRow button>span { color:#807b82; background:linear-gradient(140deg,#eeeaf0,#d6d1d8); }
 .localConsole .handRow button:disabled { opacity:.75; }
-.localConsole .handRow button[data-hand="rock"] { --hand-color:#df0733; --hand-light:#ff5d76; --hand-dark:#a80022; }
-.localConsole .handRow button[data-hand="scissors"] { --hand-color:#1876ff; --hand-light:#63b1ff; --hand-dark:#1746b4; }
-.localConsole .handRow button[data-hand="paper"] { --hand-color:#ffb51b; --hand-light:#ffdb72; --hand-dark:#bd7300; }
+.localConsole [data-hand="rock"] { --hand-color:#df0733; --hand-light:#ff5d76; --hand-dark:#a80022; }
+.localConsole [data-hand="scissors"] { --hand-color:#1876ff; --hand-light:#63b1ff; --hand-dark:#1746b4; }
+.localConsole [data-hand="paper"] { --hand-color:#ffb51b; --hand-light:#ffdb72; --hand-dark:#bd7300; }
 .localConsole .handRow button[aria-pressed="true"] { filter:drop-shadow(0 3px 5px color-mix(in srgb,var(--hand-color) 35%,transparent)); }
 .localConsole .handRow button[aria-pressed="true"]>span { color:#fff; background:linear-gradient(135deg,var(--hand-light),var(--hand-color) 50%,var(--hand-dark)); box-shadow:inset 0 2px #ffffff80; }
 .localConsole .handRow button[data-hand="paper"][aria-pressed="true"]>span { color:#513300; }
 .localConsole .handCheck { background:var(--hand-dark); }
+.localConsole .sentCommand>svg:first-child { width:48px; height:48px; padding:10px; color:#fff; background:linear-gradient(135deg,var(--hand-light),var(--hand-color),var(--hand-dark)); clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+.localConsole .sentCommand[data-hand="paper"]>svg:first-child { color:#513300; }
+.localConsole .commandStatus { color:#767179; background:#b5adb4; font-weight:750; pointer-events:none; filter:none; }
+.localConsole .commandStatus::before { background:linear-gradient(140deg,#fbf9fb,#d9d4dc); }
 .localConsole .handRow button:focus-visible::before { background:#17171c; }
 .localConsole .feedback { font-size:10px; line-height:1.4; }
 .localConsole .confirm { min-height:54px; font-size:15px; }

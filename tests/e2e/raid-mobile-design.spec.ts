@@ -48,43 +48,95 @@ test("a lethal shared attack shows a persistent victory panel only after screen 
   } finally { await db.player.delete({ where: { id: player.id } }); await db.$disconnect(); }
 });
 
-test("synced hand colors are exclusive and the result waits for the next shared round", async ({ page }) => {
-  const response = await page.request.post("/api/guest", { headers: { origin: "http://localhost:3000" }, data: { nickname: "選択UI確認" } });
+test("an automatic submission with a lost response retries the same command ID", async ({ page }) => {
+  const response = await page.request.post("/api/guest", { headers: { origin: "http://localhost:3000" }, data: { nickname: "再送確認" } });
   const { player } = await response.json();
-  let now = Date.now();
+  const now = Date.now();
   const room = new LocalRaidRoom(() => "paper", () => now);
-  room.join(player.id, "forest-golem", 170, "選択UI確認");
-  const roomId = room.snapshot().roomId;
-  room.start(roomId);
+  room.join(player.id, "forest-golem", 170, "再送確認");
+  room.start(room.snapshot().roomId);
+  const before = room.snapshot(player.id), commands: unknown[] = [];
+  let stale = true;
   await page.route("**/api/local-raid*", async route => {
     if (route.request().method() === "POST") {
       const input = route.request().postDataJSON();
-      if (input.type === "command") room.command(player.id, input);
+      if (input.type === "command") {
+        commands.push(input); room.command(player.id, input);
+        if (commands.length === 1) {
+          await route.fulfill({ status: 503, json: { error: "応答を確認できません。同じ行動を再送できます。" } });
+          return;
+        }
+        stale = false;
+      }
+    }
+    await route.fulfill({ json: { state: stale ? before : room.snapshot(player.id) } });
+  });
+  try {
+    await page.goto("/battle/raid?sync=local");
+    await page.getByRole("button", { name: "回復を選択", exact: true }).click();
+    await page.getByRole("button", { name: "パーを選択", exact: true }).click();
+    const retry = page.getByRole("button", { name: "同じ行動を再送する", exact: true });
+    await expect(retry).toBeEnabled();
+    await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "グーを選択", exact: true })).toBeDisabled();
+    await retry.click();
+    await expect(page.getByText("送信完了！", { exact: true })).toBeVisible();
+    expect(commands).toHaveLength(2);
+    expect(commands[1]).toEqual(commands[0]);
+    expect(room.snapshot(player.id).me?.submission).toMatchObject({ action: "heal", hand: "paper" });
+    expect(room.snapshot().round.submitted).toBe(1);
+  } finally { await db.player.delete({ where: { id: player.id } }); await db.$disconnect(); }
+});
+
+test("synced hands submit the chosen action once and reset at the next shared round", async ({ page }, testInfo) => {
+  const response = await page.request.post("/api/guest", { headers: { origin: "http://localhost:3000" }, data: { nickname: "自動送信確認" } });
+  const { player } = await response.json();
+  let now = Date.now();
+  const room = new LocalRaidRoom(() => "paper", () => now);
+  room.join(player.id, "forest-golem", 170, "自動送信確認");
+  const roomId = room.snapshot().roomId;
+  room.start(roomId);
+  const commands: { action: string; hand: string }[] = [];
+  await page.route("**/api/local-raid*", async route => {
+    if (route.request().method() === "POST") {
+      const input = route.request().postDataJSON();
+      if (input.type === "command") {
+        commands.push(input); room.command(player.id, input);
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
     }
     await route.fulfill({ json: { state: room.snapshot(player.id) } });
   });
   try {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/battle/raid?sync=local");
-    const hands = page.getByRole("group", { name: "じゃんけんの手を選ぶ" });
+    await expect(page.getByRole("button", { name: "じゃんけんで送信", exact: true })).toHaveCount(0);
     const colors: string[] = [];
-    for (const name of ["チョキ", "パー", "グー"]) {
-      const choice = page.getByRole("button", { name: `${name}を選択`, exact: true });
-      await choice.click();
-      await expect(choice).toHaveAttribute("aria-pressed", "true");
-      await expect(hands.locator('[aria-pressed="true"]')).toHaveCount(1);
-      colors.push(await choice.locator("span").evaluate(el => getComputedStyle(el).backgroundImage));
+    const cases = [ { name: "グー", hand: "rock", action: "attack", label: "攻撃" }, { name: "チョキ", hand: "scissors", action: "heal", label: "回復" }, { name: "パー", hand: "paper", action: "attack", label: "攻撃" } ];
+    for (const [i, choice] of cases.entries()) {
+      const hand = page.getByRole("button", { name: choice.name + "を選択", exact: true });
+      await expect(hand).toBeDisabled();
+      await page.getByRole("button", { name: choice.label + "を選択", exact: true }).click();
+      await expect(hand).toBeEnabled();
+      expect(commands).toHaveLength(i);
+      // Two clicks in the same event loop must still send exactly one command.
+      await hand.evaluate(el => { (el as HTMLButtonElement).click(); (el as HTMLButtonElement).click(); });
+      const sent = page.getByRole("group", { name: "送信した行動とじゃんけんの手" });
+      await expect(sent).toContainText(choice.label + " / " + choice.name);
+      await expect(page.getByText("送信完了！", { exact: true })).toBeVisible();
+      expect(commands).toHaveLength(i + 1);
+      expect(commands[i]).toMatchObject({ action: choice.action, hand: choice.hand });
+      colors.push(await sent.locator("svg").first().evaluate(el => getComputedStyle(el).backgroundImage));
+      await page.screenshot({ path: testInfo.outputPath("auto-submit-" + choice.hand + ".png") });
+      now += 10000; room.snapshot(); room.reveal(roomId, i + 1);
+      await expect(page.locator("[data-phase]")).toHaveAttribute("data-phase", "result");
+      if (i === 0) { await page.waitForTimeout(2200); await expect(page.locator(".raid-rps-result")).toContainText("負け ×0.5"); }
+      await expect(page.getByRole("status").filter({ hasText: /^次の受付まで待機$/ })).toBeVisible();
+      room.finish(roomId, i + 1);
+      await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toHaveAttribute("aria-pressed", "false");
+      await expect(hand).toBeDisabled();
     }
     expect(new Set(colors).size).toBe(3);
-    await page.getByRole("button", { name: "じゃんけんで送信", exact: true }).click();
-    await expect(page.locator(".raid-rps-result")).toContainText("送信完了");
-    now += 10000; room.snapshot(); room.reveal(roomId, 1);
-    await expect(page.locator(".raid-rps-result")).toContainText("負け ×0.5");
-    await page.waitForTimeout(2200);
-    await expect(page.locator(".raid-rps-result")).toContainText("負け ×0.5");
-    await expect(page.getByRole("button", { name: "次の受付まで待機", exact: true })).toBeDisabled();
-    room.finish(roomId, 1);
-    await expect(page.getByRole("button", { name: "グーを選択", exact: true })).toBeEnabled();
-    await expect(hands.locator('[aria-pressed="true"]')).toHaveCount(0);
   } finally { await db.player.delete({ where: { id: player.id } }); await db.$disconnect(); }
 });

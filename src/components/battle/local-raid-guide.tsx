@@ -19,7 +19,7 @@ export function LocalRaidGuide({ dialogRef }: { dialogRef: RefObject<HTMLDialogE
       <header className={styles.header}>
         <span className={styles.eyebrow}>RAID GUIDE</span>
         <h2 id="raid-mobile-rules"><span>レイド</span>の遊び方</h2>
-        <p>攻撃はボスへ。回復は自分へ。<br/>じゃんけんの手を選んで送信しよう。</p>
+        <p>攻撃はボスへ。回復は自分へ。<br/>行動を選び、手をタップすると送信します。</p>
         <button type="button" className={styles.close} aria-label="レイドのルールを閉じる" onClick={() => dialogRef.current?.close()}><X size={23}/></button>
         <div className={styles.decoration} aria-hidden="true"><i/><i/><i/></div>
       </header>

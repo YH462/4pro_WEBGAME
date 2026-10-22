@@ -28,7 +28,7 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
   const { state: raw, error: connectionError, send } = useLocalRaid(local, true);
   const state = raw ? visibleLocalRaid(raw) : null;
   const [partnerId, setPartnerId] = useState(partners[0]?.id ?? "");
-  const [action, setAction] = useState<LocalRaidAction>("attack");
+  const [action, setAction] = useState<LocalRaidAction | null>(local ? null : "attack");
   const [hand, setHand] = useState<RaidHand | null>(null);
   const [joining, setJoining] = useState(false);
   const [sending, setSending] = useState(false);
@@ -48,7 +48,8 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
   const seconds = useRaidCountdown(raw?.round.closesAt, raw?.serverNow);
   const submitted = raw?.me?.submission?.round === raw?.round.number && Boolean(raw?.me?.submission);
   const sentCommand = local && submitted ? raw?.me?.submission : null;
-  const SentHandIcon = sentCommand ? handIcons[sentCommand.hand] : null;
+  const pendingCommand = sentCommand ?? (local && sending ? attempt : null);
+  const SentHandIcon = pendingCommand ? handIcons[pendingCommand.hand] : null;
   const accepting = !local || Boolean(raw?.round.phase === "collecting" && seconds > 0 && raw.me && raw.me.eligibleRound <= raw.round.number);
   const waiting = previewWaiting || Boolean(local && (raw?.round.phase === "playing" || (raw?.round.phase === "collecting" && submitted)));
   const phase = result ? "result" : waiting ? "waiting" : sending ? "sending" : "select";
@@ -77,6 +78,7 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
     inputRound.current = raw.round.number;
     token.current++; locked.current = false;
     setResult(null); setHand(null); setAttempt(null); setSending(false); setError("");
+    if (local) setAction(null);
   }, [raw?.roomId, raw?.round.number, raw?.round.phase]);
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
       token.current++; locked.current = false;
       inputRound.current = 0;
       setResult(null); setHand(null); setAttempt(null); setSending(false); setError("");
+      if (local) setAction(null);
       return;
     }
     if (!latest || latest.turn > raw.revealedTurn || latest.turn <= seen.current.turn) return;
@@ -142,16 +145,16 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
       : result ? result.submitted === false ? "今回は未入力でした。次の受付で参加しよう" : `${result.label} ×${result.multiplier}：${result.action === "attack" ? "攻撃" : "自己回復"} ${result.amount} ／ ボスの全体攻撃 ${result.counterDamage}`
       : waiting ? local ? submitted && raw?.round.phase === "collecting" ? "送信済み。締め切りまでスクリーンに注目！" : "みんなの行動をスクリーンで見届けよう！" : "ボスとじゃんけん中…"
       : sending ? "選んだ手を送信しています…"
-        : ended ? bossHp === 0 ? "討伐成功！ みんなでボスを倒した！" : "戦闘不能です。次のレイドで再挑戦しよう" : "攻撃・回復と、じゃんけんの手を選ぼう");
+        : ended ? bossHp === 0 ? "討伐成功！ みんなでボスを倒した！" : "戦闘不能です。次のレイドで再挑戦しよう" : local ? action ? "手をタップすると、そのまま送信します" : "先に攻撃か回復を選ぼう" : "攻撃・回復と、じゃんけんの手を選ぼう");
 
-  async function submit() {
-    if (locked.current || busy || ended || !hand || !ready || !accepting) return;
+  async function submit(chosenHand = hand) {
+    if (locked.current || busy || ended || !chosenHand || !action || !ready || !accepting || (local && submitted)) return;
     locked.current = true;
     const current = ++token.current;
     setError("");
     if (!local) {
       setPreviewWaiting(true);
-      const chosenAction = action, chosenHand = hand;
+      const chosenAction = action;
       previewTimer.current = setTimeout(() => {
         const boss = raidHands[Math.floor(Math.random() * raidHands.length)].id;
         const rps = resolveRaidRps(chosenHand, boss);
@@ -162,7 +165,7 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
       }, 2100);
       return;
     }
-    const payload = attempt ?? { type: "command" as const, roomId: raw!.roomId, round: raw!.round.number, requestId: localRequestId(), action, hand };
+    const payload = attempt ?? { type: "command" as const, roomId: raw!.roomId, round: raw!.round.number, requestId: localRequestId(), action, hand: chosenHand };
     setAttempt(payload); setSending(true);
     try { await send(payload); }
     catch (reason) { if (current === token.current) setError(reason instanceof Error ? reason.message : "送信に失敗しました。同じ行動を再送できます。"); }
@@ -177,6 +180,9 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
   const effectRange = [.5, 2].map((multiplier) => Math.min(effectLimit, estimateBase * multiplier));
   const element = elements[partner.element as keyof typeof elements] ?? elements.LEGEND;
   const ElementIcon = element.Icon;
+  const retry = local && Boolean(attempt && error) && !busy && !ended && accepting;
+  const rejoin = local && interactive && Boolean(raw) && !joining && !busy && !ended && raw?.me?.characterId !== partnerId;
+  const localStatus = ended ? "戦闘不能" : sending ? "送信中…" : waiting || result ? "次の受付まで待機" : joining ? "参加中…" : !accepting ? "受付開始を待っています" : !action ? "① 攻撃か回復を選ぼう" : "② 手をタップして決定";
   function selectPartner(id: string) { if(characterFrozen || unsettled) return; setPartnerId(id); setHand(null); setError(""); }
   function cyclePartner(direction: number) { selectPartner(partners[(partners.findIndex((item)=>item.id===partner.id)+direction+partners.length)%partners.length].id); }
 
@@ -213,8 +219,8 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
       <div className={styles.commandArea}>
         {phase === "select" ? <>
           <div className={styles.actionRow} role="group" aria-label="行動を選ぶ">{([{ id: "attack", label: "攻撃", Icon: Swords }, { id: "heal", label: "回復", Icon: Heart }] as const).map(({ id, label, Icon }) => <button type="button" key={id} aria-label={`${label}を選択`} aria-pressed={action === id} disabled={frozen || !ready} onClick={() => setAction(id)}><Icon size={19}/><strong>{label}</strong>{action === id && <Check size={14}/>}</button>)}</div>
-          <div className={styles.handRow} role="group" aria-label="じゃんけんの手を選ぶ">{raidHands.map((item) => { const Icon = handIcons[item.id]; return <button type="button" key={item.id} data-hand={item.id} aria-label={`${item.label}を選択`} aria-pressed={hand === item.id} disabled={frozen || !ready} onClick={() => setHand(item.id)}><span><Icon size={34}/><strong>{item.label}</strong></span>{hand === item.id && <Check className={styles.handCheck} size={20} aria-hidden="true"/>}</button>; })}</div>
-          <div className={styles.prediction} aria-label="選択中の手と効果の目安"><div><span>選択中 <b>{selectedHand ? handName(selectedHand) : "手を選ぼう"}</b></span><span>{action === "attack" ? "攻撃" : "回復"}の目安 <b>{effectRange[0]}–{effectRange[1]}</b></span></div><small>勝ち ×2 ・ あいこ ×1 ・ 負け ×0.5</small></div>
+          <div className={styles.handRow} role="group" aria-label="じゃんけんの手を選ぶ">{raidHands.map((item) => { const Icon = handIcons[item.id]; return <button type="button" key={item.id} data-hand={item.id} aria-label={`${item.label}を選択`} aria-pressed={hand === item.id} disabled={frozen || !ready || (local && !action)} onClick={() => { setHand(item.id); if (local) void submit(item.id); }}><span><Icon size={34}/><strong>{item.label}</strong></span>{hand === item.id && <Check className={styles.handCheck} size={20} aria-hidden="true"/>}</button>; })}</div>
+          <div className={styles.prediction} aria-label="選択中の手と効果の目安"><div><span>選択中 <b>{selectedHand ? handName(selectedHand) : "手を選ぼう"}</b></span><span>{action ? action === "attack" ? "攻撃" : "回復" : "効果"}の目安 <b>{action ? `${effectRange[0]}–${effectRange[1]}` : "—"}</b></span></div><small>勝ち ×2 ・ あいこ ×1 ・ 負け ×0.5</small></div>
         </> : phase === "result" && result ? local ? <div key={result.key} className={`${styles.localResult} raid-rps-result`} data-outcome={result.outcome} data-submitted={result.submitted !== false}>
           {result.submitted === false && <strong className={styles.noInput}>今回は未入力です</strong>}
           <div className={styles.resultHands} aria-hidden="true">{raidHands.map(item=>{const Icon=handIcons[item.id];return <span key={item.id}><Icon size={30}/></span>;})}</div>
@@ -222,14 +228,14 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
         </div> : <div key={result.key} className={`${styles.result} raid-rps-result`} data-outcome={result.outcome}>
           <span>{result.submitted === false ? "今回は未入力" : `自分：${handName(result.hand)}`} / ボス：{handName(result.boss)}</span><strong>{result.label} {result.submitted !== false && <b>×{result.multiplier}</b>}</strong><span>{result.submitted === false ? "次のラウンドで行動を選ぼう" : <>{result.action === "attack" ? "攻撃" : "自己回復"} <b>{result.amount}</b></>}{local && <> ／ 全体攻撃 {result.counterDamage}</>}</span><small>{local ? "次の受付で自動で操作画面に戻ります" : "次の行動へ自動で切り替わります"}</small><i className={styles.resultTimer}/>
         </div> : <div className={`${styles.waiting} raid-rps-result`}>
-          {sentCommand && SentHandIcon ? <div className={styles.sentCommand} role="group" aria-label="送信した行動とじゃんけんの手"><SentHandIcon size={32} aria-hidden="true"/><div><small>送信した内容</small><b>{sentCommand.action === "attack" ? "攻撃" : "回復"} / {handName(sentCommand.hand)}</b></div><Check size={16} aria-hidden="true"/></div> : <Monitor size={34}/>}
+          {pendingCommand && SentHandIcon ? <div className={styles.sentCommand} data-hand={pendingCommand.hand} role="group" aria-label="送信した行動とじゃんけんの手"><SentHandIcon size={32} aria-hidden="true"/><div><small>{sending ? "送信中の内容" : "送信した内容"}</small><b>{pendingCommand.action === "attack" ? "攻撃" : "回復"} / {handName(pendingCommand.hand)}</b></div>{!sending && <Check size={16} aria-hidden="true"/>}</div> : <Monitor size={34}/>}
           <strong>{phase === "sending" ? "送信しています…" : local ? raw?.round.phase === "collecting" ? "送信完了！" : "スクリーンに注目！" : "じゃん・けん・ぽん！"}</strong><span>{local ? raw?.round.phase === "collecting" ? `あと${seconds}秒で、みんな一緒にじゃんけん！` : "全員の攻撃とボスの全体攻撃を見届けよう" : "操作プレビュー：ボスの手を待っています"}</span>{!sentCommand && <div className={styles.waitDots} aria-hidden="true"><i/><i/><i/></div>}
         </div>}
       </div>
       <p className={`${styles.feedback} raid-feedback`} role="status" aria-live="polite">{status}</p>
-      <button type="button" className={styles.confirm} disabled={!interactive || busy || ended || joining || Boolean(connectionError) || (local && (!raw || !accepting)) || (ready && !hand)} onClick={() => { if (!ready && local) void join(); else void submit(); }}>
+      {local ? retry || rejoin ? <button type="button" className={styles.confirm} disabled={retry && (!ready || !accepting)} onClick={()=>{ if (rejoin) void join(); else void submit(); }}>{rejoin ? "同期に参加する" : "同じ行動を再送する"}</button> : <div className={`${styles.confirm} ${styles.commandStatus}`} role="status">{(sending || waiting || result) && !ended && <LoaderCircle className={styles.spinner} size={18} aria-hidden="true"/>}<span>{localStatus}</span></div> : <button type="button" className={styles.confirm} disabled={!interactive || busy || ended || joining || Boolean(connectionError) || (ready && !hand)} onClick={() => void submit()}>
         {ended ? <span>戦闘不能</span> : sending || waiting || (local && result) ? <><LoaderCircle className={styles.spinner} size={18}/><span>{sending ? "送信中…" : "次の受付まで待機"}</span></> : result ? <><Check size={19}/><span>まもなく次の行動へ</span></> : <><Radio size={24} aria-hidden="true"/><span className={styles.confirmLabel}><small aria-hidden="true">{local ? "LOCAL SYNC" : "COMMAND PREVIEW"}</small><strong>{joining ? "参加中…" : local && !accepting ? "受付開始を待っています" : !ready ? "同期に参加する" : !hand ? "じゃんけんの手を選ぼう" : attempt ? "同じ行動を再送する" : local ? "じゃんけんで送信" : "じゃんけんで試す"}</strong></span><ChevronsRight size={24} aria-hidden="true"/></>}
-      </button>
+      </button>}
     </section>}
     {local ? <LocalRaidGuide dialogRef={help}/> : <dialog className={styles.help} ref={help} aria-labelledby="raid-mobile-rules"><header><h2 id="raid-mobile-rules">レイドの遊び方</h2><button type="button" aria-label="レイドのルールを閉じる" onClick={() => help.current?.close()}><X size={20}/></button></header><p>攻撃はボスへ。回復は自分へ。行動とじゃんけんの手を選んで送信しよう。</p><div className={styles.rules}>{Object.values(raidRpsRules).map((rule) => <span key={rule.label}>{rule.label}<b>×{rule.multiplier}</b></span>)}</div><p>操作プレビューです。HP・所持キャラクター・育成値は変わりません。</p><a href="/raid/screen" target="_blank" rel="noreferrer">スクリーンを開く <ArrowUpRight size={15}/></a></dialog>}
   </div>;
