@@ -10,6 +10,12 @@ const departmentStyles: Record<string, string> = {
   control: styles.control,
   civil: styles.civil,
 };
+const elementStyles: Record<string, string> = {
+  FOREST: styles.forest,
+  THUNDER: styles.thunder,
+  FLAME: styles.flame,
+  AQUA: styles.aqua,
+};
 
 export function PartnerCollection({ partners }: { partners: PartnerView[] }) {
   const emptySlots = Array.from({ length: Math.max(0, 12 - partners.length) });
@@ -20,17 +26,16 @@ export function PartnerCollection({ partners }: { partners: PartnerView[] }) {
         <li key={partner.id} className={styles.slot}>
           <Link
             href={`/collection/${partner.id}`}
-            className={`collection-card ${styles.hexagon} ${departmentStyles[partner.departmentId ?? ""] ?? ""} ${partner.isLegendary ? styles.legendary : ""} ${partner.owned ? styles.owned : styles.locked}`}
+            className={`collection-card ${styles.hexagon} ${elementStyles[partner.element] ?? ""} ${departmentStyles[partner.departmentId ?? ""] ?? ""} ${partner.isLegendary ? styles.legendary : ""} ${partner.owned ? styles.owned : styles.locked}`}
             aria-label={`${partner.name}の詳細を見る${partner.owned ? "（獲得済み）" : "（未獲得）"}`}
           >
             <span className={styles.innerFill} aria-hidden="true"/>
             <div className={styles.content}>
               <span className={styles.number}>{String(partner.number).padStart(3, "0")}</span>
-              <CharacterArt element={partner.element} imageUrl={partner.imageUrl} locked={!partner.owned} className={styles.art}/>
-              <strong>{partner.department}</strong>
-              <span className={styles.name}>{partner.owned ? partner.name : "未獲得"}</span>
-              <span className={styles.status}>
-                {partner.owned ? <><Check size={12}/>獲得済み</> : <LockKeyhole size={12}/>}
+              <CharacterArt element={partner.element} imageUrl={partner.imageUrl} locked={!partner.owned} portrait className={styles.art}/>
+              <strong>{partner.departmentId || partner.isLegendary ? partner.department : partner.name}</strong>
+              <span className={styles.status} title={partner.owned ? "獲得済み" : "未獲得"}>
+                {partner.owned ? <><Check size={12} aria-hidden="true"/>獲得済み</> : <LockKeyhole size={12} aria-hidden="true"/>}
               </span>
             </div>
           </Link>
