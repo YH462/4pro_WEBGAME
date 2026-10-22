@@ -12,6 +12,7 @@ import { localRequestId, useLocalRaid } from "./use-local-raid";
 import { useRaidCountdown } from "./use-raid-countdown";
 import { PartnerScene } from "./partner-scene";
 import { RaidHpGauge } from "./raid-hp-gauge";
+import { LocalRaidGuide } from "./local-raid-guide";
 import styles from "./raid-mobile.module.css";
 
 type ResultView = Pick<LocalRaidResult, "action" | "hand" | "boss" | "outcome" | "label" | "multiplier" | "amount" | "counterDamage"> & { key: string; submitted?: boolean };
@@ -224,6 +225,6 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
         {sending || waiting ? <><LoaderCircle className={styles.spinner} size={18}/><span>{sending ? "送信中…" : "次の受付まで待機"}</span></> : result ? <><Check size={19}/><span>まもなく次の行動へ</span></> : ended ? <span>戦闘不能</span> : <><Radio size={24} aria-hidden="true"/><span className={styles.confirmLabel}><small aria-hidden="true">{local ? "LOCAL SYNC" : "COMMAND PREVIEW"}</small><strong>{joining ? "参加中…" : local && !accepting ? "受付開始を待っています" : !ready ? "同期に参加する" : !hand ? "じゃんけんの手を選ぼう" : attempt ? "同じ行動を再送する" : local ? "じゃんけんで送信" : "じゃんけんで試す"}</strong></span><ChevronsRight size={24} aria-hidden="true"/></>}
       </button>
     </section>}
-    <dialog className={styles.help} ref={help} aria-labelledby="raid-mobile-rules"><header><h2 id="raid-mobile-rules">レイドの遊び方</h2><button type="button" aria-label="レイドのルールを閉じる" onClick={() => help.current?.close()}><X size={20}/></button></header><p>攻撃はボスへ。回復は自分へ。行動とじゃんけんの手を選んで送信しよう。</p><div className={styles.rules}>{Object.values(raidRpsRules).map((rule) => <span key={rule.label}>{rule.label}<b>×{rule.multiplier}</b></span>)}</div><p>{local ? "受付は全員共通で10秒、1人1回。締め切り後は同じボスの手で勝敗を判定します。送信後は会場スクリーンに注目！" : "操作プレビューです。HP・所持キャラクター・育成値は変わりません。"}</p>{local && <p>基本攻撃50・回復30、全体攻撃20。未入力は行動なしで、全体攻撃の対象になります。途中参加は次のラウンドから。回復は自分の最大HPが上限です。</p>}<a href={`/raid/screen${local ? "?sync=local" : ""}`} target="_blank" rel="noreferrer">スクリーンを開く <ArrowUpRight size={15}/></a></dialog>
+    {local ? <LocalRaidGuide dialogRef={help}/> : <dialog className={styles.help} ref={help} aria-labelledby="raid-mobile-rules"><header><h2 id="raid-mobile-rules">レイドの遊び方</h2><button type="button" aria-label="レイドのルールを閉じる" onClick={() => help.current?.close()}><X size={20}/></button></header><p>攻撃はボスへ。回復は自分へ。行動とじゃんけんの手を選んで送信しよう。</p><div className={styles.rules}>{Object.values(raidRpsRules).map((rule) => <span key={rule.label}>{rule.label}<b>×{rule.multiplier}</b></span>)}</div><p>操作プレビューです。HP・所持キャラクター・育成値は変わりません。</p><a href="/raid/screen" target="_blank" rel="noreferrer">スクリーンを開く <ArrowUpRight size={15}/></a></dialog>}
   </div>;
 }
