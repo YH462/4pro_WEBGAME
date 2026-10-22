@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, ArrowUpRight, LockKeyhole } from "lucide-react";
+import { Check, ChevronRight, LockKeyhole } from "lucide-react";
 import { characterImageUrl } from "@/lib/character-edit-input";
 import { CharacterArt } from "./character-art";
 import styles from "./exhibition-map.module.css";
@@ -15,10 +15,10 @@ type MapPartner = {
 
 // Position follows the department, even when character master data is reordered.
 const areas = [
-  { id: "mechanical", name: "機械科", position: styles.topLeft },
-  { id: "electrical", name: "電気情報", position: styles.topRight },
-  { id: "control", name: "電子制御", position: styles.bottomLeft },
-  { id: "civil", name: "建設システム", position: styles.bottomRight },
+  { id: "mechanical", name: "機械科", code: "MECHANICAL", number: "01", position: styles.topLeft },
+  { id: "electrical", name: "電気情報", code: "ELECTRICAL", number: "02", position: styles.topRight },
+  { id: "control", name: "電子制御", code: "ELECTRONICS", number: "03", position: styles.bottomLeft },
+  { id: "civil", name: "建設システム", code: "ARCHITECTURE", number: "04", position: styles.bottomRight },
 ];
 
 export function ExhibitionMap({ partners, legend, hasPlayer }: {
@@ -35,14 +35,16 @@ export function ExhibitionMap({ partners, legend, hasPlayer }: {
           <Link
             key={area.id}
             href={hasPlayer ? (partner ? `/collection/${partner.id}` : "/collection") : "/start"}
-            className={`${styles.area} ${area.position} ${partner?.owned ? "" : styles.locked} element-${(partner?.element ?? "LEGEND").toLowerCase()}`}
+            className={`${styles.area} ${area.position} ${partner?.owned ? "" : styles.locked}`}
             aria-label={`${name}：${partner?.owned ? `${partner.name}（獲得済み）` : "未獲得"}`}
           >
+            <span className={styles.marker} aria-hidden="true"><b>{area.number}</b><span>{area.code}</span></span>
+            <div className={styles.decoration} aria-hidden="true"><i/><i/><i/><i/></div>
             <div className={styles.content}>
               <div className={styles.art}><CharacterArt element={partner?.element ?? "LEGEND"} imageUrl={characterImageUrl(partner?.imageId)} locked={!partner?.owned}/></div>
-              <h2>{name}<ArrowUpRight size={16}/></h2>
-              <span className={styles.characterName}>{partner?.owned ? partner.name : "未獲得"}</span>
-              {partner?.owned && <span className={`${styles.status} ${styles.owned}`}><Check size={12}/>獲得済み</span>}
+              <h2>{name}<ChevronRight size={16} aria-hidden="true"/></h2>
+              <span className={styles.characterName}>{partner?.owned ? partner.name : "展示で仲間にしよう"}</span>
+              <span className={styles.status}>{partner?.owned ? <><Check size={12} aria-hidden="true"/>獲得済み</> : <><LockKeyhole size={11} aria-hidden="true"/>未獲得</>}</span>
             </div>
           </Link>
         );
@@ -53,17 +55,13 @@ export function ExhibitionMap({ partners, legend, hasPlayer }: {
         className={`${styles.hub} ${legend?.owned ? "" : styles.locked}`}
         aria-label={`4プロ：${legend?.owned ? "獲得済み" : "全学科コンプリートで解放"}`}
       >
-        <CharacterArt element={legend?.element ?? "LEGEND"} imageUrl={characterImageUrl(legend?.imageId)} locked={!legend?.owned}/>
+        <div className={styles.legendArt}><CharacterArt element={legend?.element ?? "LEGEND"} imageUrl={characterImageUrl(legend?.imageId)} locked={!legend?.owned}/></div>
         <h2>{legend?.name ?? "4プロ"}</h2>
         <span className={styles.hubStatus}>
           {legend?.owned ? <><Check size={12}/>獲得済み</> : <><LockKeyhole size={12}/>4学科を集めて解放</>}
         </span>
       </Link>
 
-      <svg className={styles.dividers} viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M500 0V186M0 300H250M750 300H1000M500 414V600"/>
-        <path className={styles.hubOutline} d="M250 300L400 186H600L750 300L600 414H400Z"/>
-      </svg>
     </section>
   );
 }

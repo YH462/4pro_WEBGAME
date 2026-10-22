@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Camera, QrCode, RotateCcw, X } from "lucide-react";
+import { Camera, ChevronRight, QrCode, RotateCcw, X } from "lucide-react";
 import { raidQrDestination } from "@/lib/raid-qr";
 import styles from "./raid-qr-scanner.module.css";
 
@@ -103,11 +103,11 @@ export function RaidQrScanner({ hasPlayer }: { hasPlayer: boolean }) {
     };
   }, [open, attempt, router]);
 
-  const label = <><span className={styles.qrIcon}><QrCode size={20}/></span><span>QRでレイドに参加</span><ArrowRight size={18}/></>;
-  if (!hasPlayer) return <Link href="/start" className={styles.trigger}>{label}</Link>;
+  const label = <><span className={styles.qrIcon}><QrCode size={25} aria-hidden="true"/></span><span className={styles.triggerCopy}><strong>QRでレイドに参加</strong><small id={`${id}-entry-note`}>会場の受付QRからみんなで挑戦！</small></span><ChevronRight size={21} aria-hidden="true"/></>;
+  if (!hasPlayer) return <Link href="/start" className={styles.trigger} aria-label="QRでレイドに参加" aria-describedby={`${id}-entry-note`}>{label}</Link>;
 
   return <>
-    <button className={styles.trigger} type="button" onClick={() => {
+    <button className={styles.trigger} type="button" aria-label="QRでレイドに参加" aria-describedby={`${id}-entry-note`} onClick={() => {
       setError(false);
       setStatus("カメラを起動しています…");
       dialog.current?.showModal();
