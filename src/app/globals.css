@@ -77,19 +77,6 @@ em { color:var(--red); font-style:normal; }
 .raid-notice strong { font-size:12px; color:#775364; }
 .raid-notice p { font-size:10px; margin-top:4px; }
 .battle-info>.button { align-self:flex-start; }
-.help-dialog { width:min(520px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); border:1px solid #fff; border-top:4px solid var(--red); padding:25px; background:#fffafb; color:var(--ink); margin:auto; box-shadow:0 20px 100px #4b162c40; }
-.help-dialog::backdrop { background:#28182599; backdrop-filter:blur(5px); }
-.dialog-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; }
-.dialog-heading h2 { font-size:23px; font-weight:800; }
-.guide-steps { display:grid; gap:17px; }
-.guide-steps>div { display:flex; align-items:center; gap:13px; padding-bottom:15px; border-bottom:1px solid var(--line); }
-.guide-number { color:#e0a8bd; font-size:11px; font-weight:850; }
-.guide-steps svg { color:var(--red); }
-.guide-steps h3 { font-size:13px; font-weight:750; }
-.guide-steps p { font-size:11px; color:#ab8195; margin-top:3px; }
-.guide-note { font-size:11px; line-height:1.8; color:#98657d; background:#ffedf2; padding:12px; margin-top:15px; }
-.cookie-note { font-size:10px; line-height:1.8; color:#ae879c; margin:13px 0 17px; }
-.help-dialog>.button { width:100%; }
 .simulator { background:#fff; padding:27px; max-width:800px; min-height:0; align-self:center; }
 .simulator p { font-size:12px; color:#9a758a; margin-bottom:17px; }
 .simulator pre { white-space:pre-wrap; overflow-wrap:anywhere; background:#fff3f7; padding:17px; font-size:11px; margin:15px 0; }
@@ -116,7 +103,6 @@ em { color:var(--red); font-style:normal; }
   .collection-screen,.detail-screen,.battle-screen,.utility-screen  { grid-template-rows:46px minmax(0,1fr); gap:10px; }.collection-count { font-size:26px; }.collection-count small { font-size:9px; }.guest-form { margin-top:18px; }.guest-form label { font-size:11px; }.field-help { font-size:9px; }.guest-form .button { font-size:12px; margin-top:15px; }.form-status { font-size:10px; }.privacy-note { font-size:9px; margin-top:9px; }
   .start-screen { grid-template-columns:1fr; grid-template-rows:minmax(70px,1fr) auto; gap:12px; max-width:460px; }.start-story { padding:16px; }.start-story h1 { font-size:25px; line-height:1.5; margin:6px 0; }.start-story p { display:none; }.entry-partners { position:absolute; width:140px; right:0; bottom:8px; grid-template-columns:repeat(2,1fr); margin:0; }.entry-partners svg { height:63px; }.story-caption { font-size:6px; letter-spacing:1px; margin-top:5px; }.entry-panel { padding:21px; }.entry-panel h2 { font-size:22px; margin:8px 0 4px; }.entry-panel>p { font-size:11px; }.entry-panel .guest-form { margin-top:17px; }
   .battle-panel { grid-template-columns:1fr; grid-template-rows:minmax(80px,1fr) auto; }.battle-poster>.panel-label { top:13px; left:16px; font-size:7px; }.battle-poster>svg { height:100%; width:auto; max-width:75%; }.boss-ring { height:85%; width:auto; }.boss-caption { bottom:11px; font-size:6px; letter-spacing:1px; }.battle-info { padding:20px; gap:13px; }.battle-info h2 { font-size:24px; line-height:1.6; }.battle-info>p { font-size:10px; }.battle-tag { font-size:7px; }.battle-specs { gap:18px; }.battle-specs>span { font-size:10px; gap:6px; }.raid-notice { padding:12px; gap:12px; }.raid-notice strong { font-size:11px; }.raid-notice p { font-size:9px; }.battle-info>.button { align-self:stretch; }
-  .help-dialog { padding:19px; }.dialog-heading { margin-bottom:18px; }.dialog-heading h2 { font-size:21px; }.guide-steps { gap:13px; }.guide-steps>div { gap:10px; padding-bottom:12px; }.guide-steps h3 { font-size:12px; }.guide-steps p { font-size:10px; }.guide-note { font-size:10px; padding:10px; }.cookie-note { font-size:9px; }.help-dialog>.button { font-size:12px; }
   .simulator { padding:20px; }.simulator p { font-size:10px; margin-bottom:13px; }.simulator pre { padding:13px; font-size:10px; }.simulator-links { gap:15px; }.error-page { padding:24px; }.error-page h1 { font-size:21px; }
 }
 @media (max-width:760px) and (max-height:740px) {
@@ -124,7 +110,6 @@ em { color:var(--red); font-style:normal; }
   .collection-screen,.detail-screen,.battle-screen,.utility-screen  { grid-template-rows:40px minmax(0,1fr); gap:8px; }.guest-form { margin-top:13px; }.guest-form label { margin-bottom:6px; }.guest-form .button { margin-top:12px; }.field-help { margin-top:5px; font-size:8px; }.privacy-note { font-size:8px; margin-top:7px; }
   .start-screen { grid-template-rows:minmax(64px,1fr) auto; gap:8px; }.start-story h1 { font-size:21px; margin:3px 0; }.entry-partners { width:130px; bottom:-3px; }.entry-partners svg { height:55px; }.story-caption { font-size:5px; }.entry-panel { padding:17px 20px; }.entry-panel h2 { font-size:20px; margin:6px 0 3px; }.entry-panel>p { font-size:10px; }.entry-panel .guest-form { margin-top:12px; }
   .battle-info { padding:16px; gap:11px; }.battle-info h2 { font-size:21px; line-height:1.45; }.battle-info>p { font-size:9px; }.battle-specs { gap:14px; }.battle-specs>span { font-size:9px; }.raid-notice { padding:10px; }.battle-info>.button { min-height:41px; font-size:11px; }.boss-caption { font-size:5px; bottom:8px; }
-  .help-dialog { padding:16px; }.dialog-heading { margin-bottom:12px; }.dialog-heading h2 { font-size:19px; }.guide-steps { gap:10px; }.guide-steps>div { padding-bottom:9px; }.guide-steps h3 { font-size:11px; }.guide-steps p { font-size:9px; }.guide-note { font-size:9px; padding:9px; margin-top:11px; }.cookie-note { font-size:8px; margin:10px 0 12px; }
 }
 @media (max-height:500px) and (min-width:600px) {
   .app-shell { padding:8px 16px; grid-template-rows:42px minmax(0,1fr)64px; gap:7px; }.brand-number { font-size:32px; }.brand-word { font-size:18px; }.brand-slash { height:23px; }.header-event { font-size:9px; }.icon-button { min-height:30px; width:32px; }.header-tools>.icon-button,.header-tools>.profile-link { width:46px; height:40px; min-height:40px; }
@@ -132,7 +117,6 @@ em { color:var(--red); font-style:normal; }
   .collection-screen,.detail-screen,.battle-screen,.utility-screen  { grid-template-rows:32px minmax(0,1fr); gap:6px; }
   .start-screen { grid-template-columns:1fr 1fr; grid-template-rows:1fr; max-width:900px; gap:30px; }.start-story h1 { font-size:26px; }.entry-partners { position:static; width:90%; grid-template-columns:repeat(4,1fr); margin:5px 0; }.entry-partners svg { height:60px; }.entry-panel { padding:13px 20px; }.entry-panel h2 { font-size:18px; margin:4px 0; }.entry-panel>p,.entry-panel .privacy-note { display:none; }.entry-panel .guest-form { margin-top:8px; }.guest-form label { font-size:10px; margin-bottom:4px; }.guest-form input { min-height:38px; padding:7px 10px; font-size:12px; }.guest-form .button { min-height:37px; margin-top:9px; font-size:11px; }.field-help { font-size:8px; margin-top:5px; }.form-status { font-size:9px; min-height:14px; margin-top:5px; }
   .battle-panel { grid-template-columns:.8fr 1.2fr; grid-template-rows:1fr; }.battle-info { padding:14px 22px; gap:8px; }.battle-info h2 { font-size:20px; line-height:1.4; }.battle-info h2 br { display:none; }.battle-info>p { display:none; }.battle-tag { font-size:6px; }.battle-specs>span { font-size:8px; }.raid-notice { padding:8px 10px; }.raid-notice>svg { width:24px; height:24px; }.raid-notice strong { font-size:10px; }.raid-notice p { font-size:8px; margin-top:1px; }.battle-info>.button { min-height:34px; font-size:10px; padding:7px 12px; }.boss-caption { font-size:5px; bottom:12px; }
-  .help-dialog { width:min(720px,calc(100vw - 24px)); padding:15px 20px; }.dialog-heading { margin-bottom:12px; }.dialog-heading h2 { font-size:18px; }.guide-steps { grid-template-columns:repeat(3,1fr); gap:12px; }.guide-steps>div { gap:8px; padding-bottom:10px; }.guide-number { display:none; }.guide-steps h3 { font-size:10px; }.guide-steps p { font-size:8px; }.guide-steps>div>svg { width:19px; }.guide-note { margin-top:10px; font-size:9px; padding:8px 10px; }.cookie-note { font-size:8px; margin:8px 0 10px; }.help-dialog>.button { min-height:34px; font-size:10px; }
   .simulator { padding:15px 20px; display:grid; grid-template-columns:1fr 1fr; gap:8px 15px; align-items:center; }.simulator p { font-size:9px; margin:0; }.simulator strong { font-size:10px; }.simulator pre { font-size:9px; margin:0; padding:10px; }.simulator .button { min-height:34px; font-size:10px; }.simulator-links { margin:0; font-size:9px; }
 }
 @media (prefers-reduced-motion:reduce) { *,*:before,*:after { animation:none!important; transition:none!important; } }
