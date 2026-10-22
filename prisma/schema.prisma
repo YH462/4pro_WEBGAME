@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  ACTIVE
+  ENDED
+}
+
+model Event {
+  id        String      @id
+  name      String
+  status    EventStatus @default(ACTIVE)
+  endedAt   DateTime?
+  purgeAt   DateTime?
+  createdAt DateTime    @default(now())
+  players   Player[]
+  acquisitionTags AcquisitionTag[]
+}
+
+model Player {
+  id         String            @id @default(uuid())
+  eventId    String
+  nickname   String?           @db.VarChar(20)
+  createdAt  DateTime          @default(now())
+  event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sessions   GuestSession[]
+  characters PlayerCharacter[]
+  acquisitions AcquisitionLog[]
+  @@index([eventId])
+}
+
+model GuestSession {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique @db.Char(64)
+  playerId  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+  @@index([playerId])
+}
+
+model Department {
+  id         String     @id
+  name       String
+  sortOrder  Int        @unique
+  character  Character?
+  acquisitionTags AcquisitionTag[]
+}
+
+model Character {
+  id           String            @id
+  name         String
+  description  String
+  element      String
+  isDraft      Boolean @default(false)
+  revision     Int @default(0)
+  imageId      String? @unique
+  image        CharacterImage? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  departmentId String?           @unique
+  isLegendary  Boolean           @default(false)
+  baseHp       Int
+  baseAttack   Int
+  baseDefense  Int
+  baseSpecialChargeRate Int?
+  // Legacy values are retained; speed is no longer a displayed game stat.
+  baseSpeed    Int
+  sortOrder    Int               @unique
+  department   Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  skills       Skill[]
+  owners       PlayerCharacter[]
+  acquisitions AcquisitionLog[]
+  acquisitionTags AcquisitionTag[]
+}
+
+model CharacterImage {
+  id          String @id @default(uuid())
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+  character   Character?
+}
+
+// Slot 1 is the character's single special move. Effects remain NULL until confirmed.
+// Legacy slots are retained in the database but excluded from current queries.
+model Skill {
+  id          String    @id
+  characterId String
+  slot        Int
+  name        String
+  confirmed   Boolean   @default(false)
+  effect      Json?
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  @@unique([characterId, slot])
+}
+
+model PlayerCharacter {
+  id           String    @id @default(uuid())
+  playerId     String
+  characterId  String
+  acquiredAt   DateTime  @default(now())
+  hpGrowth     Int       @default(0)
+  attackGrowth Int       @default(0)
+  defenseGrowth Int      @default(0)
+  specialChargeRateGrowth Int @default(0)
+  speedGrowth  Int       @default(0)
+  player       Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  character    Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  @@unique([playerId, characterId])
+}
+
+model RateLimitBucket {
+  key       String   @id
+  hits      Int
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model AcquisitionTag {
+  id           String @id @default(uuid())
+  eventId      String
+  departmentId String?
+  characterId  String?
+  tokenHash    String @unique @db.Char(64)
+  enabled      Boolean @default(true)
+  createdAt    DateTime @default(now())
+  event        Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  character    Character? @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  acquisitions AcquisitionLog[]
+  @@index([eventId])
+  @@index([characterId])
+}
+
+model AcquisitionLog {
+  id          String @id @default(uuid())
+  playerId    String
+  tagId       String
+  characterId String
+  granted     Boolean
+  createdAt   DateTime @default(now())
+  player      Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  tag         AcquisitionTag @relation(fields: [tagId], references: [id], onDelete: Restrict)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  @@unique([playerId, tagId])
+  @@index([tagId])
+  @@index([characterId])
+}
+
+model AdminUser {
+  id           String @id @default(uuid())
+  username     String @unique @db.VarChar(32)
+  passwordHash String
+  enabled      Boolean @default(true)
+  createdAt    DateTime @default(now())
+  sessions     AdminSession[]
+}
+
+model AdminSession {
+  id        String @id @default(uuid())
+  tokenHash String @unique @db.Char(64)
+  adminId   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  @@index([adminId])
+  @@index([expiresAt])
+}

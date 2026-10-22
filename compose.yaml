@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:18-bookworm
+    environment:
+      POSTGRES_USER: fourpro
+      POSTGRES_PASSWORD: local_fourpro
+      POSTGRES_DB: fourpro
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fourpro -d fourpro"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  web:
+    build: .
+    init: true
+    environment:
+      DATABASE_URL: postgresql://fourpro:local_fourpro@db:5432/fourpro?schema=public
+      APP_URL: http://localhost:3000
+      EVENT_ID: local-exhibition
+      SESSION_DAYS: "30"
+      ALLOW_INSECURE_LOCAL_HTTP: "true"
+      ENABLE_DEV_SIMULATOR: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres_data:
