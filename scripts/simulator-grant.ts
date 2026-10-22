@@ -9,5 +9,5 @@ try {
   const player = await db.player.findUniqueOrThrow({ where: { id: playerId }, include: { event: true } });
   if (player.eventId !== config().EVENT_ID || player.event.status !== "ACTIVE") throw new Error("Player must belong to the active development event.");
   await db.playerCharacter.upsert({ where: { playerId_characterId: { playerId, characterId } }, update: {}, create: { playerId, characterId } });
-  console.log("Development ownership fixture created. NFC/legend unlock rules are implemented in phase 2.");
+  console.log("Development ownership fixture created. This bypasses NFC acquisition and legend unlock rules.");
 } finally { await db.$disconnect(); }

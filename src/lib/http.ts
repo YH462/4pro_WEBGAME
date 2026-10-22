@@ -3,9 +3,8 @@ import { ZodError } from "zod";
 import { config } from "./config";
 import { db } from "./db";
 import { developmentOriginAllowed } from "./local-network";
-export class HttpError extends Error {
-  constructor(public status: number, message: string) { super(message); }
-}
+import { HttpError } from "./http-error";
+export { HttpError } from "./http-error";
 export function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
 }
@@ -18,11 +17,11 @@ export async function api(action: () => Promise<NextResponse>) {
     return json({ error: "サーバーに接続できません。時間をおいて再度お試しください。" }, 503);
   }
 }
-export function checkOrigin(request: Request) {
+export function checkOrigin(request: Request, contentType: "application/json" | "multipart/form-data" = "application/json") {
   const cfg = config();
   const origin = request.headers.get("origin");
   if (origin !== cfg.origin && !developmentOriginAllowed(origin, cfg.APP_URL, cfg.simulator && cfg.ALLOW_INSECURE_LOCAL_HTTP === "true")) throw new HttpError(403, "この操作は会場アプリから実行してください。");
-  if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") throw new HttpError(415, "JSON形式で送信してください。");
+  if (request.headers.get("content-type")?.split(";")[0].trim() !== contentType) throw new HttpError(415, contentType==="application/json"?"JSON形式で送信してください。":"画像を含むフォーム形式で送信してください。");
 }
 export async function readJson(request: Request) {
   const reader = request.body?.getReader();

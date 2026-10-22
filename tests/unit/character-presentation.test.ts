@@ -3,7 +3,7 @@ import type { PlayerCharacter, Skill } from "@prisma/client";
 import { presentCharacter } from "../../src/lib/character-presentation";
 import { characters } from "../../src/lib/master-data";
 
-const character = { ...characters[0], baseSpecialChargeRate: null, department: null, skills: [] };
+const character = { ...characters[0], isDraft:false, imageId:null,revision:0,baseSpecialChargeRate: null, department: null, skills: [] };
 const owned: PlayerCharacter = {
   id: "fixture-owned", playerId: "fixture-player", characterId: character.id,
   acquiredAt: new Date(0), hpGrowth: 17, attackGrowth: 4, defenseGrowth: 2,

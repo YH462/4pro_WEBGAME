@@ -77,6 +77,14 @@ erDiagram
 
 `/battle` は12体から1体を選ぶ、ブラウザ内のCPU練習対戦です。未所持もお試し選択でき、CPU対戦ではイラストを表示しますがプレイヤーの所持やゲーム進行は変更しません。仮キャラ7体は `temp-06`〜`temp-12` のIDでマスタに追加し、既存5体の能力値は維持します。CPUの予告と行動決定、同時ターンのダメージ・防御成功のEPボーナス・必殺後の隙・勝敗を純粋関数としてUIから分離しています。状態はReactで保持し、攻撃・反撃の演出中は入力をロック、画面を離れた際はタイマーを解除します。再読込でリセット、結果・報酬はDBに保存しません。レイドのサーバー判定は別途実装予定です。暫定ルールは `cpu-battle.ts` と `docs/cpu-battle.md` に記載します。
 
+## 展示での獲得
+
+フェーズ2のNFC／展示QRのURL獲得を追加しました。`AcquisitionTag` はイベント・学科・ランダムコードのhash・有効状態、`AcquisitionLog` はプレイヤー×タグの初回記録と実際の対象キャラを保持します。GETでは獲得せず、ゲスト登録後も元の展示に戻ってPOST確認します。Event・Player・Tagの順にロックし、通常キャラ付与・ログ・4学科判定・4プロ付与を一つのトランザクションで行います。詳しい発行・無効化・実機準備は [NFC獲得](nfc-acquisition.md) を参照してください。
+
+管理者画面 `/admin` は `AdminUser` / `AdminSession` による別Cookieの認証を使用します。新規の獲得タグはキャラに直接紐付け、学科なしのキャラも獲得できます。旧学科タグは互換維持します。4プロは学科キャラ4体だけで解放し、タグ発行を拒否します。管理者アカウントの初期発行・リセットはCLIのみ。各ページとAPIで認証を確認します。[管理画面](admin-management.md) を参照してください。レイド受付用スタッフ機能はまだ含めません。
+
+同じ管理画面からキャラ名・紹介・属性・基本値・仮キャラ状態・画像を編集できます。ID・所属・条件解放は固定し、revisionで古い画面からの上書きを防ぎます。画像はSharpで検証・最大1024pxのWebPへ再変換して独立した `CharacterImage` に保存し、CharacterはimageIdだけを参照します。通常のマスタ取得で画像本体を読み込むことはありません。画像とキャラの保存・旧画像の削除は同一TXです。図鑑・獲得・CPU・スマホへ反映し、画像未設定のスマホは従来の仮3Dモデルを使用します。
+
 ## 後続設計（未実装）
 
 バトルUIを先行実装していますが、フェーズ4〜5の受付・Socket.IO・戦闘処理は未実装です。表示用のボスHP／EP／ターンは `battle-preview.ts` に分離し、ゲーム状態には保存しません。DBから取得した所持と育成済み能力は表示にだけ使い、未所持の通常キャラは体験表示に限定します。未確定技のコストや効果は推測しません。
@@ -85,7 +93,7 @@ Three.jsはバトル画面で遅延ロードし、mainのcyber_turtleを参考�
 
 | フェーズ | 追加予定 | 競合・再送対策 |
 | --- | --- | --- |
-| 2 | AcquisitionTag / AcquisitionLog | Player行ロック＋4体判定＋4プロ付与を同一TX、所持UNIQUE |
+| 2（実装済み、実機確認待ち） | AcquisitionTag / AcquisitionLog | Player行ロック＋4体判定＋4プロ付与を同一TX、所持UNIQUE |
 | 3 | ScoreToken / GrowthRule / GrowthGrant | hash、期限、score、usedAt、条件付き消費とその時点の所持への成長を同一TX |
 | 4 | StaffUser / StaffSession / Raid / RaidEntry / ReceptionToken | 別認証、Raid行ロックで20人制限、(raidId,playerId) UNIQUE、QR再発行 |
 | 5 | RaidSnapshot / RaidTurn / TurnCommand / CombatEvent | 開始時能力保存、(raidId,turn,playerId) UNIQUE、通番、サーバー期限、再接続同期 |

@@ -5,7 +5,6 @@ import { BarChart3, Check, FileText, Gauge, Heart, LockKeyhole, ScanLine, Shield
 import { CharacterArt } from "./character-art";
 import type { PartnerView } from "@/lib/character-presentation";
 import styles from "./partner-panel.module.css";
-import { isTemporaryCharacter } from "@/lib/master-data";
 
 const tabs = [
   { id: "stats", label: "ステータス", icon: BarChart3 },
@@ -36,7 +35,7 @@ export function PartnerPanel({ partner }: { partner: PartnerView }) {
               <polygon points="66,11 174,11 228,108 174,205 66,205 12,108" fill="none" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M44 54 66 11h73M206 148l-32 57H99M12 108l22 40" fill="none" stroke="currentColor" strokeWidth="3"/>
             </svg>
-            <CharacterArt element={partner.element} className={styles.art} locked={!partner.owned}/>
+            <CharacterArt element={partner.element} imageUrl={partner.imageUrl} className={styles.art} locked={!partner.owned}/>
           </div>
         </div>
         <div className={styles.identity}>
@@ -127,8 +126,8 @@ export function PartnerPanel({ partner }: { partner: PartnerView }) {
           </div>}
           {tab === "about" && <div className={styles.about}>
             <p>{partner.description}</p>
-            <div><ScanLine size={23}/><span>{isTemporaryCharacter(partner.id) ? "仮配置のキャラクターです。CPU対戦でお試しできます。" : partner.isLegendary ? "4学科のパートナーをすべて集めると解放されます。" : `${partner.department}の展示で出会えるパートナーです。`}</span></div>
-            <small>キャラクター獲得は準備中です。</small>
+            <div><ScanLine size={23}/><span>{partner.isDraft ? "仮配置のキャラクターです。CPU対戦でお試しできます。" : partner.isLegendary ? "4学科のパートナーをすべて集めると解放されます。" : partner.departmentId?`${partner.department}の展示で出会えるパートナーです。`:"展示のタグから獲得できるパートナーです。"}</span></div>
+            <small>展示のタグ・QRから仲間にできます。</small>
           </div>}
         </div>
       </div>
