@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-:root { --red:#df2638; --ink:#111; --muted:#666; --line:#ddd; }
+:root { --red:#df2638; --ink:#111; --muted:#666; --line:#ddd; --mobile-ui-background:url('/mobile-ui-background.png'); }
 * { box-sizing:border-box; }
 html,body { width:100%; height:100%; margin:0; overflow:hidden; }
-body { color:var(--ink); background:#fff url('/red-white-honeycomb-background.png') center/cover no-repeat fixed; font-family:"Segoe UI","Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif; font-size:14px; line-height:1.6; }
+body { color:var(--ink); background:#fff var(--mobile-ui-background) center/cover no-repeat fixed; font-family:"Segoe UI","Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif; font-size:14px; line-height:1.6; }
 a { color:inherit; text-decoration:none; }
 button,input { font:inherit; }
 button { cursor:pointer; }
