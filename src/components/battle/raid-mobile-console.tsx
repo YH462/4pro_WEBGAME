@@ -7,6 +7,7 @@ import type { PartnerView } from "@/lib/character-presentation";
 import type { LocalRaidAction, LocalRaidResult } from "@/lib/local-raid-types";
 import { visibleLocalRaid } from "@/lib/local-raid-presentation";
 import { battlePreview } from "@/lib/battle-preview";
+import { characterModel } from "@/lib/character-models";
 import { raidHands, raidRpsRules, resolveRaidRps, type RaidHand } from "@/lib/raid-rps";
 import { localRequestId, useLocalRaid } from "./use-local-raid";
 import { useRaidCountdown } from "./use-raid-countdown";
@@ -199,7 +200,7 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
         {local && <div className={styles.localPartnerSelect} title={`パートナー変更：${partner.name}`}><select aria-label="参加キャラクター" value={partner.id} disabled={characterFrozen || unsettled} onChange={event=>selectPartner(event.target.value)}>{partners.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><Repeat2 size={17} aria-hidden="true"/></div>}
         <div className={styles.stageScenery} aria-hidden="true"><div className={styles.portalFloor}/>{Array.from({length:6},(_,i)=><i key={i} style={{"--prism":i} as CSSProperties}/>)}</div>
         <div className={styles.characterEffects} data-counter={impact?.kind === "counter"}>
-          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター（${partner.imageUrl?"キャラ画像":"3Dモデル"}）`}><PartnerScene element={partner.element} characterId={partner.id} imageUrl={partner.imageUrl}/></div>
+          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター（${partner.imageUrl&&!characterModel(partner.id)?"キャラ画像":"3Dモデル"}）`}><PartnerScene element={partner.element} characterId={partner.id} imageUrl={partner.imageUrl}/></div>
           {(result || impact) && <div key={impact?.key ?? result?.key} className={styles.particles} aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <Sparkles key={i} style={{ "--i": i } as CSSProperties}/>)}</div>}
           {(impact?.kind === "heal" || (!local && result?.action === "heal")) && <span className={styles.healNumber}>+{impact?.kind === "heal" ? impact.amount : result!.amount}<Heart size={18}/></span>}
           {impact?.kind === "counter" && <span className={styles.hitNumber}>−{impact.amount}</span>}

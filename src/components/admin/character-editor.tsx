@@ -2,6 +2,7 @@
 import { useEffect,useRef,useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CharacterEditInput } from "@/lib/character-edit-input";
+import { characterModel } from "@/lib/character-models";
 import { CharacterArt } from "../character-art";
 import styles from "./admin.module.css";
 type Editable=Omit<CharacterEditInput,"imageAction">&{id:string;imageUrl:string|null};
@@ -33,6 +34,7 @@ export function AdminCharacterEditor({initial,fixedClassification}:{initial:Edit
   }
   return <section className={`${styles.panel} ${styles.editor}`} aria-labelledby="character-edit-title"><h2 id="character-edit-title">キャラクターを編集</h2><p className={styles.note}>ID「{saved.id}」と獲得条件は固定です。名前・画像・基本値を変更しても、タグURL・所持・育成の加算値は引き継ぎます。</p><form onSubmit={(event)=>void save(event)}>
     <fieldset disabled={!ready||busy} className={styles.editFields}>
+      {characterModel(saved.id)&&<p className={styles.note}>このキャラのレイド表示は3Dモデルを使用します。ここで設定する画像は図鑑などの2D表示に反映されます。</p>}
       <div className={styles.editAppearance}><div className={styles.editPreview} role="img" aria-label="編集中のキャラ画像"><CharacterArt element={fields.element} imageUrl={imageUrl} portrait/></div><div><label htmlFor="character-image">キャラ画像<input ref={fileInput} id="character-image" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event)=>{const selected=event.target.files?.[0];if(!selected)return;if(selected.size>2*1024*1024){setError("画像は2MB以内で選択してください。");event.target.value="";return;}setError("");setFile(selected);setImageAction("replace");setMessage("");}}/></label><p className={styles.note}>PNG・JPEG・WebP、2MB以内・最大4096px。保存時に最大1024pxへ縮小します。透過画像も使用できます。画像は2Dで表示されます。</p>{(saved.imageUrl||file)&&<button type="button" className={styles.button} onClick={()=>{setFile(null);setImageAction(saved.imageUrl?"remove":"keep");if(fileInput.current)fileInput.current.value="";}}>画像を外して標準表示に戻す</button>}</div></div>
       <div className={styles.editGrid}><label htmlFor="character-name">キャラ名<input id="character-name" required maxLength={50} value={fields.name} onChange={(event)=>update("name",event.target.value)}/></label><label htmlFor="character-element">属性<select id="character-element" aria-label="属性" value={fields.element} onChange={(event)=>update("element",event.target.value)}><option value="FOREST">森</option><option value="THUNDER">雷</option><option value="FLAME">炎</option><option value="AQUA">水</option><option value="LEGEND">レジェンド</option></select></label></div>
       <label htmlFor="character-description">紹介文<textarea id="character-description" aria-label="紹介文" rows={4} maxLength={1000} value={fields.description} onChange={(event)=>update("description",event.target.value)}/></label>

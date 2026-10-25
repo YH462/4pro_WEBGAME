@@ -3,6 +3,8 @@ import { buildBoss } from "./battle-arena";
 import { counterImpactMs, counterLaunchMs, showcaseCounterFrame, type ShowcaseFrame } from "./raid-showcase-playback";
 import { showcaseImpactMs } from "./raid-showcase-scenes";
 import { characterColors, raidMemberPosition, type RaidArenaContext } from "./raid-screen-playback";
+import { characterModel } from "./character-models";
+import { createCharacterModelLibrary } from "./character-model-loader";
 
 const clamp = THREE.MathUtils.clamp;
 const ease = (value: number) => 1 - (1 - clamp(value, 0, 1)) ** 3;
@@ -127,18 +129,23 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     const head = new THREE.Mesh(new THREE.IcosahedronGeometry(.12, 1), ivory);
     head.position.y = .43; body.add(head);
     const legs: THREE.Mesh[] = [];
-    const arms: THREE.Mesh[] = [];
+    const arms: THREE.Group[] = [];
     const hands: THREE.Object3D[] = [];
+    const fallbackParts: THREE.Object3D[] = [torso, head];
     for (const side of [-1, 1]) {
       const leg = new THREE.Mesh(new THREE.BoxGeometry(.09, .24, .12), armor);
       leg.position.set(side * .09, .12, 0); ally.add(leg);
       legs.push(leg);
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(.09, .28, .1), suit);
+      fallbackParts.push(leg);
+      // The hand origin stays active when the placeholder's visible mesh is hidden.
+      const arm = new THREE.Group();
+      const armMesh = new THREE.Mesh(new THREE.BoxGeometry(.09, .28, .1), suit);
+      arm.add(armMesh); fallbackParts.push(armMesh);
       arm.position.set(side * .2, .18, -.06); arm.rotation.x = -.75; body.add(arm); arms.push(arm);
       const hand = new THREE.Object3D(); hand.position.y = -.14; arm.add(hand); hands.push(hand);
     }
     ally.scale.setScalar(.8); ally.position.set(x * .9, 0, 2.75 + Math.abs(x) * .08); ally.rotation.y = Math.atan2(-x, 3.5); ally.visible = i < 4; scene.add(ally);
-    return { root: ally, body, arms, hands, legs, suit, home: ally.position.clone() };
+    return { root: ally, body, arms, hands, legs, suit, fallbackParts, home: ally.position.clone(), modelId: "", modelVersion: 0, model: null as THREE.Group | null };
   });
   let actorIndex = 2;
   let attacker = allies[actorIndex];
@@ -260,6 +267,29 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
 
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let disposed = false;
+  const modelLibrary = createCharacterModelLibrary();
+  const reportModels = () => { canvas.dataset.characterModels = allies.filter((ally) => ally.model).map((ally) => ally.modelId).join(","); };
+  const setAllyModel = (ally: typeof allies[number], characterId: string) => {
+    if (ally.modelId === characterId) return;
+    ally.modelId = characterId;
+    const version = ++ally.modelVersion;
+    if (ally.model) { ally.body.remove(ally.model); ally.model = null; }
+    ally.fallbackParts.forEach((part) => { part.visible = true; }); reportModels();
+    if (!characterModel(characterId)) return;
+    void modelLibrary.load(characterId).then((model) => {
+      if (disposed || ally.modelVersion !== version) return;
+      const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+      model.scale.setScalar(Math.min(.4, .9 / Math.max(size.x, size.z)));
+      model.position.y = -.24;
+      // Models face the boss; the hidden hand anchors retain the shared effects' original transforms.
+      model.rotation.y = Math.atan2(-ally.home.x, -ally.home.z) - ally.root.rotation.y;
+      ally.model = model; ally.body.add(model);
+      ally.fallbackParts.forEach((part) => { part.visible = false; }); reportModels();
+    }).catch((error: unknown) => {
+      if (!disposed && ally.modelVersion === version) console.warn(`Could not load screen character: ${characterId}`, error);
+    });
+  };
+  let demoModels = false;
   let contextKey = "";
   let counterIndices = [0, 1, 2, 3];
   const syncContext = (context: RaidArenaContext) => {
@@ -268,12 +298,14 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     contextKey = nextKey;
     allies.forEach((ally, i) => {
       const member = context.members[i]; ally.root.visible = Boolean(member);
-      if (!member) return;
+      if (!member) { setAllyModel(ally, ""); return; }
       const position = raidMemberPosition(i, context.members.length);
       ally.home.set(position.x, 0, position.z);
       ally.root.position.copy(ally.home); ally.root.rotation.y = Math.atan2(-position.x, 3.5);
       ally.root.scale.setScalar(context.members.length > 10 ? .6 : .8);
       ally.suit.color.set(characterColors[member.characterId] ?? 0xb18aff);
+      setAllyModel(ally, member.characterId);
+      if (ally.model) ally.model.rotation.y = Math.atan2(-position.x, -position.z) - ally.root.rotation.y;
     });
     actorIndex = context.members.findIndex((member) => member.id === context.actorId);
     attacker = allies[Math.max(0, actorIndex)];
@@ -326,6 +358,10 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   const draw = (frame: ShowcaseFrame, context?: RaidArenaContext) => {
     if (disposed) return;
     if (context) syncContext(context);
+    else if (!demoModels) {
+      demoModels = true;
+      ["thunder-fox", "flame-dragon", "forest-golem", "aqua-spirit"].forEach((id, i) => setAllyModel(allies[i], id));
+    }
     const cue = frame.cue;
     const time = frame.visualMs / 1000;
     const reduced = motion.matches;
@@ -587,6 +623,8 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      allies.forEach((ally) => { if (ally.model) ally.body.remove(ally.model); });
+      modelLibrary.dispose();
       const materials = new Set<THREE.Material>(); const geometries = new Set<THREE.BufferGeometry>();
       scene.traverse((object) => {
         const item = object as THREE.Mesh;

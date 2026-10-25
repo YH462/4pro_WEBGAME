@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { characterModel } from "./character-models";
+import { createCharacterModelLibrary, disposeModel } from "./character-model-loader";
 
 type Point = [number, number];
 const palettes: Record<string, [number, number, number]> = {
@@ -92,7 +94,7 @@ export function buildRaidPartner(element: string) {
   return root;
 }
 
-export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: string) {
+export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: string, characterId?: string, onModelState?: (state: "loading" | "ready" | "fallback") => void) {
   const options = { alpha: true, antialias: true, powerPreference: "low-power" } as const;
   const context = canvas.getContext("webgl2", options) as WebGL2RenderingContext | null;
   if (!context) throw new Error("WebGL2 is unavailable.");
@@ -102,12 +104,41 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
   scene.add(new THREE.HemisphereLight(0xffffff,0x76818a,2.2));
   const key = new THREE.DirectionalLight(0xfffaf4,3); key.position.set(-3,5,6); scene.add(key);
   const rim = new THREE.DirectionalLight(0xffffff,1.3); rim.position.set(3,2,-2); scene.add(rim);
-  const character = buildRaidPartner(element); scene.add(character);
-  const bounds = new THREE.Box3().setFromObject(character), size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
+  let character: THREE.Object3D = buildRaidPartner(element); scene.add(character);
+  const hasModel=Boolean(characterId&&characterModel(characterId));
+  character.visible=!hasModel;
+  const size = new THREE.Vector3(), center = new THREE.Vector3();
   const camera = new THREE.OrthographicCamera(-2,2,2,-2,.1,50);
-  camera.position.set(center.x,center.y,8); camera.lookAt(center); // Fixed front: no automatic orbit.
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let frame = 0, disposed = false, last = -Infinity, dirty = true;
+  let frame = 0, disposed = false, imported = false, last = -Infinity, dirty = true;
+  let width = 1, height = 1;
+  const fit = () => {
+    const aspect = width / height, half = Math.max(size.y * .57, size.x * .57 / aspect);
+    camera.left = -half * aspect; camera.right = half * aspect; camera.top = half; camera.bottom = -half;
+    camera.position.set(center.x, center.y, Math.max(8, size.z + 3)); camera.lookAt(center);
+    camera.updateProjectionMatrix(); dirty = true;
+  };
+  const measure = () => {
+    const bounds = new THREE.Box3().setFromObject(character);
+    bounds.getSize(size); bounds.getCenter(center); fit();
+  };
+  measure(); // Fixed front: no automatic orbit.
+  const library = createCharacterModelLibrary();
+  if (characterId && characterModel(characterId)) {
+    onModelState?.("loading");
+    void library.load(characterId).then((model) => {
+      if (disposed) return;
+      scene.remove(character); disposeModel(character);
+      character = model; imported = true; scene.add(character); measure();
+      renderer.render(scene,camera); // Reveal the canvas only after the first real-model frame is drawn.
+      onModelState?.("ready");
+    }).catch((error: unknown) => {
+      if (!disposed) {
+        console.warn(`Could not load character model: ${characterId}`, error);
+        character.visible=true; dirty=true; renderer.render(scene,camera); onModelState?.("fallback");
+      }
+    });
+  }
   const changed = () => { dirty = true; }; motion.addEventListener("change",changed);
   const draw = (now: number) => {
     if (disposed) return;
@@ -119,17 +150,18 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
   };
   frame=requestAnimationFrame(draw);
   return {
-    resize(width: number,height: number) {
-      if (disposed || width<=0 || height<=0) return;
-      renderer.setSize(width,height,false);
-      const aspect=width/height, half=Math.max(size.y*.57,size.x*.57/aspect);
-      camera.left=-half*aspect; camera.right=half*aspect; camera.top=half; camera.bottom=-half; camera.updateProjectionMatrix(); dirty=true;
+    resize(nextWidth: number,nextHeight: number) {
+      if (disposed || nextWidth<=0 || nextHeight<=0) return;
+      width = nextWidth; height = nextHeight;
+      renderer.setSize(width,height,false); fit();
     },
     dispose() {
+      if (disposed) return;
       disposed=true; cancelAnimationFrame(frame); motion.removeEventListener("change",changed);
-      const materials=new Set<THREE.Material>();
-      scene.traverse((object) => { const mesh=object as THREE.Mesh; mesh.geometry?.dispose(); if(mesh.material) (Array.isArray(mesh.material)?mesh.material:[mesh.material]).forEach((m)=>materials.add(m)); });
-      materials.forEach((m)=>m.dispose()); renderer.dispose(); renderer.forceContextLoss();
+      // Imported resources belong to the library; the procedural fallback belongs to this arena.
+      if (character.parent) scene.remove(character);
+      if (!imported) disposeModel(character);
+      library.dispose(); renderer.dispose(); renderer.forceContextLoss();
     },
   };
 }
