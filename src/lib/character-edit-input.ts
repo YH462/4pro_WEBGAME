@@ -11,6 +11,8 @@ export const characterEditSchema=z.strictObject({
   isDraft:z.boolean(),
   revision:z.number().int().min(0),
   imageAction:z.enum(["keep","replace","remove"]),
+  modelAction:z.enum(["keep","replace","remove"]).optional(),
+  modelYaw:z.number().finite().min(-180).max(180).optional(),
 });
 export type CharacterEditInput=z.infer<typeof characterEditSchema>;
 export const characterImageUrl=(imageId:string|null|undefined)=>imageId?`/api/character-images/${encodeURIComponent(imageId)}`:null;

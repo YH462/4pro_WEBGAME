@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
-import { characterModel } from "./character-models";
+import { characterModel, type CharacterModelAsset } from "./character-models";
 
 /** Dispose unique resources, including the embedded GLB textures. */
 export function disposeModel(root: THREE.Object3D) {
@@ -31,11 +31,11 @@ export function createCharacterModelLibrary() {
   const loaded = new Set<THREE.Group>();
   let disposed = false;
   return {
-    async load(characterId: string) {
+    async load(characterId: string, asset: CharacterModelAsset | undefined = characterModel(characterId)) {
       if (disposed) throw new Error("Character model library has been disposed.");
-      const asset = characterModel(characterId);
       if (!asset) throw new Error(`No model for ${characterId}`);
-      let template = templates.get(characterId);
+      const key = `${asset.url}:${asset.yaw}`;
+      let template = templates.get(key);
       if (!template) {
         template = loader.loadAsync(asset.url).then((gltf) => {
           const root = new THREE.Group();
@@ -54,7 +54,7 @@ export function createCharacterModelLibrary() {
           loaded.add(root);
           return root;
         });
-        templates.set(characterId, template);
+        templates.set(key, template);
       }
       const source = await template;
       if (disposed) throw new Error("Character model library has been disposed.");

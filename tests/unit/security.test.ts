@@ -37,12 +37,13 @@ describe("nickname input", () => {
   });
 });
 describe("initial master data", () => {
-  it("has 12 unique characters including seven clearly labelled drafts", () => {
+  it("has 12 unique characters with seven stable non-department slots", () => {
     expect(characters).toHaveLength(12);
     expect(new Set(characters.map((character) => character.id)).size).toBe(12);
     const drafts = characters.filter((character) => character.id.startsWith("temp-"));
     expect(drafts).toHaveLength(7);
-    expect(drafts.every((character) => character.name.startsWith("仮キャラ") && character.departmentId === null && character.baseHp > 0)).toBe(true);
+    expect(drafts.every((character) => character.departmentId === null && character.baseHp > 0)).toBe(true);
+    expect(drafts.filter(character=>"isDraft" in character&&character.isDraft).map(character=>character.id)).toEqual(["temp-12"]);
   });
   it("maps four normal characters one-to-one to departments", () => {
     const normal = characters.filter((character) => !character.isLegendary && character.departmentId);

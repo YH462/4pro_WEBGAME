@@ -12,6 +12,7 @@ import { characterColors, type RaidArenaContext, type RaidScreenScene } from "@/
 import { EnemyArt } from "../battle/enemy-art";
 import { RaidJoinCard } from "./raid-join-card";
 import styles from "./raid-showcase.module.css";
+import { useCharacterModels } from "../battle/use-character-models";
 
 const icons = { idle: Users, rps: HandFist, attack: Swords, critical: Sparkles, heal: Heart, counter: Waves, weaken: Waves, victory: Trophy };
 const handIcons = { rock: HandFist, scissors: Scissors, paper: Hand };
@@ -26,6 +27,7 @@ export type RaidScreenPresentation = {
 };
 
 export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntryTarget[]; screen?: RaidScreenPresentation }) {
+  const models=useCharacterModels();
   const [demoCue, setCue] = useState<ShowcaseCue>("idle");
   const cue = screen?.scene.cue ?? demoCue;
   const [iteration, setIteration] = useState(0);
@@ -46,8 +48,8 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   const health = useRef<HTMLSpanElement>(null);
   const delayedHealth = useRef<HTMLSpanElement>(null);
   const context: RaidArenaContext | undefined = screen ? { members: screen.members, actorId: screen.scene.actorId, counterIds: screen.scene.counterIds, actions: screen.scene.actions } : undefined;
-  const latest = useRef({ auto: false, paused: false, context, complete: screen?.onComplete });
-  latest.current = { auto: !screen && auto, paused: !screen && paused, context, complete: screen?.onComplete };
+  const latest = useRef({ auto: false, paused: false, context, complete: screen?.onComplete, models });
+  latest.current = { auto: !screen && auto, paused: !screen && paused, context, complete: screen?.onComplete, models };
   const fixture = showcaseScenes.find((item) => item.id === cue)!;
   const scene = screen?.scene ?? fixture;
   const { beforeHp, hp: targetHp, seconds } = scene;
@@ -74,6 +76,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
       if (cancelled) return;
       try {
         arena.current = createShowcaseArena(target);
+        if(latest.current.models)arena.current.setModels(latest.current.models);
         const rect = target.getBoundingClientRect(); arena.current.resize(rect.width, rect.height);
         observer = new ResizeObserver(([entry]) => arena.current?.resize(entry.contentRect.width, entry.contentRect.height));
         observer.observe(target); setRenderer("webgl");
@@ -81,6 +84,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
     }).catch(() => { if (!cancelled) setRenderer("fallback"); });
     return () => { cancelled = true; observer?.disconnect(); target.removeEventListener("webglcontextlost", lost); document.removeEventListener("visibilitychange", visibility); arena.current?.dispose(); arena.current = null; };
   }, []);
+  useEffect(()=>{if(models)arena.current?.setModels(models);},[models]);
 
   useEffect(() => {
     if (renderer === "loading") return;

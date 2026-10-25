@@ -1,10 +1,10 @@
-/** Blender source letters follow the school's department names, independently of element. */
-export const characterModels = {
-  "forest-golem": { code: "M", department: "機械科", url: "/models/characters/m.glb", yaw: -Math.PI / 2 },
-  "thunder-fox": { code: "E", department: "電気情報", url: "/models/characters/e.glb", yaw: Math.PI },
-  "flame-dragon": { code: "S", department: "電子制御", url: "/models/characters/s.glb", yaw: -Math.PI / 2 },
-  "aqua-spirit": { code: "C", department: "建設システム", url: "/models/characters/c.glb", yaw: 0 },
-} satisfies Record<string, { code: string; department: string; url: string; yaw: number }>;
+import bundled from "./bundled-character-models.json" with { type: "json" };
+/** Shared export/seed manifest. Character IDs remain stable when placeholders gain models. */
+export type CharacterModelAsset = { url: string; yaw: number };
+export type CharacterModelCatalog = Record<string, CharacterModelAsset>;
+export const maxCharacterModelBytes = 20 * 1024 * 1024;
+export const characterModelUrl = (id: string | null | undefined) => id ? `/api/character-models/${encodeURIComponent(id)}` : null;
+export const characterModels:Record<string,{code:string;department:string|null;source:string;url:string;yaw:number;displayName?:string}>=Object.fromEntries(bundled.map((asset)=>[asset.id,{code:asset.code,department:asset.department,source:asset.source,url:`/models/characters/${asset.file}`,yaw:asset.yaw*Math.PI/180,...(asset.displayName?{displayName:asset.displayName}:{})}]));
 
 export function characterModel(characterId: string) {
   return Object.hasOwn(characterModels, characterId) ? characterModels[characterId as keyof typeof characterModels] : undefined;

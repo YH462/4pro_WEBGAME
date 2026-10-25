@@ -24,7 +24,7 @@ export async function issueAcquisitionTag(characterId:string,origin:string) {
   return {...tag,url};
 }
 export async function tagsForCharacter(characterId:string) {
-  const character=await db.character.findUnique({where:{id:characterId},include:{department:true}});
+  const character=await db.character.findUnique({where:{id:characterId},include:{department:true,model:{select:{fileName:true,byteLength:true}}}});
   if(!character) throw new HttpError(404,"キャラクターが見つかりません。");
   const tags=await db.acquisitionTag.findMany({where:{eventId:config().EVENT_ID,OR:[{characterId},...(character.departmentId?[{characterId:null,departmentId:character.departmentId}]:[])]},orderBy:{createdAt:"desc"},select:{id:true,enabled:true,createdAt:true,characterId:true,_count:{select:{acquisitions:true}}}});
   return {character,tags};

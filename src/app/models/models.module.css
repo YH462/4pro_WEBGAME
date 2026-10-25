@@ -12,3 +12,4 @@
 .note { font-size:13px; }
 @media(max-width:1000px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.stage { height:300px; } }
 @media(max-width:540px) { .page { padding:20px 14px; }.grid { gap:12px; }.card { padding:12px; }.card h2 { font-size:13px; gap:6px; }.stage { height:235px; }.card>a { font-size:11px; padding:8px 2px; } }
+.category { color:#796570; font-size:12px; margin:6px 0; }

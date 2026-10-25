@@ -3,7 +3,7 @@ import { buildBoss } from "./battle-arena";
 import { counterImpactMs, counterLaunchMs, showcaseCounterFrame, type ShowcaseFrame } from "./raid-showcase-playback";
 import { showcaseImpactMs } from "./raid-showcase-scenes";
 import { characterColors, raidMemberPosition, type RaidArenaContext } from "./raid-screen-playback";
-import { characterModel } from "./character-models";
+import type { CharacterModelCatalog } from "./character-models";
 import { createCharacterModelLibrary } from "./character-model-loader";
 
 const clamp = THREE.MathUtils.clamp;
@@ -267,16 +267,23 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
 
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let disposed = false;
-  const modelLibrary = createCharacterModelLibrary();
-  const reportModels = () => { canvas.dataset.characterModels = allies.filter((ally) => ally.model).map((ally) => ally.modelId).join(","); };
+  let modelLibrary = createCharacterModelLibrary();
+  let catalog: CharacterModelCatalog = {}, catalogReady = false;
+  const reportModels = () => {
+    canvas.dataset.characterModels = allies.filter((ally) => ally.model).map((ally) => ally.modelId).join(",");
+    canvas.dataset.characterModelUrls = allies.filter((ally) => ally.model).map((ally) => catalog[ally.modelId]?.url??"").join(",");
+  };
   const setAllyModel = (ally: typeof allies[number], characterId: string) => {
-    if (ally.modelId === characterId) return;
+    const asset=catalog[characterId];
+    const key=`${characterId}:${asset?.url??""}:${asset?.yaw??0}:${catalogReady}`;
+    if (ally.root.userData.modelKey === key) return;
+    ally.root.userData.modelKey=key;
     ally.modelId = characterId;
     const version = ++ally.modelVersion;
     if (ally.model) { ally.body.remove(ally.model); ally.model = null; }
-    ally.fallbackParts.forEach((part) => { part.visible = true; }); reportModels();
-    if (!characterModel(characterId)) return;
-    void modelLibrary.load(characterId).then((model) => {
+    ally.fallbackParts.forEach((part) => { part.visible = catalogReady&&!asset; }); reportModels();
+    if (!asset) return;
+    void modelLibrary.load(characterId,asset).then((model) => {
       if (disposed || ally.modelVersion !== version) return;
       const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
       model.scale.setScalar(Math.min(.4, .9 / Math.max(size.x, size.z)));
@@ -286,7 +293,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       ally.model = model; ally.body.add(model);
       ally.fallbackParts.forEach((part) => { part.visible = false; }); reportModels();
     }).catch((error: unknown) => {
-      if (!disposed && ally.modelVersion === version) console.warn(`Could not load screen character: ${characterId}`, error);
+      if (!disposed && ally.modelVersion === version) { ally.fallbackParts.forEach((part)=>{part.visible=true;}); console.warn(`Could not load screen character: ${characterId}`, error); }
     });
   };
   let demoModels = false;
@@ -615,6 +622,13 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     renderer.render(scene, camera);
   };
   return {
+    setModels(next: CharacterModelCatalog) {
+      if (disposed||catalogReady&&JSON.stringify(catalog)===JSON.stringify(next)) return;
+      const ids=allies.map((ally)=>ally.modelId);
+      allies.forEach((ally)=>{ ++ally.modelVersion; if(ally.model){ally.body.remove(ally.model);ally.model=null;} ally.root.userData.modelKey=""; });
+      modelLibrary.dispose(); modelLibrary=createCharacterModelLibrary(); catalog=next; catalogReady=true;
+      allies.forEach((ally,i)=>setAllyModel(ally,ids[i]));
+    },
     render: draw,
     resize(width: number, height: number) {
       if (disposed || width <= 0 || height <= 0) return;

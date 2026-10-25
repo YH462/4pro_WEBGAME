@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { characters, departments } from "../src/lib/master-data";
+import { importDefaultCharacterModels } from "../src/lib/default-character-models";
 const db = new PrismaClient();
 try {
   await db.$transaction(async (tx) => {
@@ -12,5 +13,6 @@ try {
       await tx.skill.upsert({ where: { characterId_slot: { characterId: character.id, slot: 1 } }, update: {}, create: { id: `${character.id}-1`, characterId: character.id, slot: 1, name: "必殺技（仕様確認待ち）" } });
     }
   });
-  console.log(`Seed complete: event, 4 departments, ${characters.length} characters (including 7 drafts), 1 special move per character.`);
+  await importDefaultCharacterModels(db);
+  console.log(`Seed complete: event, 4 departments, ${characters.length} characters, 1 special move per character, bundled 3D models.`);
 } finally { await db.$disconnect(); }

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { characterModel } from "./character-models";
+import { characterModel, type CharacterModelAsset } from "./character-models";
 import { createCharacterModelLibrary, disposeModel } from "./character-model-loader";
 
 type Point = [number, number];
@@ -94,7 +94,7 @@ export function buildRaidPartner(element: string) {
   return root;
 }
 
-export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: string, characterId?: string, onModelState?: (state: "loading" | "ready" | "fallback") => void) {
+export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: string, characterId?: string, onModelState?: (state: "loading" | "ready" | "fallback") => void, asset: CharacterModelAsset | null | undefined = characterId ? characterModel(characterId) : undefined) {
   const options = { alpha: true, antialias: true, powerPreference: "low-power" } as const;
   const context = canvas.getContext("webgl2", options) as WebGL2RenderingContext | null;
   if (!context) throw new Error("WebGL2 is unavailable.");
@@ -105,7 +105,7 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
   const key = new THREE.DirectionalLight(0xfffaf4,3); key.position.set(-3,5,6); scene.add(key);
   const rim = new THREE.DirectionalLight(0xffffff,1.3); rim.position.set(3,2,-2); scene.add(rim);
   let character: THREE.Object3D = buildRaidPartner(element); scene.add(character);
-  const hasModel=Boolean(characterId&&characterModel(characterId));
+  const hasModel=Boolean(asset);
   character.visible=!hasModel;
   const size = new THREE.Vector3(), center = new THREE.Vector3();
   const camera = new THREE.OrthographicCamera(-2,2,2,-2,.1,50);
@@ -124,9 +124,9 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
   };
   measure(); // Fixed front: no automatic orbit.
   const library = createCharacterModelLibrary();
-  if (characterId && characterModel(characterId)) {
+  if (characterId && asset) {
     onModelState?.("loading");
-    void library.load(characterId).then((model) => {
+    void library.load(characterId,asset).then((model) => {
       if (disposed) return;
       scene.remove(character); disposeModel(character);
       character = model; imported = true; scene.add(character); measure();
