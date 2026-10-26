@@ -49,14 +49,16 @@ sudo docker compose exec -T web node -e 'console.log(JSON.stringify({APP_URL:pro
 更新前のDBと設定を保存します。
 
 ```bash
+raid_backup="$HOME/fourpro-backups/fourpro-before-raid-$(date +%Y%m%d-%H%M%S)"
+(
 umask 077
 mkdir -p "$HOME/fourpro-backups"
-raid_backup="$HOME/fourpro-backups/fourpro-before-raid-$(date +%Y%m%d-%H%M%S)"
 sudo docker compose exec -T db pg_dump -U fourpro -d fourpro -Fc > "$raid_backup.dump"
 test -s "$raid_backup.dump"
 sudo docker compose exec -T db pg_restore --list < "$raid_backup.dump" > /dev/null
 git rev-parse HEAD > "$raid_backup.commit"
 cp compose.override.yaml "$raid_backup.compose.override.yaml"
+)
 ```
 
 作業ツリーが反映可能な状態になってから取得・ビルドします。`--ff-only` が失敗した場合は停止し、ブランチの差分を確認してください。
@@ -71,6 +73,10 @@ curl --retry 10 --retry-connrefused --retry-delay 2 --max-time 10 -fsS http://12
 ```
 
 コンテナー起動時に `db:migrate`→`db:seed`→本番起動が実行されます。通常の更新でDBボリュームの削除やDBリセットは行いません。`/api/health` の正常応答に加え、実機で管理者ログイン・参加QR・スマホ2台以上の入力・HP更新・スクリーン再読み込み・リセット・既存のNFC URLからの獲得を確認します。
+
+バックアップの `umask 077` は括弧内のサブシェルだけに適用します。シェル全体へ設定したままGitでファイルを取得すると、ソースが所有者しか読めない権限になる場合があります。Dockerfileではコピー時に `node` へ所有権を設定し、ホスト側で制限されたソースも非rootユーザーで読み込めるようにしています。
+
+旧Dockerfileで `EACCES: permission denied, open '/app/prisma/schema.prisma'` が出て再起動を繰り返す場合は、`umask 022` を実行してから、この修正を取得しwebを再ビルド・再作成します。既に作られたファイルの権限は `umask` だけでは変更されません。DBコンテナーやDBボリュームを削除する必要はありません。
 
 更新後に問題がある場合はログを保存し、控えたコミットへソースを戻してwebを再ビルドする方法を検討します。追加テーブルは旧版の既存テーブルと独立しているので、アプリを戻すためだけに本番DB全体を復元する必要はありません。
 
