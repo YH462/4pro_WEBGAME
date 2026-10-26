@@ -13,12 +13,12 @@ async function request(path: string, init?: RequestInit): Promise<ResponseBody> 
     if (!response.ok) throw new Error(body.error || "同期サーバーに接続できません。");
     return body;
   } catch (error) {
-    if (controller.signal.aborted) throw new Error("接続がタイムアウトしました。PCと同じWi-Fiか確認してください。");
+    if (controller.signal.aborted) throw new Error("接続がタイムアウトしました。ネットワークを確認してください。");
     throw error;
   } finally { window.clearTimeout(timeout); }
 }
 
-export function useLocalRaid(enabled: boolean, personal = false) {
+export function useLocalRaid(enabled: boolean, personal = false, endpoint = "/api/local-raid") {
   const [state, setState] = useState<LocalRaidSnapshot | null>(null);
   const [error, setError] = useState("");
   const sequence = useRef(0);
@@ -35,13 +35,13 @@ export function useLocalRaid(enabled: boolean, personal = false) {
     const turn = body.state.me?.lastResult?.turn;
     pending.current = personal && (body.state.me?.submission || (turn && turn > body.state.counterTurn)) ? { roomId: body.state.roomId, revision: body.state.revision } : null;
     setState(body.state); setError("");
-  }, []);
+  }, [personal]);
   const refresh = useCallback(async () => {
     const id = ++sequence.current;
-    const wait = personal && pending.current;
-    const body = await request(`/api/local-raid${personal ? `?personal=1${wait ? `&waitForRevision=${wait.revision}&roomId=${encodeURIComponent(wait.roomId)}` : ""}` : ""}`);
+    const wait = personal && endpoint === "/api/local-raid" && pending.current;
+    const body = await request(`${endpoint}${personal ? `?personal=1${wait ? `&waitForRevision=${wait.revision}&roomId=${encodeURIComponent(wait.roomId)}` : ""}` : ""}`);
     accept(body, id);
-  }, [personal, accept]);
+  }, [personal, accept, endpoint]);
 
   useEffect(() => {
     mounted.current = true;
@@ -59,10 +59,10 @@ export function useLocalRaid(enabled: boolean, personal = false) {
 
   const send = useCallback(async (payload: object) => {
     const id = ++sequence.current;
-    const body = await request("/api/local-raid", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const body = await request(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     accept(body, id);
     return body;
-  }, [accept]);
+  }, [accept, endpoint]);
   return { state, error, send, refresh };
 }
 

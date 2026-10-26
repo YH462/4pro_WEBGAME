@@ -10,8 +10,8 @@ import { useRaidCountdown } from "@/components/battle/use-raid-countdown";
 import { RaidShowcase } from "./raid-showcase";
 import styles from "./raid-screen.module.css";
 
-export function RaidScreen({ local = false, canSync = false, entryTargets = [] }: { local?: boolean; canSync?: boolean; entryTargets?: RaidEntryTarget[] }) {
-  const { state: live, error, send } = useLocalRaid(local);
+export function RaidScreen({ local = false, production = false, canSync = false, entryTargets = [] }: { local?: boolean; production?: boolean; canSync?: boolean; entryTargets?: RaidEntryTarget[] }) {
+  const { state: live, error, send } = useLocalRaid(local, false, production ? "/api/raid" : "/api/local-raid");
   const [playback, dispatch] = useReducer(raidPlaybackReducer, emptyRaidPlayback);
   const [resetError, setResetError] = useState("");
   const [resetting, setResetting] = useState(false);
@@ -50,7 +50,7 @@ export function RaidScreen({ local = false, canSync = false, entryTargets = [] }
   const last = visible?.lastResult;
   const members = visible?.members ?? [];
   const failed = Boolean(visible && visible.participants > 0 && visible.alive === 0 && visible.bossHp > 0 && !active);
-  const status = local ? error ? "再接続中" : live ? "ローカル同期中" : "接続中" : "参加受付前";
+  const status = local ? error ? "再接続中" : live ? production ? "会場同期中" : "ローカル同期中" : "接続中" : "参加受付前";
   const title = failed ? "仲間が全員、戦闘不能に！" : scene.cue === "victory" ? "全員の力で、討伐成功！"
     : active ? scene.cue === "rps" ? "みんなでボスとじゃんけん！" : scene.cue === "counter" ? "ボスの全体攻撃！" : "全員の力を合わせよう！"
       : live?.round.phase === "collecting" ? `入力受付 あと${seconds}秒` : live?.round.phase === "lobby" ? "参加者がそろったら受付を開始しよう"
@@ -58,7 +58,7 @@ export function RaidScreen({ local = false, canSync = false, entryTargets = [] }
   const message = error || resetError || (live?.round.phase === "collecting" ? `${live.round.submitted} / ${live.round.eligible}人が送信済み。全員同じ「ぽん！」で勝負！` : last ? `ROUND ${last.turn}：全員共通のボスの手で、それぞれの勝敗を判定します。`
     : local ? "参加QRを読み取って、スマホから攻撃・回復を選ぼう。" : "開催前です。演出は右下の「演出確認ページ」から確認できます。");
   return <>
-    <RaidShowcase entryTargets={entryTargets} screen={{ scene, members, local, status, title, message, pending: 0, bossName: live?.bossName ?? "キング・アクア", failed,
+    <RaidShowcase entryTargets={entryTargets} screen={{ scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? "キング・アクア", failed,
       collection: live?.round.phase === "collecting" ? { round: live.round.number, seconds, submitted: live.round.submitted, eligible: live.round.eligible } : undefined,
       onComplete: complete, onReveal, onImpact, tools: <>{local && live?.round.phase === "lobby" && <button type="button" disabled={resetting || !live.alive} onClick={async () => {
         setResetting(true); try { await send({ type: "start", roomId: live.roomId }); setResetError(""); }
@@ -68,9 +68,10 @@ export function RaidScreen({ local = false, canSync = false, entryTargets = [] }
       <div className={styles.settingsHeading}><h2 id="screen-settings-title">スクリーンの設定</h2><button type="button" aria-label="表示設定を閉じる" onClick={() => settings.current?.close()}><X/></button></div>
       <p>演出確認ページは独立して残しています。実際の参加人数・HP・行動結果は同期モードで表示します。</p>
       <div className={styles.playback}><a href="/raid/screen?demo=effects">演出確認ページを開く</a>{!local && canSync && <a href="/raid/screen?sync=local">スマホ連携テストへ</a>}
-        {local && <><a href="/battle/raid?sync=local" target="_blank" rel="noreferrer">スマホ画面を開く ↗</a><button type="button" disabled={resetting} onClick={async () => {
+        {production && <a href="/admin/login?next=raid-screen">管理者ログイン</a>}
+        {local && <><a href={production ? "/battle/raid" : "/battle/raid?sync=local"} target="_blank" rel="noreferrer">スマホ画面を開く ↗</a><button type="button" disabled={resetting || !live} onClick={async () => {
           setResetting(true);
-          try { await send({ type: "reset" }); setResetError(""); settings.current?.close(); }
+          try { await send({ type: "reset", ...(production ? { roomId: live!.roomId } : {}) }); setResetError(""); settings.current?.close(); }
           catch (reason) { setResetError(reason instanceof Error ? reason.message : "リセットできませんでした。"); }
           finally { setResetting(false); }
         }}>{resetting ? "リセット中…" : "同期をリセット"}</button></>}

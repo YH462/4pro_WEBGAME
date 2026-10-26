@@ -42,7 +42,7 @@ test.describe("viewport-contained game screens", () => {
         expect(response.status()).toBe(201);
         playerId = (await response.json()).player.id;
 
-        for (const route of ["/", "/collection", "/collection/four-pro", "/profile", "/battle", "/battle/raid", "/dev"]) {
+        for (const route of ["/", "/collection", "/collection/four-pro", "/profile", "/battle", "/battle/raid?preview=1", "/dev"]) {
           await page.goto(route);
           await expect(page.locator(".game-main")).toBeVisible();
           await expectScreenFits(page);
@@ -66,7 +66,7 @@ test.describe("viewport-contained game screens", () => {
             await page.getByRole("tab", { name: "冒険の記録", exact: true }).click();
             await expectScreenFits(page);
           }
-          if (route === "/battle/raid") {
+          if (route === "/battle/raid?preview=1") {
             const character = await page.getByRole("region", { name: "自分のキャラクター", exact: true }).boundingBox();
             const controls = await page.getByRole("region", { name: "スマホ操作画面", exact: true }).boundingBox();
             expect(character).not.toBeNull(); expect(controls).not.toBeNull();

@@ -5,6 +5,13 @@ import type { LocalRaidAction, LocalRaidMember, LocalRaidResult, LocalRaidRoundR
 
 type Member = LocalRaidMember & { screenId: string; characterName: string; nickname: string };
 type Command = { roomId: string; round: number; requestId: string; action: LocalRaidAction; hand: RaidHand };
+export type SavedRaidRoom = {
+  version: 1; roomId: string; revision: number; bossHp: number; turn: number;
+  phase: LocalRaidSnapshot["round"]["phase"]; closesAt: number | null;
+  revealedTurn: number; actionTurn: number; counterTurn: number; completedTurn: number;
+  totalDamage: number; totalHealing: number; rounds: LocalRaidRoundResult[];
+  members: [string, Member][]; receipts: [string, string][];
+};
 export const raidInputMs = 10_000;
 export class LocalRaidError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -22,7 +29,7 @@ export function allocateRaidDamage(requested: number[], remaining: number) {
   return amounts;
 }
 
-// One development room in one Node process. No ownership, growth or rewards are persisted here.
+// Shared rules for local and database-backed rooms. Ownership/growth/rewards are separate.
 export class LocalRaidRoom {
   private roomId = randomUUID();
   private revision = 0;
@@ -43,6 +50,23 @@ export class LocalRaidRoom {
   private receipts = new Map<string, string>();
 
   constructor(private drawHand: () => RaidHand = () => raidHands[randomInt(raidHands.length)].id, private now = () => Date.now()) {}
+
+  save(): SavedRaidRoom {
+    return structuredClone({ version: 1, roomId: this.roomId, revision: this.revision, bossHp: this.bossHp, turn: this.turn,
+      phase: this.phase, closesAt: this.closesAt, revealedTurn: this.revealedTurn, actionTurn: this.actionTurn,
+      counterTurn: this.counterTurn, completedTurn: this.completedTurn, totalDamage: this.totalDamage,
+      totalHealing: this.totalHealing, rounds: this.rounds, members: [...this.members], receipts: [...this.receipts] });
+  }
+
+  static restore(saved: SavedRaidRoom, now = () => Date.now()) {
+    if (saved.version !== 1) throw new Error("Unsupported raid state version.");
+    const room = new LocalRaidRoom(undefined, now);
+    const { version: _version, members, receipts, ...fields } = structuredClone(saved);
+    Object.assign(room, fields);
+    room.members = new Map(members); room.receipts = new Map(receipts);
+    room.results = room.rounds.flatMap((round) => round.results);
+    return room;
+  }
 
   private changed() { this.revision++; this.listeners.forEach((notify) => notify()); }
   private checkRoom(roomId: string) {
@@ -115,6 +139,7 @@ export class LocalRaidRoom {
     });
     const round: LocalRaidRoundResult = { turn: this.turn, boss, bossHpBefore, bossHpAfter: this.bossHp, damage: damage.reduce((a, b) => a + b, 0), healing: results.filter((result) => result.action === "heal").reduce((sum, result) => sum + result.amount, 0), results };
     this.rounds.push(round); if (this.rounds.length > 10) this.rounds.shift();
+    for (const [key, receipt] of this.receipts) if (Number(receipt.split(":")[0]) < this.turn - 9) this.receipts.delete(key);
     this.results = this.rounds.flatMap((entry) => entry.results);
     this.totalDamage += round.damage; this.totalHealing += round.healing;
     this.phase = "playing"; this.changed();

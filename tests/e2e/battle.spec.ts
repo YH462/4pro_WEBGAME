@@ -14,7 +14,7 @@ test.afterAll(async () => { await db.$disconnect(); });
 test("the compact partner keeps HP visible while results return automatically to inline controls", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const id = await guest(page);
-  await page.goto("/battle/raid");
+  await page.goto("/battle/raid?preview=1");
   await page.getByLabel("参加キャラクター").selectOption("flame-dragon");
   const character = page.getByRole("img", { name: /フレイムドラゴン：正面/ });
   const hp = page.getByRole("progressbar", { name: "自分のHP（プレビュー）", exact: true });
@@ -56,7 +56,7 @@ test("owned partners use their DB growth and preview actions never change saved 
   const id = await guest(page);
   await db.playerCharacter.createMany({ data: [{ playerId: id, characterId: "forest-golem", hpGrowth: 17, attackGrowth: 4 }, { playerId: id, characterId: "thunder-fox", hpGrowth: 12 }] });
   const before = await db.playerCharacter.findMany({ where: { playerId: id }, orderBy: { characterId: "asc" } });
-  await page.goto("/battle/raid");
+  await page.goto("/battle/raid?preview=1");
   await expect(page.getByLabel("参加キャラクター").locator("option")).toHaveCount(2);
   await expect(page.getByRole("progressbar", { name: "自分のHP（プレビュー）" })).toHaveAttribute("aria-valuenow", "187");
   await page.getByLabel("参加キャラクター").selectOption("thunder-fox");
@@ -77,7 +77,7 @@ test("the phone works without WebGL and with reduced motion, including automatic
     } });
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await guest(page); await page.goto("/battle/raid");
+  await guest(page); await page.goto("/battle/raid?preview=1");
   await expect(page.getByRole("img", { name: /正面を向いた自分のキャラクター/ })).toBeVisible();
   await expect(page.locator("[data-renderer]")).toHaveAttribute("data-renderer", "fallback");
   await expect(page.locator('[data-renderer="fallback"] svg')).toBeVisible();
@@ -98,7 +98,7 @@ test("mobile commands stay visible and tappable on small phones, landscape and d
   await guest(page);
   for (const size of [{ width: 360, height: 640 }, { width: 375, height: 667 }, { width:393,height:636 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(size);
-    await page.goto("/battle/raid");
+    await page.goto("/battle/raid?preview=1");
     await page.getByRole("button", { name: "チョキを選択", exact: true }).click();
     await expect(page.getByRole("button", { name: "じゃんけんで試す", exact: true })).toBeEnabled();
     // Measure settled hit areas after the brief tap/selection transform has finished.
@@ -132,7 +132,7 @@ test("mobile commands stay visible and tappable on small phones, landscape and d
 });
 
 test("Safari toolbar height changes keep the partner large and the selected command usable",async({page},testInfo)=>{
-  await guest(page);await page.setViewportSize({width:393,height:852});await page.goto("/battle/raid");
+  await guest(page);await page.setViewportSize({width:393,height:852});await page.goto("/battle/raid?preview=1");
   await page.getByRole("button",{name:"チョキを選択",exact:true}).click();
   await page.setViewportSize({width:393,height:636});
   const portrait=page.locator('[data-character-id="forest-golem"]');
@@ -148,7 +148,7 @@ test("Safari toolbar height changes keep the partner large and the selected comm
 
 test("the selected partner has its own front-facing 3D portrait and the phone has no enemy model", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
-  await guest(page); await page.setViewportSize({ width:390,height:844 }); await page.goto("/battle/raid");
+  await guest(page); await page.setViewportSize({ width:390,height:844 }); await page.goto("/battle/raid?preview=1");
   await expect(page.getByRole("img", { name:"立体のキング・アクア" })).toHaveCount(0);
   await expect(page.locator(".enemy-fallback-art")).toHaveCount(0);
   for(const id of ["forest-golem","thunder-fox","flame-dragon","aqua-spirit"]) {

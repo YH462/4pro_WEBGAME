@@ -1,0 +1,7 @@
+CREATE TABLE "RaidRoom" (
+    "eventId" TEXT NOT NULL,
+    "state" JSONB NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "RaidRoom_pkey" PRIMARY KEY ("eventId"),
+    CONSTRAINT "RaidRoom_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
