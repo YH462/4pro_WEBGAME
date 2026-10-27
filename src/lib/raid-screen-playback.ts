@@ -40,7 +40,8 @@ export function raidPlaybackReducer(state: RaidScreenPlayback, action: { type: "
   const snapshot = action.snapshot;
   const round = snapshot.round.phase === "playing" ? snapshot.rounds.at(-1) ?? null : null;
   if (state.roomId === snapshot.roomId && (!round || round.turn <= state.lastTurn)) return state;
-  const step = !round || round.turn > snapshot.revealedTurn ? 0 : round.turn > snapshot.actionTurn ? 1 : 2;
+  const requestedStep = !round || round.turn > snapshot.revealedTurn ? 0 : round.turn > snapshot.actionTurn ? 1 : 2;
+  const step = round ? Math.min(requestedStep, steps(round).length - 1) : 0;
   return { ...emptyRaidPlayback, roomId: snapshot.roomId, lastTurn: round?.turn ?? 0, active: round, step,
     hp: round ? step === 0 ? round.bossHpBefore : round.bossHpAfter : snapshot.bossHp, maxHp: snapshot.bossMaxHp };
 }

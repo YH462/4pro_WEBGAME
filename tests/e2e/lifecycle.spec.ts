@@ -13,6 +13,7 @@ test("active events cannot be purged; explicit end, retention and confirmation a
     const player = await db.player.findFirstOrThrow({ where: { eventId: id } });
     const tag = await db.acquisitionTag.create({ data: { eventId: id, departmentId: "mechanical", tokenHash: randomUUID().replaceAll("-", "").padEnd(64, "0") } });
     await db.acquisitionLog.create({ data: { playerId: player.id, tagId: tag.id, characterId: "forest-golem", granted: true } });
+    await db.raidRoom.create({ data: { eventId: id, state: { nickname: "削除テスト", playerId: player.id } } });
     await db.rateLimitBucket.create({ data: { key: `nickname:${player.id}`, hits: 1, expiresAt: new Date(Date.now() + 60_000) } });
     await db.rateLimitBucket.create({ data: { key: `acquire:${player.id}`, hits: 1, expiresAt: new Date(Date.now() + 60_000) } });
     await expect(cli("purge", "--confirm")).rejects.toThrow();
@@ -27,6 +28,7 @@ test("active events cannot be purged; explicit end, retention and confirmation a
     await expect(cli("purge", "")).rejects.toThrow();
     await cli("purge", "--confirm");
     expect(await db.player.count({ where: { eventId: id } })).toBe(0);
+    expect(await db.raidRoom.count({ where: { eventId: id } })).toBe(0);
     expect(await db.guestSession.count({ where: { playerId: player.id } })).toBe(0);
     expect(await db.playerCharacter.count({ where: { playerId: player.id } })).toBe(0);
     expect(await db.rateLimitBucket.count({ where: { key: `nickname:${player.id}` } })).toBe(0);

@@ -22,10 +22,10 @@ const colors: Record<string, string> = { FOREST: "#49a878", THUNDER: "#e1a52d", 
 const elements = { FOREST: { label:"森属性",Icon:Leaf }, THUNDER: { label:"雷属性",Icon:Zap }, FLAME: { label:"炎属性",Icon:Flame }, AQUA: { label:"水属性",Icon:Droplets }, LEGEND: { label:"レジェンド",Icon:Crown } };
 const handName = (hand: RaidHand) => raidHands.find((item) => item.id === hand)!.label;
 
-export function RaidMobileConsole({ partners, local = false }: { partners: PartnerView[]; local?: boolean }) {
+export function RaidMobileConsole({ partners, local = false, production = false }: { partners: PartnerView[]; local?: boolean; production?: boolean }) {
   const [interactive, setInteractive] = useState(false);
   useEffect(() => { setInteractive(true); }, []);
-  const { state: raw, error: connectionError, send } = useLocalRaid(local, true);
+  const { state: raw, error: connectionError, send } = useLocalRaid(local, true, production ? "/api/raid" : "/api/local-raid");
   const state = raw ? visibleLocalRaid(raw) : null;
   const [partnerId, setPartnerId] = useState(partners[0]?.id ?? "");
   const [action, setAction] = useState<LocalRaidAction | null>(local ? null : "attack");
@@ -232,6 +232,6 @@ export function RaidMobileConsole({ partners, local = false }: { partners: Partn
         {ended ? <span>戦闘不能</span> : sending || waiting || (local && result) ? <><LoaderCircle className={styles.spinner} size={18}/><span>{sending ? "送信中…" : "次の受付まで待機"}</span></> : result ? <><Check size={19}/><span>まもなく次の行動へ</span></> : <><Radio size={24} aria-hidden="true"/><span className={styles.confirmLabel}><strong>{joining ? "参加中…" : local && !accepting ? "受付開始を待っています" : !ready ? "同期に参加する" : !hand ? "じゃんけんの手を選ぼう" : attempt ? "同じ行動を再送する" : local ? "じゃんけんで送信" : "じゃんけんで試す"}</strong></span><ChevronsRight size={24} aria-hidden="true"/></>}
       </button>}
     </section>}
-    {local ? <LocalRaidGuide dialogRef={help}/> : <dialog className={styles.help} ref={help} aria-labelledby="raid-mobile-rules"><header><h2 id="raid-mobile-rules">レイドの遊び方</h2><button type="button" aria-label="レイドのルールを閉じる" onClick={() => help.current?.close()}><X size={20}/></button></header><p>攻撃はボスへ。回復は自分へ。行動とじゃんけんの手を選んで送信しよう。</p><div className={styles.rules}>{Object.values(raidRpsRules).map((rule) => <span key={rule.label}>{rule.label}<b>×{rule.multiplier}</b></span>)}</div><p>操作プレビューです。HP・所持キャラクター・育成値は変わりません。</p><a href="/raid/screen" target="_blank" rel="noreferrer">スクリーンを開く <ArrowUpRight size={15}/></a></dialog>}
+    {local ? <LocalRaidGuide dialogRef={help} screenHref={production ? "/raid/screen" : "/raid/screen?sync=local"}/> : <dialog className={styles.help} ref={help} aria-labelledby="raid-mobile-rules"><header><h2 id="raid-mobile-rules">レイドの遊び方</h2><button type="button" aria-label="レイドのルールを閉じる" onClick={() => help.current?.close()}><X size={20}/></button></header><p>攻撃はボスへ。回復は自分へ。行動とじゃんけんの手を選んで送信しよう。</p><div className={styles.rules}>{Object.values(raidRpsRules).map((rule) => <span key={rule.label}>{rule.label}<b>×{rule.multiplier}</b></span>)}</div><p>操作プレビューです。HP・所持キャラクター・育成値は変わりません。</p><a href="/raid/screen" target="_blank" rel="noreferrer">スクリーンを開く <ArrowUpRight size={15}/></a></dialog>}
   </div>;
 }

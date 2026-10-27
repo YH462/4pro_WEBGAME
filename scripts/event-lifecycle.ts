@@ -16,7 +16,8 @@ try {
       const events = await tx.$queryRaw<{ status: string; endedAt: Date | null; purgeAt: Date | null }[]>`SELECT "status", "endedAt", "purgeAt" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
       const event = events[0];
       if (!event || event.status !== "ENDED" || !event.endedAt || !event.purgeAt || event.purgeAt > new Date()) throw new Error("Only explicitly ended events past their retention date may be purged.");
-      await tx.$executeRaw`DELETE FROM "RateLimitBucket" USING "Player" WHERE "RateLimitBucket"."key" IN ('nickname:' || "Player"."id", 'acquire:' || "Player"."id") AND "Player"."eventId" = ${eventId}`;
+      await tx.$executeRaw`DELETE FROM "RateLimitBucket" USING "Player" WHERE "RateLimitBucket"."key" IN ('nickname:' || "Player"."id", 'acquire:' || "Player"."id", 'raid-read:player:' || "Player"."id", 'raid-write:player:' || "Player"."id") AND "Player"."eventId" = ${eventId}`;
+      await tx.raidRoom.deleteMany({ where: { eventId } });
       const deleted = await tx.player.deleteMany({ where: { eventId } });
       await tx.rateLimitBucket.deleteMany({ where: { expiresAt: { lte: new Date() } } });
       console.log(`Deleted ${deleted.count} guest(s), their sessions and owned characters. Event/master data retained.`);

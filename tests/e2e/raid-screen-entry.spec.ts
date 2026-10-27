@@ -73,17 +73,8 @@ test("screen QR decodes to a LAN entry link and a new phone reaches the synced r
   } finally { await phone.close(); }
 });
 
-test("the normal screen keeps the effect-check page separate and waits for real participants", async ({ page }) => {
-  await page.setViewportSize({ width: 1366, height: 768 });
+test("the production screen asks operators to log in before controlling the battle", async ({ page }) => {
   await page.goto("/raid/screen");
-  const card = page.getByRole("region", { name: "レイド参加案内" });
-  const link = card.getByRole("link");
-  await expect(link).toHaveAttribute("href", /\/battle\/raid$/);
-  await expect(card).toContainText("操作プレビュー");
-  await page.getByRole("button", { name: "表示設定", exact: true }).click();
-  await expect(page.getByRole("link", { name: "演出確認ページを開く", exact: true })).toHaveAttribute("href", "/raid/screen?demo=effects");
-  await page.getByRole("button", { name: "表示設定を閉じる" }).click();
-  await expect(card.getByRole("img", { name: "レイド参加用QRコード", exact: true })).toBeVisible();
-  await expect(page.getByRole("list", { name: "参加者とキャラクター" }).getByRole("listitem")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "連続デモ", exact: true })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/admin\/login\?next=raid-screen$/);
+  await expect(page.getByRole("heading", { name: "管理者ログイン", exact: true })).toBeVisible();
 });

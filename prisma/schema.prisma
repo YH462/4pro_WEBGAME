@@ -21,6 +21,15 @@ model Event {
   createdAt DateTime    @default(now())
   players   Player[]
   acquisitionTags AcquisitionTag[]
+  raidRoom RaidRoom?
+}
+
+// One shared battle per event. Updates are serialized with a database row lock.
+model RaidRoom {
+  eventId String @id
+  state Json
+  updatedAt DateTime @default(now()) @updatedAt
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model Player {

@@ -11,7 +11,7 @@ const outcomes = [
   { id: "lose", Icon: Hand, className: styles.lose },
 ] as const;
 
-export function LocalRaidGuide({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
+export function LocalRaidGuide({ dialogRef, screenHref = "/raid/screen?sync=local" }: { dialogRef: RefObject<HTMLDialogElement | null>; screenHref?: string }) {
   return <dialog ref={dialogRef} className={styles.dialog} aria-labelledby="raid-mobile-rules" onClick={(event) => {
     if (event.target === event.currentTarget) dialogRef.current?.close();
   }}>
@@ -39,7 +39,7 @@ export function LocalRaidGuide({ dialogRef }: { dialogRef: RefObject<HTMLDialogE
           </ol>
 
         </section>
-        <a className={styles.screenLink} href="/raid/screen?sync=local" target="_blank" rel="noreferrer">スクリーンを開く <ArrowRight size={23} aria-hidden="true"/></a>
+        <a className={styles.screenLink} href={screenHref} target="_blank" rel="noreferrer">スクリーンを開く <ArrowRight size={23} aria-hidden="true"/></a>
       </div>
     </div>
   </dialog>;
