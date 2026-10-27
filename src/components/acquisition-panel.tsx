@@ -29,7 +29,7 @@ export function AcquisitionPanel({ token, department, character, owned }: { toke
   return <section className={styles.page}>
     <div className="screen-heading"><h1>展示のパートナー</h1><span className={styles.department}>{department}</span></div>
     <div className={styles.card}>
-      <span className={styles.eyebrow}>{done ? "YOUR NEW PARTNER" : "PARTNER FOUND"}</span>
+
       <div className={styles.art} role="img" aria-label={character.name}><CharacterArt element={character.element} imageUrl={character.imageUrl} portrait/></div>
       <h2>{character.name}</h2>
       <p role="status">{result?.acquired ? "新しいパートナーが仲間になりました！" : done ? "このパートナーは獲得済みです。" : "このパートナーを仲間にしよう！"}</p>

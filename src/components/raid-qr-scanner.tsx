@@ -103,11 +103,11 @@ export function RaidQrScanner({ hasPlayer }: { hasPlayer: boolean }) {
     };
   }, [open, attempt, router]);
 
-  const label = <><span className={styles.qrIcon}><QrCode size={25} aria-hidden="true"/></span><span className={styles.triggerCopy}><strong>QRでレイドに参加</strong><small id={`${id}-entry-note`}>会場の受付QRからみんなで挑戦！</small></span><ChevronRight size={21} aria-hidden="true"/></>;
-  if (!hasPlayer) return <Link href="/start" className={styles.trigger} aria-label="QRでレイドに参加" aria-describedby={`${id}-entry-note`}>{label}</Link>;
+  const label = <><span className={styles.qrIcon}><QrCode size={25} aria-hidden="true"/></span><span className={styles.triggerCopy}><strong>QRでレイドに参加</strong></span><ChevronRight size={21} aria-hidden="true"/></>;
+  if (!hasPlayer) return <Link href="/start" className={styles.trigger} aria-label="QRでレイドに参加">{label}</Link>;
 
   return <>
-    <button className={styles.trigger} type="button" aria-label="QRでレイドに参加" aria-describedby={`${id}-entry-note`} onClick={() => {
+    <button className={styles.trigger} type="button" aria-label="QRでレイドに参加" onClick={() => {
       setError(false);
       setStatus("カメラを起動しています…");
       dialog.current?.showModal();
@@ -126,7 +126,7 @@ export function RaidQrScanner({ hasPlayer }: { hasPlayer: boolean }) {
         <div className={styles.scanFrame} aria-hidden="true"/>
       </div>
       <p className={`${styles.status} ${error ? styles.error : ""}`} role="status">{status}</p>
-      <p className={styles.note}>読み取るとバトル画面へ進みます。映像は保存・送信しません。</p>
+
       {error && <button type="button" className={styles.retry} onClick={() => {
         setError(false);
         setStatus("カメラを起動しています…");

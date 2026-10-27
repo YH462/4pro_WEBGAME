@@ -38,7 +38,7 @@
 .notice::before { content:""; position:absolute; inset:1px; z-index:-1; background:linear-gradient(110deg,#fff5f8,#ffebf0); clip-path:inherit; }
 .notice>svg { color:#ee3154; }
 .notice p { color:#736671; font-size:13px; line-height:1.7; }
-.privacy { color:#8a808a; font-size:11px; line-height:1.7; }
+
 .confirm { position:relative; display:flex; align-items:center; justify-content:center; width:100%; min-height:64px; padding:8px 40px; border:0; color:#fff; background:linear-gradient(100deg,#ff5975,#fff 55%,#ff4566); clip-path:polygon(5% 0,95% 0,100% 50%,95% 100%,5% 100%,0 50%); isolation:isolate; font-size:21px; font-weight:850; }
 .confirm::before { content:""; position:absolute; inset:2px; z-index:-1; background:linear-gradient(115deg,#f81b40b3,#d50028c9),var(--mobile-ui-background) center 10%/cover; clip-path:inherit; box-shadow:inset 0 0 10px #ff7c88; }
 .confirm>svg { position:absolute; right:7%; stroke-width:3; }
@@ -49,7 +49,7 @@
 
 @media (max-width:600px) {
   .header { padding:16px 20px 18px; }
-  .eyebrow { font-size:8px; }
+  .eyebrow { font-size:0; }
   .header h2 { font-size:28px; }
   .header p { margin-top:5px; font-size:12px; }
   .close { width:44px; height:44px; top:12px; right:10px; }
@@ -65,7 +65,7 @@
   .notice { padding:10px 12px; gap:10px; }
   .notice>svg { width:20px; }
   .notice p { font-size:10.5px; }
-  .privacy { font-size:10px; line-height:1.7; }
+
   .confirm { min-height:50px; font-size:17px; }
 }
 @media (max-width:370px) {
@@ -85,11 +85,11 @@
 @media (max-height:500px) and (min-width:600px) {
   .dialog { width:min(780px,calc(100vw - 24px)); }
   .panel { display:grid; grid-template-columns:230px minmax(0,1fr); }
-  .header { padding:50px 20px 20px; }.header h2 { font-size:26px; }.header p { font-size:12px; }.eyebrow { font-size:8px; }
+  .header { padding:50px 20px 20px; }.header h2 { font-size:26px; }.header p { font-size:12px; }.eyebrow { font-size:0; }
   .close { top:7px; right:9px; width:44px; height:44px; }
   .body { padding:10px 13px; gap:7px; }
   .steps { gap:5px; }.step { min-height:59px; grid-template-columns:31px 58px minmax(0,1fr)10px; gap:6px; padding-block:2px; }
-  .number { width:31px; font-size:15px; }.description h3 { font-size:13px; }.description p { font-size:10px; line-height:1.5; margin-top:1px; }
-  .notice { padding:5px 10px; gap:10px; }.notice p { font-size:10px; }.notice>svg { width:19px; }.privacy { font-size:9px; line-height:1.5; }
+  .number { width:31px; font-size:15px; }.description h3 { font-size:13px; }.description p { font-size:0; line-height:1.5; margin-top:1px; }
+  .notice { padding:5px 10px; gap:10px; }.notice p { font-size:0; }.notice>svg { width:19px; }
   .confirm { min-height:44px; font-size:15px; }
 }

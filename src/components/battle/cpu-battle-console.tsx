@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, RotateCcw, Shield, Sparkles, Swords } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, RotateCcw, Shield, Sparkles, Swords } from "lucide-react";
 import type { PartnerView } from "@/lib/character-presentation";
 import { chooseCpuAction, cpuRules, createCpuBattle, damage, practiceFighter, resolveCpuTurn, type CpuAction, type CpuBattle } from "@/lib/cpu-battle";
 import { CharacterArt } from "../character-art";
@@ -94,9 +94,9 @@ export function CpuBattleConsole({ partners }: { partners: PartnerView[] }) {
     : "相手の予告を見て、行動を選ぼう。";
 
   return <div className={styles.screen}>
-    <div className={styles.heading}><h1><Swords size={20}/>CPU対戦</h1><Link href="/battle/raid">レイド画面<ArrowRight size={14}/></Link></div>
+    <div className={styles.heading}><h1><Swords size={20}/>CPU対戦</h1><Link href="/battle/raid" aria-label="レイド画面">レイド画面<ArrowRight size={14}/></Link></div>
     {!battle ? <section className={styles.picker} aria-label="CPU対戦のキャラ選択">
-      <div className={styles.intro}><h2>使うキャラを1体選ぼう</h2><p>全{partners.length}体をお試しできます。仮ルール・報酬なし。</p></div>
+      <div className={styles.intro}><h2>使うキャラを1体選ぼう</h2></div>
       <div className={styles.choices} role="group" aria-label="対戦キャラクター">
         {partners.map((partner) => <button
           type="button" key={partner.id} className={`${styles.choice} ${selected.id === partner.id ? styles.chosen : ""}`}
@@ -115,7 +115,7 @@ export function CpuBattleConsole({ partners }: { partners: PartnerView[] }) {
     </section> : <div className={styles.fight}>
       <section className={styles.battlefield} aria-label="CPUの対戦画面" data-phase={phase}>
         <div className={styles.cpuHud}>
-          <div><span className={styles.eyebrow}>対戦相手 · CPU</span><h2>{battle.cpu.name}</h2><Meter label="CPUのHP" value={battle.cpuHp} max={battle.cpu.maxHp}/><small>HP {battle.cpuHp} / {battle.cpu.maxHp}　EP {battle.cpuEp} / {cpuRules.maxEp}</small></div>
+          <div><h2>{battle.cpu.name}</h2><Meter label="CPUのHP" value={battle.cpuHp} max={battle.cpu.maxHp}/><small>HP {battle.cpuHp} / {battle.cpu.maxHp}　EP {battle.cpuEp} / {cpuRules.maxEp}</small></div>
           <div className={styles.turn}><span>TURN</span><strong>{Math.min(ended ? battle.turn : battle.turn + 1, cpuRules.maxTurns).toString().padStart(2, "0")}</strong><small>/ {cpuRules.maxTurns}</small></div>
         </div>
         <div className={`${styles.forecast} ${intent === "special" ? styles.danger : ""}`} aria-label="相手の次の行動">
@@ -129,7 +129,7 @@ export function CpuBattleConsole({ partners }: { partners: PartnerView[] }) {
             <PracticeArt partner={selected}/>
             {busy && last?.playerAction === "defend" && <span className={styles.guard}><Shield/><small>GUARD</small></span>}
             {phase === "cpu" && !!last?.damageToPlayer && <b className={`${styles.damage} ${last.playerAction === "defend" ? styles.blocked : ""}`}>−{last.damageToPlayer}</b>}
-            <span className={styles.fighterTag}>YOU · お試し</span>
+            <span className={styles.fighterTag}>自分</span>
           </div>
           <div className={`${styles.combatant} ${styles.cpuFighter} ${phase === "cpu" && last?.cpuAction !== "defend" ? styles.cpuAttacking : ""} ${phase === "player" && last?.damageToCpu ? styles.hit : ""}`} role="img" aria-label={`敵のキャラ：${battle.cpu.name}`}>
             <EnemyArt/>
@@ -144,26 +144,26 @@ export function CpuBattleConsole({ partners }: { partners: PartnerView[] }) {
           <span>{battle.result === "win" ? "VICTORY" : battle.result === "lose" ? "DEFEAT" : "DRAW"}</span>
           <h2>{battle.result === "win" ? "勝利！" : battle.result === "lose" ? "敗北" : "引き分け"}</h2>
           <p>{battle.turn}ターンで対戦終了</p>
-          <small>{battle.result === "lose" ? "必殺を防ぎ、直後の隙に反撃しよう。" : "攻撃と防御のタイミングが勝負のカギ。"}</small>
+
         </div>}
       </section>
 
       <section className={styles.controls} aria-label="CPU対戦の操作">
         <div className={styles.playerHud}>
-          <div className={styles.playerVitals}><span className={styles.eyebrow}>YOUR PARTNER</span><strong>{selected.name}</strong><Meter label="自分のHP" value={battle.playerHp} max={battle.player.maxHp}/><small>HP {battle.playerHp} / {battle.player.maxHp}</small></div>
+          <div className={styles.playerVitals}><strong>{selected.name}</strong><Meter label="自分のHP" value={battle.playerHp} max={battle.player.maxHp}/><small>HP {battle.playerHp} / {battle.player.maxHp}</small></div>
           <div className={`${styles.ep} ${battle.playerEp >= cpuRules.specialCost ? styles.charged : ""}`}><span>必殺ゲージ（EP）</span><strong>{battle.playerEp}<small> / {cpuRules.maxEp}</small></strong><Meter label="必殺ゲージ（EP）" value={battle.playerEp} max={cpuRules.maxEp} ep/></div>
         </div>
         <div className={styles.commands} role="group" aria-label="行動を選ぶ">
           {actions.map((item) => <button type="button" key={item.id} aria-label={item.name}
             className={`${styles.command} ${item.id === "special" ? styles.special : ""}`}
             disabled={busy || ended || (item.id === "special" && battle.playerEp < cpuRules.specialCost)} onClick={() => play(item.id)}
-          ><item.icon size={23}/><strong>{item.name}</strong><small>{item.id === "special" ? `EP ${cpuRules.specialCost} で発動` : item.id === "defend" ? "軽減 ＋ EPボーナス" : "ダメージ ＋ EP"}</small></button>)}
+          ><item.icon size={23}/><strong>{item.name}</strong></button>)}
         </div>
-        <p className={styles.hint}>{ended ? "もう一度挑戦してみよう。" : busy ? "行動中…" : battle.cpuOpening ? "必殺のあとは隙あり！ 攻撃・必殺で反撃しよう。" : intent === "special" ? "防御でダメージ65%軽減。防ぐとEPも多くたまる！" : intent === "defend" ? "相手は防御中。必殺を温存して次に備えよう。" : "攻撃で削る？ 防御でEPをためる？"}</p>
+
       </section>
       <div className={styles.battleFooter}>
-        <button type="button" disabled={busy} onClick={() => { setBattle(null); setExchange(null); }}>キャラを選び直す</button>
-        {ended ? <button type="button" disabled={busy} onClick={start}><RotateCcw size={15}/>もう一度対戦</button> : <span>仮ルール · 勝敗は保存されません</span>}
+        <button type="button" aria-label="キャラを選び直す" disabled={busy} onClick={() => { setBattle(null); setExchange(null); }}><ArrowLeft size={20}/>キャラを選び直す</button>
+        {ended ? <button type="button" aria-label="もう一度対戦" disabled={busy} onClick={start}><RotateCcw size={20}/>もう一度対戦</button> : null}
       </div>
     </div>}
   </div>;

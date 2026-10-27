@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { Award, BookOpen, Check, Copy, ShieldCheck, SquarePen, Trophy, UserRound } from "lucide-react";
+import { Award, BookOpen, Check, Copy, SquarePen, Trophy, UserRound } from "lucide-react";
 import { GuestForm } from "./guest-form";
 import styles from "./profile-panel.module.css";
 
@@ -27,7 +27,7 @@ export function ProfilePanel({ id, nickname, count, total }: { id: string; nickn
         <polygon points="724,630 780,630 808,678 780,726 724,726 696,678" opacity=".05"/>
       </svg>
       <div className={styles.identity}>
-        <span className={styles.guest}><ShieldCheck size={15}/>GUEST</span>
+
         <div className={styles.avatar}>
           <svg viewBox="0 0 124 112" className={styles.avatarFrame} aria-hidden="true">
             <polygon points="32,3 92,3 122,56 92,109 32,109 2,56" fill="#fff8" stroke="#f3bac6"/>
@@ -40,7 +40,7 @@ export function ProfilePanel({ id, nickname, count, total }: { id: string; nickn
           </svg>
         </div>
         <div className={styles.name}>
-          <span>EXHIBITION EXPLORER</span>
+
           <div><h2>{nickname || "ゲスト"}</h2><button type="button" aria-label="ニックネームを編集" onClick={() => {
             setTab("profile");
             requestAnimationFrame(() => input.current?.focus());
@@ -74,7 +74,7 @@ export function ProfilePanel({ id, nickname, count, total }: { id: string; nickn
           <GuestForm mode="edit" initialNickname={nickname} inputRef={input} className={styles.form}/>
           <div className={styles.playerInfo}>
             <div className={styles.playerId}>
-              <span>PLAYER ID</span>
+              <span>プレイヤーID</span>
               <code>{id}</code>
               <button type="button" aria-label="プレイヤーIDをコピー" onClick={async () => {
                 try { await navigator.clipboard.writeText(id); setCopyMessage("コピーしました。"); }
@@ -82,7 +82,7 @@ export function ProfilePanel({ id, nickname, count, total }: { id: string; nickn
               }}>{copyMessage === "コピーしました。" ? <Check size={19}/> : <Copy size={19}/>}</button>
             </div>
             <p className={styles.copyMessage} aria-live="polite">{copyMessage}</p>
-            <p className={styles.privacy}>Cookieを削除すると進行状況を引き継げません。</p>
+
           </div>
         </div> : <div className={styles.records}>
           <div className={styles.recordStats}>
@@ -90,7 +90,7 @@ export function ProfilePanel({ id, nickname, count, total }: { id: string; nickn
             <div className={`${styles.recordCard} ${styles.trophies}`}><Trophy size={28}/><strong>—</strong><span>討伐記録</span></div>
             <div className={`${styles.recordCard} ${styles.badges}`}><Award size={28}/><strong>—</strong><span>称号・バッジ</span></div>
           </div>
-          <p>討伐記録と称号・バッジは準備中です。<br/>まずは展示のパートナーに会いにいこう。</p>
+
         </div>}
       </div>
     </section>

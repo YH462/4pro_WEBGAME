@@ -22,6 +22,7 @@ export type RaidScreenPresentation = {
   collection?: { round: number; seconds: number; submitted: number; eligible: number };
   scene: RaidScreenScene; members: LocalRaidParticipant[]; bossName: string;
   local: boolean; status: string; title: string; message: string; pending: number;
+  production?: boolean;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
   onImpact: (id: string, kind: "action" | "counter") => void;
 };
@@ -147,10 +148,10 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   return <div className={styles.viewport}>
     <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} data-actor-ids={screen?.scene.actions.map((action) => action.participantId).join(",")} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
       <div className={styles.honeycomb}/>
-      <div className={styles.brand}>4<span>PRO</span><small>ONE TEAM. ONE RAID.</small></div>
+      <div className={styles.brand}>4<span>PRO</span></div>
       <div className={styles.demoBadge}>{screen?.status ?? "PC 演出デモ"}</div>
       <header className={styles.hud}>
-        <div className={styles.bossTitle}><span>RAID BOSS / 01</span><h1>{screen?.bossName ?? "キング・アクア"}</h1><strong>{Math.round(hp / maxHp * 100)}<small>%</small></strong></div>
+        <div className={styles.bossTitle}><h1>{screen?.bossName ?? "キング・アクア"}</h1><strong>{Math.round(hp / maxHp * 100)}<small>%</small></strong></div>
         <div className={styles.health} role="progressbar" aria-label={screen ? "ボスHP" : "演出デモのボスHP"} aria-valuenow={hp} aria-valuemin={0} aria-valuemax={maxHp}>
           <span ref={delayedHealth} className={styles.delayedHealth} style={{ width: `${beforeHp / maxHp * 100}%` }}/><span ref={health} className={styles.currentHealth} style={{ width: `${beforeHp / maxHp * 100}%` }}/>
         </div>
@@ -205,8 +206,8 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
         })}</div>
       </div>}
       {screen && <footer className={styles.liveFooter}><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</footer>}
-      <div className={styles.tools}>{screen ? <><a href="/raid/screen?demo=effects">演出確認ページ</a>{screen.tools}</> : <a href="/raid/screen?sync=local">同期スクリーンへ戻る</a>}<button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
-      {!screen && <p className={styles.caption} role="status">{fixture.label} <span>／ 人数・HPはデモ用の表示です</span></p>}
+      <div className={styles.tools}>{screen ? <><a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認ページ<Play size={18}/></a>{screen.tools}</> : <a href="/raid/screen?sync=local" aria-label="同期スクリーンへ戻る"><RotateCcw size={18}/>同期スクリーンへ戻る</a>}<button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+      {!screen && <p className={styles.caption} role="status">{fixture.label} </p>}
       {fullscreenError && <p className={styles.error} role="alert">{fullscreenError}</p>}
     </main>
   </div>;

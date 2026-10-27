@@ -1,0 +1,45 @@
+import { chromium, expect } from '@playwright/test';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import sharp from 'sharp';
+const root = path.resolve('.local/ui-review/2026-10-26');
+const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
+const files = await readdir(path.join(root, 'screenshots'));
+if (manifest.failures.length || manifest.errors.length) throw new Error('Capture failures present');
+if (manifest.masterUnchanged !== true) throw new Error('Master data comparison did not pass');
+if (new Set(manifest.records.map(r => r.id)).size !== manifest.records.length) throw new Error('Duplicate IDs');
+const routeFiles = (await readdir('src/app', {recursive:true})).filter(file => /(^|[\\/])page\.tsx$/.test(file));
+const routeCoverage = routeFiles.map(file => {
+  const route = '/' + file.replaceAll('\\','/').replace(/(^|\/)page\.tsx$/, '');
+  const pattern = new RegExp('^' + route.split('/').map(segment => segment.startsWith('[') ? '[^/]+' : segment).join('/') + '$');
+  return {route, captured:manifest.records.some(record => pattern.test(new URL(record.route,'http://localhost').pathname))};
+});
+if (routeCoverage.some(item => !item.captured)) throw new Error('Missing page routes: ' + JSON.stringify(routeCoverage.filter(item => !item.captured)));
+for (const item of manifest.records) {
+  const metadata = await sharp(path.join(root, item.file)).metadata();
+  if (metadata.width !== item.layout.width || metadata.height !== item.layout.height) throw new Error(`Incorrect dimensions: ${item.id}`);
+}
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'ja-JP' });
+const errors = [];
+page.on('pageerror', e => errors.push(String(e)));
+await page.goto('http://localhost:4310');
+await expect(page.locator('.card')).toHaveCount(manifest.records.length);
+await page.getByRole('textbox').fill('討伐成功');
+await expect(page.locator('.card:not(.hidden)')).toHaveCount(1);
+await page.locator('.card:not(.hidden) a').click();
+await expect(page.locator('#viewer')).toBeVisible();
+await expect(page.locator('#large')).toHaveJSProperty('naturalWidth', 390);
+await page.getByRole('button', { name: '閉じる', exact: true }).click();
+await page.getByRole('textbox').fill('');
+await expect(page.locator('.card:not(.hidden)')).toHaveCount(manifest.records.length);
+await page.getByRole('textbox').blur();
+await page.evaluate(() => scrollTo(0, 0));
+await page.screenshot({ path: path.join(root, 'gallery-preview.png') });
+await browser.close();
+if (errors.length) throw new Error(errors.join('\n'));
+const qa = { count: manifest.records.length, pngCount: files.length, dimensionsVerified: true, gallerySearchVerified: true, galleryImageModalVerified: true, galleryErrors: errors, captureFailures: manifest.failures, groups: Object.fromEntries([...new Set(manifest.records.map(r => r.group))].map(g => [g, manifest.records.filter(r => r.group === g).length])), overflow: manifest.records.filter(r => r.layout.documentWidth > r.layout.width || r.layout.documentHeight > r.layout.height).map(r => ({ id: r.id, ...r.layout })) };
+qa.routeCoverage = routeCoverage;
+qa.masterUnchanged = manifest.masterUnchanged;
+await writeFile(path.join(root, 'verification.json'), JSON.stringify(qa, null, 2));
+console.log(JSON.stringify(qa));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { BarChart3, Check, FileText, Gauge, Heart, LockKeyhole, ScanLine, Shield, Sparkles, Swords } from "lucide-react";
+import { BarChart3, Check, FileText, Gauge, Heart, LockKeyhole, Shield, Sparkles, Swords } from "lucide-react";
 import { CharacterArt } from "./character-art";
 import type { PartnerView } from "@/lib/character-presentation";
 import styles from "./partner-panel.module.css";
@@ -89,7 +89,7 @@ export function PartnerPanel({ partner }: { partner: PartnerView }) {
                   <div className={styles.statValue}>
                     <span>{stat.label}</span>
                     <strong>{stat.value ?? "—"}</strong>
-                    <small>{stat.value === null ? "設定待ち" : <>基本 {stat.base}{stat.growth > 0 ? ` + ${stat.growth}` : ""}</>}</small>
+
                   </div>
                   <div className={styles.gauge} aria-hidden="true">
                     <div className={styles.gaugeTrack}>
@@ -116,18 +116,18 @@ export function PartnerPanel({ partner }: { partner: PartnerView }) {
               </svg>
               <span className={styles.skillEmblem}><Sparkles className={styles.skillIcon} size={24}/></span>
               <div className={styles.skillHeading}>
-                <span className={styles.skillEyebrow}>SPECIAL SKILL</span>
+
                 <strong>{partner.specialMove?.name ?? "必殺技"}</strong>
               </div>
               <small className={styles.skillBadge}>{partner.specialMove?.confirmed ? "登録済み" : "準備中"}</small>
-              <p>必殺ゲージ（EP）を消費して使う、<br/>キャラごとの技です。</p>
-              <span className={styles.skillNote}>効果・消費EPは準備中です。</span>
+
+
             </div>
           </div>}
           {tab === "about" && <div className={styles.about}>
             <p>{partner.description}</p>
-            <div><ScanLine size={23}/><span>{partner.isDraft ? "仮配置のキャラクターです。CPU対戦でお試しできます。" : partner.isLegendary ? "4学科のパートナーをすべて集めると解放されます。" : partner.departmentId?`${partner.department}の展示で出会えるパートナーです。`:"展示のタグから獲得できるパートナーです。"}</span></div>
-            <small>展示のタグ・QRから仲間にできます。</small>
+
+
           </div>}
         </div>
       </div>

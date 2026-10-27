@@ -15,10 +15,10 @@ type MapPartner = {
 
 // Position follows the department, even when character master data is reordered.
 const areas = [
-  { id: "mechanical", name: "機械科", code: "MECHANICAL", number: "01", position: styles.topLeft },
-  { id: "electrical", name: "電気情報", code: "ELECTRICAL", number: "02", position: styles.topRight },
-  { id: "control", name: "電子制御", code: "ELECTRONICS", number: "03", position: styles.bottomLeft },
-  { id: "civil", name: "建設システム", code: "ARCHITECTURE", number: "04", position: styles.bottomRight },
+  { id: "mechanical", name: "機械科", number: "01", position: styles.topLeft },
+  { id: "electrical", name: "電気情報", number: "02", position: styles.topRight },
+  { id: "control", name: "電子制御", number: "03", position: styles.bottomLeft },
+  { id: "civil", name: "建設システム", number: "04", position: styles.bottomRight },
 ];
 
 export function ExhibitionMap({ partners, legend, hasPlayer }: {
@@ -38,12 +38,12 @@ export function ExhibitionMap({ partners, legend, hasPlayer }: {
             className={`${styles.area} ${area.position} ${partner?.owned ? "" : styles.locked}`}
             aria-label={`${name}：${partner?.owned ? `${partner.name}（獲得済み）` : "未獲得"}`}
           >
-            <span className={styles.marker} aria-hidden="true"><b>{area.number}</b><span>{area.code}</span></span>
+            <span className={styles.marker} aria-hidden="true"><b>{area.number}</b></span>
             <div className={styles.decoration} aria-hidden="true"><i/><i/><i/><i/></div>
             <div className={styles.content}>
               <div className={styles.art}><CharacterArt element={partner?.element ?? "LEGEND"} imageUrl={characterImageUrl(partner?.imageId)} locked={!partner?.owned}/></div>
               <h2>{name}<ChevronRight size={16} aria-hidden="true"/></h2>
-              <span className={styles.characterName}>{partner?.owned ? partner.name : "展示で仲間にしよう"}</span>
+
               <span className={styles.status}>{partner?.owned ? <><Check size={12} aria-hidden="true"/>獲得済み</> : <><LockKeyhole size={11} aria-hidden="true"/>未獲得</>}</span>
             </div>
           </Link>

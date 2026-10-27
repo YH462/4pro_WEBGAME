@@ -17,7 +17,7 @@ export function LocalRaidGuide({ dialogRef }: { dialogRef: RefObject<HTMLDialogE
   }}>
     <div className={styles.panel}>
       <header className={styles.header}>
-        <span className={styles.eyebrow}>RAID GUIDE</span>
+
         <h2 id="raid-mobile-rules"><span>レイド</span>の遊び方</h2>
         <p>攻撃はボスへ。回復は自分へ。<br/>行動を選び、手をタップすると送信します。</p>
         <button type="button" className={styles.close} aria-label="レイドのルールを閉じる" onClick={() => dialogRef.current?.close()}><X size={23}/></button>
@@ -37,7 +37,7 @@ export function LocalRaidGuide({ dialogRef }: { dialogRef: RefObject<HTMLDialogE
             <li><span aria-hidden="true">1</span><p>受付は全員共通で<strong>10秒</strong>・1人1回。</p></li>
             <li><span aria-hidden="true">2</span><p>締め切り後は同じボスの手で勝敗を判定します。</p></li>
           </ol>
-          <p className={styles.note}>基本攻撃50・回復30・全体攻撃20。未入力は行動なしで全体攻撃の対象になります。途中参加は次のラウンドから。回復は自分の最大HPが上限です。</p>
+
         </section>
         <a className={styles.screenLink} href="/raid/screen?sync=local" target="_blank" rel="noreferrer">スクリーンを開く <ArrowRight size={23} aria-hidden="true"/></a>
       </div>

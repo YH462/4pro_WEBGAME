@@ -22,19 +22,19 @@
 .screenLink { position:relative; isolation:isolate; display:flex; justify-content:center; align-items:center; gap:14px; min-height:62px; padding:10px 25px; background:linear-gradient(110deg,#f50034d9,#c8002bd9),var(--mobile-ui-background) center 10%/cover; color:#fff; font-size:19px; font-weight:800; clip-path:polygon(5% 0,95% 0,100% 50%,95% 100%,5% 100%,0 50%); }.screenLink>svg { stroke-width:2.5; }.screenLink:hover { filter:brightness(.93); }.screenLink:focus-visible { outline:0; background:#9d0029; box-shadow:inset 0 0 0 4px #ff91a6; }
 @media (max-width:600px) {
   .dialog { --cut:17px; }
-  .header { padding:20px 24px 19px; }.eyebrow { font-size:8px; }.header h2 { font-size:27px; }.header>p { font-size:12px; line-height:1.7; margin-top:11px; }
+  .header { padding:20px 24px 19px; }.eyebrow { font-size:0; }.header h2 { font-size:27px; }.header>p { font-size:12px; line-height:1.7; margin-top:11px; }
   .close { width:47px; height:44px; top:11px; right:14px; }.close>svg { width:20px; }
   .body { padding:16px 23px 20px; gap:15px; }.matchups h3,.rules h3 { font-size:13px; gap:8px; }.matchups h3::before,.rules h3::before { height:15px; }
-  .outcomes { margin:12px -5px 0; }.outcome { min-height:59px; padding:5px; gap:6px; }.hand { width:34px; height:34px; }.hand>svg { width:21px; height:21px; }.outcome>div>span { font-size:10px; }.outcome strong { font-size:24px; }
+  .outcomes { margin:12px -5px 0; }.outcome { min-height:59px; padding:5px; gap:6px; }.hand { width:34px; height:34px; }.hand>svg { width:21px; height:21px; }.outcome>div>span { font-size:0; }.outcome strong { font-size:24px; }
   .rules { padding-top:12px; }.rules ol { margin-top:7px; padding-inline:4px; }.rules li { min-height:43px; gap:10px; padding:7px 0; }.rules li>span { width:26px; height:24px; font-size:12px; }.rules li p { font-size:11px; line-height:1.6; }
-  .note { font-size:9px; line-height:1.6; margin-top:7px; }.screenLink { min-height:49px; font-size:15px; gap:12px; }.screenLink>svg { width:20px; }
+  .note { font-size:0; line-height:1.6; margin-top:7px; }.screenLink { min-height:49px; font-size:15px; gap:12px; }.screenLink>svg { width:20px; }
 }
 @media (max-width:370px) {
   .header { padding-inline:21px; }.header h2 { font-size:25px; }.body { padding-inline:20px; }.outcome { gap:4px; }.hand { width:30px; height:31px; }.outcome strong { font-size:22px; }
 }
 @media (max-height:500px) and (min-width:600px) {
   .dialog { width:min(780px,calc(100vw - 24px)); --cut:14px; padding-block:3px; }
-  .panel { display:grid; grid-template-columns:225px minmax(0,1fr); }.header { padding:58px 19px 20px; border-right:1px solid #f1e8ec; border-bottom:0; }.eyebrow { font-size:9px; }.header h2 { font-size:26px; }.header>p { font-size:12px; }.close { top:10px; right:12px; width:47px; height:44px; }
-  .body { padding:12px 19px; gap:9px; }.matchups h3,.rules h3 { font-size:13px; }.matchups h3::before,.rules h3::before { height:15px; }.outcomes { margin-top:9px; }.outcome { min-height:54px; gap:6px; padding:4px; }.hand { width:34px; height:33px; }.hand>svg { width:21px; }.outcome>div>span { font-size:10px; }.outcome strong { font-size:22px; }
-  .rules { padding-top:7px; }.rules ol { margin-top:3px; padding-inline:4px; }.rules li { min-height:35px; gap:9px; padding:5px 0; }.rules li p { font-size:11px; }.rules li>span { width:25px; height:23px; font-size:12px; }.note { margin-top:5px; font-size:9px; line-height:1.5; }.screenLink { min-height:44px; font-size:14px; }
+  .panel { display:grid; grid-template-columns:225px minmax(0,1fr); }.header { padding:58px 19px 20px; border-right:1px solid #f1e8ec; border-bottom:0; }.eyebrow { font-size:0; }.header h2 { font-size:26px; }.header>p { font-size:12px; }.close { top:10px; right:12px; width:47px; height:44px; }
+  .body { padding:12px 19px; gap:9px; }.matchups h3,.rules h3 { font-size:13px; }.matchups h3::before,.rules h3::before { height:15px; }.outcomes { margin-top:9px; }.outcome { min-height:54px; gap:6px; padding:4px; }.hand { width:34px; height:33px; }.hand>svg { width:21px; }.outcome>div>span { font-size:0; }.outcome strong { font-size:22px; }
+  .rules { padding-top:7px; }.rules ol { margin-top:3px; padding-inline:4px; }.rules li { min-height:35px; gap:9px; padding:5px 0; }.rules li p { font-size:11px; }.rules li>span { width:25px; height:23px; font-size:12px; }.note { margin-top:5px; font-size:0; line-height:1.5; }.screenLink { min-height:44px; font-size:14px; }
 }

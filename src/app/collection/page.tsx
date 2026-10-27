@@ -14,7 +14,7 @@ export default async function Collection() {
   const progress = characters.length ? ownedCount / characters.length * 100 : 0;
   return <Shell active="/collection"><div className={styles.screen}>
     <header className={styles.heading}>
-      <div className={styles.title}><span>PARTNER COLLECTION</span><h1>キャラ図鑑</h1></div>
+      <div className={styles.title}><h1>キャラ図鑑</h1></div>
       <div className={styles.progress} role="progressbar" aria-label="キャラクター獲得進捗" aria-valuemin={0} aria-valuemax={Math.max(1, characters.length)} aria-valuenow={ownedCount} aria-valuetext={`${ownedCount} / ${characters.length} 体獲得`}>
         <div className={styles.count}><strong>{ownedCount}</strong><span>/ {characters.length}</span><small>体獲得</small></div>
         <div className={styles.track} aria-hidden="true"><span style={{ width: `${progress}%` }}/></div>

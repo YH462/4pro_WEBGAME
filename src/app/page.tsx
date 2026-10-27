@@ -17,11 +17,7 @@ export default async function Home() {
   return (
     <Shell>
       <div className={styles.screen}>
-        <section className={styles.notice} aria-labelledby="home-notice-title">
-          <h1 id="home-notice-title"><Megaphone size={18}/>お知らせ</h1>
-          <p>図鑑・プロフィール・CPU対戦を利用できます。<span>獲得・育成・レイドは準備中です。</span></p>
-          <ChevronRight className={styles.noticeArrow} size={20} aria-hidden="true"/>
-        </section>
+
         <ExhibitionMap
           hasPlayer={!!player}
           partners={partners.filter((partner) => !partner.isLegendary)}
