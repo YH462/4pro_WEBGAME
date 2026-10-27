@@ -6,6 +6,8 @@ export function raidQrDestination(value: string, origin: string): string | null 
     const url = new URL(text, origin);
     if (!["http:", "https:"].includes(url.protocol) || url.origin !== origin || url.username || url.password) return null;
     if (!["/battle", "/battle/", "/battle/raid", "/battle/raid/"].includes(url.pathname)) return null;
+    // Entry QR codes always open a synchronized battle, never the visual preview.
+    url.searchParams.delete("preview");
     return `/battle/raid${url.search}`;
   } catch {
     return null;

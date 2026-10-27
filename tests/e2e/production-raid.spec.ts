@@ -77,6 +77,8 @@ test("NFC acquisition, profile data and model delivery survive UI integration", 
       expect((await asset.body()).readUInt32LE(0)).toBe(0x46546c67);
     }
     await page.context().addCookies([{ name: "fourpro_guest", value: guest.token, url: origin }]);
+    await page.goto("/collection");
+    await expect(page.getByRole("link", { name: "フォレストゴーレムの詳細を見る（獲得済み）", exact: true })).toBeVisible();
     for (const viewport of [{width:375,height:667},{width:390,height:844},{width:430,height:932}]) {
       await page.setViewportSize(viewport); await page.goto("/collection/forest-golem");
       await expect(page.getByRole("tab", {name:"ステータス",exact:true})).toBeVisible();
@@ -85,13 +87,12 @@ test("NFC acquisition, profile data and model delivery survive UI integration", 
     }
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/battle");
-    await page.getByRole("button", { name: "このキャラで対戦", exact: true }).click();
-    const enemy = page.getByRole("img", { name: "敵のキャラ：デスドラグーン", exact: true });
-    await expect(enemy).toBeVisible();
-    await expect(enemy.locator("image")).toHaveAttribute("href", "/models/bosses/des-dragoon-red.webp");
-    expect(await page.evaluate(async () => { const image = new Image(); image.src = "/models/bosses/des-dragoon-red.webp"; await image.decode(); return image.naturalWidth; })).toBe(512);
+    await expect(page.getByRole("heading", { name: "同期レイド", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "QRでレイドに参加", exact: true })).toBeVisible();
+    await expect(page.getByRole("img", { name: "デスドラグーン", exact: true })).toHaveAttribute("src", "/models/bosses/des-dragoon-red.webp");
+    await expect(page.getByText("CPU対戦", { exact: true })).toHaveCount(0);
     expect((await collectSmallText(page)).filter(item=>item.size<=10)).toEqual([]);
-    await page.screenshot({ path: testInfo.outputPath("des-dragoon-cpu-mobile.png") });
+    await page.screenshot({ path: testInfo.outputPath("raid-entry-mobile.png") });
   } finally {
     await db.acquisitionLog.deleteMany({ where: { tagId: tag.id } });
     await db.acquisitionTag.delete({ where: { id: tag.id } });

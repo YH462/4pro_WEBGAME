@@ -10,6 +10,7 @@ describe("NFC acquisition links", () => {
   it("only permits a validated local return destination after guest entry", () => {
     expect(startDestination({ next: "acquire", tag: token })).toBe(`/acquire/${token}`);
     expect(startDestination({ next: "local-raid" })).toBe("/battle/raid?sync=local");
+    expect(startDestination({ next: "battle" })).toBe("/battle");
     for (const input of [{ next:"https://evil.example" }, { next:"acquire",tag:"//evil.example" }, { next:"acquire",tag:[token] }, { next:["acquire"],tag:token }]) expect(startDestination(input)).toBe("/");
   });
   it("rejects malformed codes and non-origin URL input", () => {

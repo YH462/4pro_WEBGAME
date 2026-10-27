@@ -21,10 +21,9 @@ const areas = [
   { id: "civil", name: "建設システム", number: "04", position: styles.bottomRight },
 ];
 
-export function ExhibitionMap({ partners, legend, hasPlayer }: {
+export function ExhibitionMap({ partners, legend }: {
   partners: MapPartner[];
   legend?: MapPartner;
-  hasPlayer: boolean;
 }) {
   return (
     <section className={styles.map} aria-label="4学科の展示マップ">
@@ -34,7 +33,7 @@ export function ExhibitionMap({ partners, legend, hasPlayer }: {
         return (
           <Link
             key={area.id}
-            href={hasPlayer ? (partner ? `/collection/${partner.id}` : "/collection") : "/start"}
+            href={partner ? `/collection/${partner.id}` : "/collection"}
             className={`${styles.area} ${area.position} ${partner?.owned ? "" : styles.locked}`}
             aria-label={`${name}：${partner?.owned ? `${partner.name}（獲得済み）` : "未獲得"}`}
           >
@@ -51,7 +50,7 @@ export function ExhibitionMap({ partners, legend, hasPlayer }: {
       })}
 
       <Link
-        href={hasPlayer ? "/collection/four-pro" : "/start"}
+        href="/collection/four-pro"
         className={`${styles.hub} ${legend?.owned ? "" : styles.locked}`}
         aria-label={`4プロ：${legend?.owned ? "獲得済み" : "全学科コンプリートで解放"}`}
       >

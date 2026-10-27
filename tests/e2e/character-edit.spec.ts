@@ -143,11 +143,7 @@ test("editing a draft keeps its NFC URL, ownership and growth while updating all
   await expect(page.locator('[data-character-image="custom"] image')).toHaveAttribute("href",`/api/character-images/${saved.imageId}`);
   await page.goto(`/collection/${character.id}`);await expect(page.getByRole("heading",{name:"クリスタルパートナー",exact:true})).toBeVisible();
   await expect(page.getByText("247",{exact:true})).toBeVisible();
-  await page.goto("/battle");
-  await page.getByRole("button",{name:"クリスタルパートナーを選択",exact:true}).click();
-  await page.getByRole("button",{name:"このキャラで対戦",exact:true}).click();
-  await expect(page.getByRole("img",{name:"自分のキャラ：クリスタルパートナー",exact:true}).locator('image')).toHaveAttribute("href",`/api/character-images/${saved.imageId}`);
-  await page.goto("/battle/raid");await expect(page.locator('[data-model-state="ready"]')).toBeVisible();
+  await page.goto("/battle/raid?preview=1");await expect(page.locator('[data-model-state="ready"]')).toBeVisible();
   await expect(page.getByRole("progressbar",{name:"自分のHP（プレビュー）"})).toHaveAttribute("aria-valuenow","247");
   await page.goto(`/admin/characters/${character.id}`);await page.getByRole("button",{name:"3Dモデルを外す",exact:true}).click();
   await page.getByRole("button",{name:"キャラ情報を保存",exact:true}).click();

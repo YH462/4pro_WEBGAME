@@ -9,6 +9,10 @@ describe("raid QR navigation", () => {
   it("preserves future raid parameters but drops fragments", () => {
     expect(raidQrDestination(`${origin}/battle?raid=sample#other`, origin)).toBe("/battle/raid?raid=sample");
   });
+  it("does not let an entry QR select the standalone preview", () => {
+    expect(raidQrDestination(`${origin}/battle/raid?preview=1`, origin)).toBe("/battle/raid");
+    expect(raidQrDestination(`${origin}/battle?sync=local&preview=1`, origin)).toBe("/battle/raid?sync=local");
+  });
   it.each(["", "battle", "not a QR URL", "/profile", "/battle/other", "https://other.example/battle", "http://event.example/battle", "//other.example/battle", "javascript:alert(1)", "data:text/html,test", "https://user:password@event.example/battle", `https://event.example.attacker.example/battle`, `/battle?${"x".repeat(2048)}`])("rejects unrelated or unsafe QR data: %s", (text) => {
     expect(raidQrDestination(text, origin)).toBeNull();
   });

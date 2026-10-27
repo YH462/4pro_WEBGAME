@@ -7,7 +7,7 @@ import { Camera, ChevronRight, QrCode, RotateCcw, X } from "lucide-react";
 import { raidQrDestination } from "@/lib/raid-qr";
 import styles from "./raid-qr-scanner.module.css";
 
-export function RaidQrScanner({ hasPlayer }: { hasPlayer: boolean }) {
+export function RaidQrScanner({ hasPlayer, startHref = "/start" }: { hasPlayer: boolean; startHref?: "/start" | "/start?next=battle" }) {
   const router = useRouter();
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -104,7 +104,7 @@ export function RaidQrScanner({ hasPlayer }: { hasPlayer: boolean }) {
   }, [open, attempt, router]);
 
   const label = <><span className={styles.qrIcon}><QrCode size={25} aria-hidden="true"/></span><span className={styles.triggerCopy}><strong>QRでレイドに参加</strong></span><ChevronRight size={21} aria-hidden="true"/></>;
-  if (!hasPlayer) return <Link href="/start" className={styles.trigger} aria-label="QRでレイドに参加">{label}</Link>;
+  if (!hasPlayer) return <Link href={startHref} className={styles.trigger} aria-label="QRでレイドに参加">{label}</Link>;
 
   return <>
     <button className={styles.trigger} type="button" aria-label="QRでレイドに参加" onClick={() => {

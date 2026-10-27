@@ -57,9 +57,9 @@ test.describe("viewport-contained game screens", () => {
             }
           }
           if (route === "/battle") {
-            await expect(page.getByRole("group", { name: "対戦キャラクター", exact: true }).getByRole("button")).toHaveCount(12);
-            await page.getByRole("button", { name: "このキャラで対戦", exact: true }).click();
-            await expect(page.getByRole("progressbar", { name: "自分のHP", exact: true })).toBeVisible();
+            await expect(page.getByRole("heading", { name: "同期レイド", exact: true })).toBeVisible();
+            await expect(page.getByRole("button", { name: "QRでレイドに参加", exact: true })).toBeVisible();
+            await expect(page.getByRole("button", { name: "このキャラで対戦", exact: true })).toHaveCount(0);
             await expectScreenFits(page);
           }
           if (route === "/profile") {

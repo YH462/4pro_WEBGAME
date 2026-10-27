@@ -19,7 +19,6 @@ export default async function Home() {
       <div className={styles.screen}>
 
         <ExhibitionMap
-          hasPlayer={!!player}
           partners={partners.filter((partner) => !partner.isLegendary)}
           legend={partners.find((partner) => partner.id === "four-pro")}
         />

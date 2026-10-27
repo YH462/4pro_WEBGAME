@@ -104,6 +104,8 @@ try {
     await page.getByRole('button', { name: '遊び方を開く' }).click();
     await snap('02-guide', '冒険のガイド', '01 はじめる');
     await page.keyboard.press('Escape');
+    await go('/collection'); await snap('02a-collection-visitor', 'キャラ図鑑／ゲスト登録なし', '01 はじめる');
+    await go('/collection/forest-golem'); await snap('02b-detail-visitor', 'キャラ詳細／ゲスト登録なし', '01 はじめる');
     await go('/start'); await expect(page.getByRole('button', { name: 'ゲストではじめる' })).toBeEnabled();
     await snap('03-start-empty', 'ゲスト開始／未入力', '01 はじめる');
     await page.getByRole('textbox', { name: /ニックネーム/ }).fill('よつば');
@@ -142,40 +144,13 @@ try {
     await page.getByRole('tab', { name: '冒険の記録', exact: true }).click();
     await snap('13-profile-records-empty', '冒険の記録／未獲得', '04 プロフィール');
   });
-  await stage('CPU battle', async () => {
-    await go('/battle'); await snap('14-cpu-select', 'CPU対戦／キャラ選択', '05 CPU対戦');
-    await page.getByRole('button', { name: 'このキャラで対戦', exact: true }).click();
-    await snap('15-cpu-ready', 'CPU対戦／行動選択', '05 CPU対戦');
-    await page.clock.install();
-    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100));
-    const field = page.getByRole('region', { name: 'CPUの対戦画面', exact: true });
-    await page.getByRole('button', { name: '攻撃', exact: true }).click();
-    await snap('16-cpu-player-attack', 'CPU対戦／自分の攻撃', '05 CPU対戦');
-    await page.clock.runFor(600);
-    await snap('17-cpu-enemy-attack', 'CPU対戦／相手の攻撃', '05 CPU対戦');
-    await page.clock.runFor(900);
-    await page.getByRole('button', { name: '防御', exact: true }).click();
-    await snap('18-cpu-guard', 'CPU対戦／防御', '05 CPU対戦');
-    await page.clock.runFor(1500);
-    for (let i = 0; i < 4 && await page.getByRole('button', { name: '必殺', exact: true }).isDisabled(); i++) {
-      await page.getByRole('button', { name: '防御', exact: true }).click(); await page.clock.runFor(1500);
-    }
-    await snap('19-cpu-charged', 'CPU対戦／必殺ゲージ満タン', '05 CPU対戦');
-    await page.getByRole('button', { name: '必殺', exact: true }).click();
-    await snap('20-cpu-special', 'CPU対戦／必殺技', '05 CPU対戦');
-    await page.clock.runFor(1500);
-    for (let i = 0; i < 30 && !(await page.getByRole('region', { name: '対戦結果', exact: true }).count()); i++) {
-      const special = page.getByRole('button', { name: '必殺', exact: true });
-      await page.getByRole('button', { name: await special.isEnabled() ? '必殺' : '攻撃', exact: true }).click();
-      await page.clock.runFor(1500);
-    }
-    await snap('21-cpu-result', 'CPU対戦／対戦結果', '05 CPU対戦');
-    await page.getByRole('button', { name: 'もう一度対戦', exact: true }).click();
-    await snap('22-cpu-rematch', 'CPU対戦／再戦', '05 CPU対戦');
-    await page.clock.resume();
+  await stage('raid entry', async () => {
+    await go('/battle');
+    await snap('14-raid-entry', '同期レイド／QR参加', '05 レイド参加');
+    await page.getByRole('button', { name: 'QRでレイドに参加', exact: true }).click();
+    await snap('15-raid-entry-camera', '同期レイド／QR読み取り', '05 レイド参加');
+    await page.getByRole('button', { name: 'QR読み取りを閉じる', exact: true }).click();
   });
-  // Restore real time if a CPU action failed midway.
-  await page.clock.resume().catch(() => {});
   await stage('raid preview', async () => {
     await page.clock.install();
     await go('/battle/raid?preview=1');
@@ -368,25 +343,6 @@ try {
     await go('/ui-audit-page-not-found'); await snap('67-not-found', '404／ページが見つからない', '11 補助画面');
     await go('/collection/ui-audit-character-not-found'); await snap('68-character-not-found', '404／キャラが見つからない', '11 補助画面');
   });
-  await stage('CPU outcomes', async () => {
-    await page.clock.install();
-    await go('/battle');
-    await page.getByRole('button', { name: `${characters.find(c => c.id === 'temp-09')!.name}を選択`, exact: true }).click();
-    await page.getByRole('button', { name: 'このキャラで対戦', exact: true }).click();
-    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100));
-    for (const action of ['攻撃', '攻撃', '防御', '必殺']) {
-      await page.getByRole('button', { name: action, exact: true }).click(); await page.clock.runFor(1500);
-    }
-    await expect(page.getByRole('region', { name: '対戦結果' })).toContainText('勝利！');
-    await snap('70-cpu-victory', 'CPU対戦／勝利', '05 CPU対戦');
-    await page.getByRole('button', { name: 'もう一度対戦', exact: true }).click();
-    for (let i = 0; i < 30 && !(await page.getByRole('region', { name: '対戦結果' }).count()); i++) {
-      await page.getByRole('button', { name: '防御', exact: true }).click(); await page.clock.runFor(1500);
-    }
-    await expect(page.getByRole('region', { name: '対戦結果' })).toContainText('敗北');
-    await snap('71-cpu-defeat', 'CPU対戦／敗北', '05 CPU対戦');
-    await page.clock.resume();
-  });
   await stage('raid fallback', async () => {
     const fallback = await browser.newContext({ baseURL: origin, viewport, isMobile: true, hasTouch: true, locale: 'ja-JP' });
     await fallback.addCookies(await ctx.cookies());
@@ -440,7 +396,7 @@ try {
   await stage('small and large viewport', async () => {
     for (const size of [{ width: 375, height: 667 }, { width: 430, height: 932 }]) {
       await page.setViewportSize(size);
-      for (const [id, route, title] of [['home', '/', 'ホーム'], ['collection', '/collection', 'キャラ図鑑'], ['detail', '/collection/forest-golem', 'キャラ詳細'], ['profile', '/profile', 'プロフィール'], ['cpu', '/battle', 'CPU選択'], ['raid', '/battle/raid?preview=1', 'レイド']]) {
+      for (const [id, route, title] of [['home', '/', 'ホーム'], ['collection', '/collection', 'キャラ図鑑'], ['detail', '/collection/forest-golem', 'キャラ詳細'], ['profile', '/profile', 'プロフィール'], ['battle', '/battle', 'レイド参加'], ['raid', '/battle/raid?preview=1', 'レイド']]) {
         await go(route);
         await snap(`69-${size.width}-${id}`, `${title}／${size.width}×${size.height}`, '12 サイズ比較');
       }
