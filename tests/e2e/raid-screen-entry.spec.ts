@@ -58,7 +58,7 @@ test("screen QR decodes to a LAN entry link and a new phone reaches the synced r
     await expect(mobile).toHaveURL(`${url.origin}/start?next=local-raid`);
     await mobile.getByRole("textbox", { name: /ニックネーム/ }).fill("スクリーンQR確認");
     const registration = mobile.waitForResponse((response) => response.url() === `${url.origin}/api/guest` && response.request().method() === "POST");
-    await mobile.getByRole("button", { name: "ゲストではじめる" }).click();
+    await mobile.getByRole("button", { name: "この名前ではじめる" }).click();
     const response = await registration;
     expect(response.status()).toBe(201);
     const me = await mobile.request.get(`${url.origin}/api/me`);

@@ -28,7 +28,7 @@ test("guest registration returns to the raid QR entry instead of the retired CPU
   await page.getByRole("link", { name: "QRでレイドに参加", exact: true }).click();
   await page.getByRole("textbox", { name: "ニックネーム", exact: true }).fill("バトルから参加");
   const registration = page.waitForResponse(response => response.url() === `${origin}/api/guest` && response.request().method() === "POST");
-  await page.getByRole("button", { name: "ゲストではじめる", exact: true }).click();
+  await page.getByRole("button", { name: "この名前ではじめる", exact: true }).click();
   playerIds.push((await (await registration).json()).player.id);
   await expect(page).toHaveURL(`${origin}/battle`);
   await expect(page.getByRole("button", { name: "QRでレイドに参加", exact: true })).toBeVisible();

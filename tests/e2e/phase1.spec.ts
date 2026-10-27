@@ -16,7 +16,7 @@ test("guest entry, persistent session, dictionary and nickname update", async ({
   await page.goto("/start");
   await expect(page.getByRole("heading", { name: "冒険の準備" })).toBeVisible();
   await page.getByRole("textbox", { name: /ニックネーム/ }).fill("テスト冒険者");
-  await page.getByRole("button", { name: "ゲストではじめる" }).click();
+  await page.getByRole("button", { name: "この名前ではじめる" }).click();
   await expect(page.getByRole("heading", { name: "お知らせ", exact: true })).toBeVisible();
   const { player } = await (await page.request.get("/api/me")).json(); playerIds.push(player.id);
   await page.reload();

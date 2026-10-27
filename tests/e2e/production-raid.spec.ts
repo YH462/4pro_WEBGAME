@@ -164,7 +164,7 @@ test("a real screen and two phones complete a round and reconnect after reload",
     const phones = await Promise.all(phoneContexts.map(async (context) => { await context.addInitScript(withoutWebGl); return context.newPage(); }));
     await phones[0].goto("/battle/raid"); await expect(phones[0]).toHaveURL(/\/start\?next=raid$/);
     await phones[0].getByRole("textbox", { name: "ニックネーム" }).fill("本番参加確認");
-    await phones[0].getByRole("button", { name: "ゲストではじめる" }).click(); await expect(phones[0]).toHaveURL(`${origin}/battle/raid`);
+    await phones[0].getByRole("button", { name: "この名前ではじめる" }).click(); await expect(phones[0]).toHaveURL(`${origin}/battle/raid`);
     const registered = await phoneContexts[0].request.get("/api/me"); playerIds.push((await registered.json()).player.id);
     const second = await player(); await phoneContexts[1].addCookies([{ name: "fourpro_guest", value: second.token, url: origin }]); await phones[1].goto("/battle/raid");
     await page.goto("/raid/screen");

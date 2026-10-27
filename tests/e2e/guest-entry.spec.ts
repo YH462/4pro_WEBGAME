@@ -28,7 +28,7 @@ test("LAN guest entry preserves the raid destination and session after reload", 
   await expect(page).toHaveURL(`${origin}/start?next=local-raid`);
   await page.getByRole("textbox", { name: /ニックネーム/ }).fill("LAN参加確認");
   const registration = page.waitForResponse((response) => response.url() === `${origin}/api/guest` && response.request().method() === "POST");
-  await page.getByRole("button", { name: "ゲストではじめる" }).click();
+  await page.getByRole("button", { name: "この名前ではじめる" }).click();
   const response = await registration;
   expect(response.ok()).toBeTruthy();
   const { player } = await response.json();

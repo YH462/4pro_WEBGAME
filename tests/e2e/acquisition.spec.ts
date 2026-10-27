@@ -36,7 +36,7 @@ test("a tag returns through guest entry, grants only after confirmation and pers
   await expect(page).toHaveURL(new RegExp(`/start\\?next=acquire&tag=${issued.token}$`));
   await page.getByRole("textbox",{name:/ニックネーム/}).fill("展示の来場者");
   const registration=page.waitForResponse((response)=>response.url().endsWith("/api/guest")&&response.request().method()==="POST");
-  await page.getByRole("button",{name:"ゲストではじめる"}).click();
+  await page.getByRole("button",{name:"この名前ではじめる"}).click();
   const {player}=await(await registration).json(); players.push(player.id);
   await expect(page).toHaveURL(new RegExp(`/acquire/${issued.token}$`));
   await expect(page.getByRole("heading",{name:"フォレストゴーレム"})).toBeVisible();
