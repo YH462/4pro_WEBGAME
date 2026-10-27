@@ -41,7 +41,24 @@ model Player {
   sessions   GuestSession[]
   characters PlayerCharacter[]
   acquisitions AcquisitionLog[]
+  raidResults RaidResult[]
   @@index([eventId])
+}
+
+// One completed cooperative battle per player; room resets do not remove history.
+model RaidResult {
+  id            String @id @default(uuid())
+  roomId        String
+  playerId      String
+  characterId   String
+  characterName String
+  bossName      String
+  won           Boolean
+  turns         Int
+  finishedAt    DateTime @default(now())
+  player        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  @@unique([roomId, playerId])
+  @@index([playerId, finishedAt])
 }
 
 model GuestSession {

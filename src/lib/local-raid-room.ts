@@ -75,6 +75,10 @@ export class LocalRaidRoom {
   join(playerId: string, characterId: string, maxHp: number, nickname: string, characterName = characterId) {
     this.tick();
     const existing = this.members.get(playerId);
+    if (this.phase === "finished") {
+      if (!existing) throw new LocalRaidError(409, "終了したレイドです。次の受付をお待ちください。");
+      return this.snapshot(playerId);
+    }
     if (!existing && this.members.size >= 20) throw new LocalRaidError(409, "参加上限は20人です。");
     if (!Number.isSafeInteger(maxHp) || maxHp <= 0) throw new LocalRaidError(400, "キャラクターのHPを確認してください。");
     if (!existing) this.members.set(playerId, { screenId: randomUUID(), characterId, characterName, maxHp, hp: maxHp, nickname, lastResult: null, submission: null, eligibleRound: this.phase === "playing" ? this.turn + 1 : Math.max(1, this.turn) });

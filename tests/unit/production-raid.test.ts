@@ -33,4 +33,18 @@ describe("persistent raid rules", () => {
     expect(startDestination({ next: "raid" })).toBe("/battle/raid");
     expect(startDestination({ next: ["raid"] })).toBe("/");
   });
+
+  it("does not add late visitors or change a participant after the battle has finished", () => {
+    let now = 0;
+    const room = new LocalRaidRoom(() => "paper", () => now);
+    for (let i = 0; i < 5; i++) room.join(`player-${i}`, "forest-golem", 170, `参加者${i}`);
+    const roomId = room.snapshot().roomId;
+    room.start(roomId);
+    for (let i = 0; i < 5; i++) room.command(`player-${i}`, { roomId, round: 1, requestId: `p${i}`, action: "attack", hand: "scissors" });
+    now = 10_000; room.snapshot(); room.finish(roomId, 1);
+    expect(room.snapshot().round.phase).toBe("finished");
+    expect(() => room.join("late", "forest-golem", 170, "後から参加")).toThrow("終了したレイド");
+    expect(room.join("player-0", "four-pro", 300, "変更後").me?.characterId).toBe("forest-golem");
+    expect(room.snapshot().participants).toBe(5);
+  });
 });

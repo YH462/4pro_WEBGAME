@@ -1,8 +1,12 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
-import { Award, BookOpen, Check, Copy, SquarePen, Trophy, UserRound } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BookOpen, Check, Copy, SquarePen, Swords, Trophy, UserRound } from "lucide-react";
 import { GuestForm } from "./guest-form";
+import { CharacterArt } from "./character-art";
+import type { AdventureRecords } from "@/lib/adventure-records";
 import styles from "./profile-panel.module.css";
 
 const tabs = [
@@ -10,12 +14,43 @@ const tabs = [
   { id: "records", label: "冒険の記録", icon: BookOpen },
 ] as const;
 
-export function ProfilePanel({ id, nickname, count, total }: { id: string; nickname: string; count: number; total: number }) {
+export function ProfilePanel({ id, nickname, initialRecords }: { id: string; nickname: string; initialRecords: AdventureRecords }) {
+  const router = useRouter();
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("profile");
+  const [records, setRecords] = useState(initialRecords);
+  const [recordsError, setRecordsError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const prefix = useId();
+  useEffect(() => { setRecords(initialRecords); }, [initialRecords]);
+  useEffect(() => {
+    if (tab !== "records") return;
+    let active = true;
+    let controller: AbortController | undefined;
+    const refresh = async () => {
+      if (document.hidden) return;
+      controller?.abort();
+      const request = new AbortController(); controller = request;
+      try {
+        const response = await fetch("/api/profile/records", { cache: "no-store", signal: request.signal });
+        if (!active || request.signal.aborted) return;
+        if (response.status === 401) { router.replace("/start"); return; }
+        if (!response.ok) throw new Error("記録を更新できません。通信を確認してください。");
+        const { records: next }: { records: AdventureRecords } = await response.json();
+        if (!active || request.signal.aborted) return;
+        if (next.playerId !== id) { router.refresh(); return; }
+        setRecords(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
+        setRecordsError("");
+      } catch {
+        if (active && !request.signal.aborted) setRecordsError("記録を更新できません。通信を確認してください。");
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3000);
+    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
+    return () => { active = false; controller?.abort(); window.clearInterval(timer); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, [tab, id, router]);
 
   return (
     <section className={styles.panel} aria-label="アカウント情報">
@@ -84,13 +119,33 @@ export function ProfilePanel({ id, nickname, count, total }: { id: string; nickn
             <p className={styles.copyMessage} aria-live="polite">{copyMessage}</p>
 
           </div>
-        </div> : <div className={styles.records}>
+        </div> : <div className={`${styles.records} ${styles.adventureRecords}`}>
           <div className={styles.recordStats}>
-            <div className={`${styles.recordCard} ${styles.partners}`}><BookOpen size={28}/><strong>{count}<small> / {total}</small></strong><span>パートナー</span></div>
-            <div className={`${styles.recordCard} ${styles.trophies}`}><Trophy size={28}/><strong>—</strong><span>討伐記録</span></div>
-            <div className={`${styles.recordCard} ${styles.badges}`}><Award size={28}/><strong>—</strong><span>称号・バッジ</span></div>
+            <div className={`${styles.recordCard} ${styles.partners}`} role="group" aria-label="パートナー収集数"><BookOpen size={24}/><strong>{records.collected}<small> / {records.total}</small></strong><span>パートナー</span></div>
+            <div className={`${styles.recordCard} ${styles.trophies}`} role="group" aria-label="討伐成功数"><Trophy size={24}/><strong>{records.victories}</strong><span>討伐成功</span></div>
+            <div className={`${styles.recordCard} ${styles.badges}`} role="group" aria-label="レイド記録数"><Swords size={24}/><strong>{records.raidCount}</strong><span>レイド記録</span></div>
           </div>
-
+          <div className={styles.recordDetails}>
+            {recordsError && <p role="alert" className={styles.recordError}>{recordsError}</p>}
+            <section aria-label="収集したパートナー">
+              <h3>収集したパートナー</h3>
+              {records.characters.length ? <ul className={styles.collectedPartners}>
+                {records.characters.map(character => <li key={character.id}><Link href={`/collection/${character.id}`} aria-label={`${character.name}の収集記録`}>
+                  <CharacterArt element={character.element} imageUrl={character.imageUrl}/><span>{character.name}</span>
+                </Link></li>)}
+              </ul> : <p className={styles.emptyRecord}>まだパートナーを集めていません</p>}
+            </section>
+            <section aria-label="最近のレイド">
+              <h3>最近のレイド</h3>
+              {records.raids.length ? <ul className={styles.raidHistory}>
+                {records.raids.map(raid => <li key={raid.id}>
+                  <div><strong>{raid.bossName}</strong><span className={raid.won ? styles.raidWon : styles.raidLost}>{raid.won ? "討伐成功" : "全滅"}</span></div>
+                  <p>{raid.characterName} · {raid.turns}ラウンド</p>
+                  <time dateTime={raid.finishedAt}>{new Date(raid.finishedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
+                </li>)}
+              </ul> : <p className={styles.emptyRecord}>まだレイドの記録はありません</p>}
+            </section>
+          </div>
         </div>}
       </div>
     </section>

@@ -80,7 +80,7 @@ QRのデコードには[スタンドアロンのjsQR](https://github.com/cozmo/j
 | --- | --- |
 | `/`、`/start` | イベント案内、ゲストID発行、任意ニックネーム |
 | `/collection`、`/collection/[id]` | 六角形12枠の一覧、個別詳細、キャラごとの必殺技1枠 |
-| `/profile` | ニックネーム更新、プレイヤーID |
+| `/profile` | ニックネーム更新、収集状況・同期レイドの勝敗を自動更新する冒険の記録 |
 | `/admin/login`、`/admin` | 管理者認証、キャラ一覧・検索 |
 | `/admin/characters/[id]` | キャラの名前・紹介・画像・基本値の編集、タグ発行、QR保存、有効・無効 |
 | `/acquire/[token]` | NFC／展示QRからのキャラ獲得、ゲスト開始後の復帰 |
@@ -91,6 +91,7 @@ QRのデコードには[スタンドアロンのjsQR](https://github.com/cozmo/j
 | `POST /api/guest` | ゲスト作成、有効な既存セッションは再利用 |
 | `GET /api/me`、`PATCH /api/me` | 自分のデータ取得、ニックネーム更新 |
 | `GET /api/characters` | DBマスタ＋自分の所持状態 |
+| `GET /api/profile/records` | 本人の収集一覧・完了レイド数・討伐成功数・最近の勝敗 |
 | `GET /api/health` | DB疎通 |
 
 更新APIは `Origin: APP_URLのオリジン` と `Content-Type: application/json` が必須です。ゲストCookieから対象プレイヤーを決め、クライアントのIDやHPでデータを更新しません。

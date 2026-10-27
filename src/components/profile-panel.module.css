@@ -71,6 +71,27 @@
 .recordCard>span { font-size:12px; font-weight:650; color:#7b727c; text-align:center; }
 .records>p { justify-self:center; width:90%; border-top:1px solid #e0d8df; padding-top:15px; color:#746773; font-size:12px; font-weight:600; text-align:center; line-height:1.9; }
 
+.records.adventureRecords { grid-template-columns:minmax(0,1fr); grid-template-rows:104px minmax(0,1fr); gap:12px; padding-top:0; }
+.adventureRecords .recordCard { gap:3px; padding:7px 4px; }
+.adventureRecords .recordCard strong { font-size:25px; }
+.adventureRecords .recordCard small { font-size:12px; }
+.adventureRecords .recordCard>span { font-size:12px; color:var(--ink); font-weight:700; }
+.recordDetails { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:0 5px 4px; display:flex; flex-direction:column; gap:16px; }
+.recordDetails h3 { font-size:14px; font-weight:800; margin-bottom:8px; }
+.collectedPartners { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
+.collectedPartners a { display:flex; flex-direction:column; align-items:center; min-width:0; padding:5px; background:#fff4f6; border:1px solid #f4c5cf; }
+.collectedPartners svg { width:100%; height:60px; }
+.collectedPartners span { width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--ink); font-weight:700; text-align:center; }
+.emptyRecord { font-size:12px; font-weight:650; color:var(--ink); }
+.raidHistory { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.raidHistory li { border:1px solid #efd1da; background:#fff9fb; padding:8px 10px; }
+.raidHistory li>div { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.raidHistory strong { font-size:14px; }
+.raidHistory p,.raidHistory time { display:block; font-size:12px; font-weight:650; color:var(--ink); }
+.raidWon,.raidLost { font-size:12px; font-weight:800; white-space:nowrap; }
+.raidWon { color:#206743; }.raidLost,.recordError { color:#b91d37; }
+.recordError { font-size:12px; font-weight:700; }
+
 @media (min-width:761px) and (max-height:800px) {
   .screen { grid-template-rows:47px minmax(0,1fr); gap:10px; }
   .panel { padding:18px 24px; gap:17px; grid-template-rows:minmax(100px,1fr) 44px minmax(0,1.6fr); }
