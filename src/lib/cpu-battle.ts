@@ -1,3 +1,4 @@
+import { boss } from "./boss";
 import type { PartnerView } from "./character-presentation";
 
 // Temporary CPU practice balance. Keep separate from the exhibition raid rules.
@@ -10,7 +11,7 @@ export const cpuRules = {
 
 export type CpuAction = "attack" | "defend" | "special";
 export type Fighter = { id: string; name: string; maxHp: number; attack: number; defense: number; charge: number };
-export const trainingCpu: Fighter = { id: "training-cpu", name: "キング・アクア", maxHp: 180, attack: 30, defense: 20, charge: 50 };
+export const trainingCpu: Fighter = { id: "training-cpu", name: boss.name, maxHp: 180, attack: 30, defense: 20, charge: 50 };
 export type CpuBattle = {
   player: Fighter; cpu: Fighter; playerHp: number; cpuHp: number;
   playerEp: number; cpuEp: number; turn: number;

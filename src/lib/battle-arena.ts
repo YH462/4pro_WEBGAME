@@ -1,47 +1,6 @@
 import * as THREE from "three";
 import { battlePreview } from "./battle-preview";
-
-/** Procedural armored turtle inspired by main:battle.html's cyber_turtle. */
-export function buildBoss() {
-  const boss = new THREE.Group();
-  const armor = new THREE.MeshStandardMaterial({ color: 0x403840, metalness: .72, roughness: .48, flatShading: true });
-  const trim = new THREE.MeshStandardMaterial({ color: 0xe6dde1, metalness: .45, roughness: .3 });
-  const glow = new THREE.MeshStandardMaterial({ color: 0xdc263b, emissive: 0xd71c35, emissiveIntensity: 1.8, metalness: .35, roughness: .4 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x231e28, roughness: .65 });
-  const part = (geometry: THREE.BufferGeometry, material: THREE.Material, position: [number, number, number]) => {
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(...position);
-    boss.add(mesh);
-    return mesh;
-  };
-  const shell = part(new THREE.IcosahedronGeometry(1.06, 1), armor, [0, 1.08, -.13]);
-  shell.scale.set(1.25, .84, 1.12);
-  part(new THREE.BoxGeometry(.72, .52, .75), armor, [0, .86, 1.03]);
-  part(new THREE.BoxGeometry(.82, .15, .65), trim, [0, .62, 1.14]);
-  part(new THREE.BoxGeometry(.83, .11, .13), glow, [0, .96, 1.43]);
-  part(new THREE.BoxGeometry(.17, .11, .16), dark, [0, .96, 1.45]);
-  const ring = part(new THREE.TorusGeometry(1.15, .035, 6, 64), glow, [0, .94, -.13]);
-  ring.rotation.x = Math.PI / 2;
-  ring.scale.set(1.1, 1.06, 1);
-  const core = part(new THREE.CylinderGeometry(.44, .44, .09, 6), trim, [0, 1.9, -.13]);
-  core.rotation.y = Math.PI / 6;
-  part(new THREE.CylinderGeometry(.29, .29, .11, 6), glow, [0, 1.96, -.13]);
-  for (const side of [-1, 1]) {
-    for (const front of [-1, 1]) {
-      const z = front > 0 ? .65 : -.82;
-      part(new THREE.BoxGeometry(.4, .52, .48), armor, [side * .86, .35, z]);
-      part(new THREE.BoxGeometry(.46, .15, .59), trim, [side * .87, .13, z + .04]);
-      part(new THREE.BoxGeometry(.43, .065, .5), glow, [side * .86, .47, z]);
-    }
-    const horn = part(new THREE.ConeGeometry(.13, .55, 4), trim, [side * .56, 1.72, .42]);
-    horn.rotation.z = side * -.35;
-    const plate = part(new THREE.BoxGeometry(.09, .62, .72), trim, [side * .92, 1.25, -.1]);
-    plate.rotation.z = side * -.45;
-  }
-  part(new THREE.ConeGeometry(.15, .6, 5), armor, [0, .7, -1.4]).rotation.x = -Math.PI / 2;
-  boss.rotation.y = -.3;
-  return boss;
-}
+import { createBossModel } from "./boss-model";
 
 export function createBattleArena(canvas: HTMLCanvasElement, { framing = "default" }: { framing?: "default" | "raid" } = {}) {
   const options = { alpha: true, antialias: true, powerPreference: "low-power" } as const;
@@ -63,7 +22,8 @@ export function createBattleArena(canvas: HTMLCanvasElement, { framing = "defaul
   rim.position.set(2, 3, -2);
   scene.add(rim);
 
-  const boss = buildBoss();
+  const bossModel = createBossModel(canvas);
+  const boss = bossModel.root;
   scene.add(boss);
   const platformMaterial = new THREE.MeshStandardMaterial({ color: 0xe8dce3, metalness: .4, roughness: .6 });
   const platform = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.95, .08, 6), platformMaterial);
@@ -111,6 +71,7 @@ export function createBattleArena(canvas: HTMLCanvasElement, { framing = "defaul
   };
   frame = requestAnimationFrame(draw);
   return {
+    ready: bossModel.ready.then(() => { needsDraw = true; }),
     resize(width: number, height: number) {
       if (disposed || width <= 0 || height <= 0) return;
       renderer.setSize(width, height, false);
@@ -129,6 +90,7 @@ export function createBattleArena(canvas: HTMLCanvasElement, { framing = "defaul
       disposed = true;
       cancelAnimationFrame(frame);
       motion.removeEventListener("change", motionChanged);
+      bossModel.dispose();
       // A remount or route change must release geometry, materials and the GL context.
       const materials = new Set<THREE.Material>();
       scene.traverse((object) => {

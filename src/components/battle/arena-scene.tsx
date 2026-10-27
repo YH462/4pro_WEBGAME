@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { createBattleArena } from "@/lib/battle-arena";
 import { EnemyArt } from "./enemy-art";
+import { boss } from "@/lib/boss";
 
 export function ArenaScene({ animationId, caption = "EXHIBITION RAID / TEST ARENA", framing = "default" }: { animationId: number; caption?: string; framing?: "default" | "raid" }) {
   const root = useRef<HTMLDivElement>(null);
@@ -28,7 +29,11 @@ export function ArenaScene({ animationId, caption = "EXHIBITION RAID / TEST AREN
         observer = new ResizeObserver(([entry]) => arena.current?.resize(entry.contentRect.width, entry.contentRect.height));
         observer.observe(root.current);
         arena.current.resize(root.current.clientWidth, root.current.clientHeight);
-        setMode("webgl");
+        const activeArena = arena.current;
+        void activeArena.ready.then(() => { if (!cancelled && arena.current === activeArena) setMode("webgl"); }).catch(() => {
+          if (cancelled || arena.current !== activeArena) return;
+          observer?.disconnect(); activeArena.dispose(); arena.current = null; setMode("fallback");
+        });
       } catch { arena.current?.dispose(); arena.current = null; setMode("fallback"); }
     }).catch(() => { if (!cancelled) setMode("fallback"); });
     return () => {
@@ -40,5 +45,5 @@ export function ArenaScene({ animationId, caption = "EXHIBITION RAID / TEST AREN
     };
   }, [framing]);
   useEffect(() => { if (animationId > 0) arena.current?.attack(); }, [animationId]);
-  return <div className={`arena-scene arena-${mode}`} ref={root} data-renderer={mode}><EnemyArt/><canvas ref={canvas} aria-label="立体のキング・アクア" role="img"/><span className="arena-floor-label">{caption}</span></div>;
+  return <div className={`arena-scene arena-${mode}`} ref={root} data-renderer={mode}><EnemyArt/><canvas ref={canvas} aria-label={`立体の${boss.name}`} role="img"/><span className="arena-floor-label">{caption}</span></div>;
 }

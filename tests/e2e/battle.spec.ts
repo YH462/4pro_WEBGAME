@@ -149,7 +149,7 @@ test("Safari toolbar height changes keep the partner large and the selected comm
 test("the selected partner has its own front-facing 3D portrait and the phone has no enemy model", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   await guest(page); await page.setViewportSize({ width:390,height:844 }); await page.goto("/battle/raid?preview=1");
-  await expect(page.getByRole("img", { name:"立体のキング・アクア" })).toHaveCount(0);
+  await expect(page.getByRole("img", { name:"立体のデスドラグーン" })).toHaveCount(0);
   await expect(page.locator(".enemy-fallback-art")).toHaveCount(0);
   for(const id of ["forest-golem","thunder-fox","flame-dragon","aqua-spirit"]) {
     await page.getByLabel("参加キャラクター").selectOption(id);

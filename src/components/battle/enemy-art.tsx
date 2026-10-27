@@ -1,4 +1,6 @@
-// Lightweight fallback for devices without WebGL. Matches the procedural boss.
+import { boss } from "@/lib/boss";
+
+// Use a portrait of the same GLB for CPU battles and WebGL fallback.
 export function EnemyArt() {
-  return <svg viewBox="0 0 360 210" aria-hidden="true" className="enemy-fallback-art"><ellipse cx="180" cy="180" rx="116" ry="16" fill="#bc8d9e" opacity=".2"/><path d="m61 151 48-71 75-27 89 41 28 60-61 28-123-6Z" fill="#d5c3ce" stroke="#b197a8"/><path d="m88 108 22-42 67-29 80 27 22 55-36 46-109-7Z" fill="#443746" stroke="#655264" strokeWidth="3"/><path d="m111 72 65-21 66 23-18 31-98-1Z" fill="#6b586b"/><path d="m127 104 49-53 48 54-48 47Z" fill="#514252" stroke="#f04462" strokeWidth="3"/><path d="m159 72 18-12 19 12v20l-19 13-18-12Z" fill="#ff607a"/><path d="m98 121-17 23 5 28 31 4 5-30m119-20 28 20-3 27-32 4-5-29" fill="#443746" stroke="#ad8d9e" strokeWidth="3"/><path d="m97 146 20 5m124-4 21 6" stroke="#fa4060" strokeWidth="5"/><path d="m140 127 36-17 43 17 2 39-41 18-43-17Z" fill="#382c3d" stroke="#8d6a80" strokeWidth="3"/><path d="m148 137 61 1" stroke="#ff405f" strokeWidth="7"/><path d="m148 162 30 12 31-13v11l-30 12-30-13Z" fill="#e5d3dd"/><path d="m116 65 7-32 13 23m89 0 14-23 7 35" fill="#e7d5de"/><path d="m87 115 41 17m99-2 40-17" stroke="#df2638" strokeWidth="4"/></svg>;
+  return <svg viewBox="0 0 360 210" aria-hidden="true" className="enemy-fallback-art"><image href={boss.imageUrl} x="20" y="0" width="320" height="210" preserveAspectRatio="xMidYMid meet"/></svg>;
 }

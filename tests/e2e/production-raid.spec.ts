@@ -48,6 +48,8 @@ test("staff login returns to the live screen and the cleaned header retains its 
   await page.getByLabel("パスワード", { exact: true }).fill(adminPassword);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(`${origin}/raid/screen`);
+  await expect(page.locator("canvas[data-boss-model='ready']")).toHaveAttribute("data-boss-model-url", "/models/bosses/des-dragoon-red.glb");
+  await expect(page.getByRole("heading", { name: "デスドラグーン", exact: true })).toBeVisible();
   expect((await page.request.get("/api/raid")).status()).toBe(200);
   await page.goto("/admin");
   await expect(page.getByText("ADMINISTRATION", { exact: true })).toHaveCount(0);
@@ -55,7 +57,7 @@ test("staff login returns to the live screen and the cleaned header retains its 
   await expect(page).toHaveURL(`${origin}/raid/screen`);
 });
 
-test("NFC acquisition, profile data and model delivery survive UI integration", async ({ page, request }) => {
+test("NFC acquisition, profile data and model delivery survive UI integration", async ({ page, request }, testInfo) => {
   const guest = await player(), token = randomBytes(32).toString("base64url");
   const tag = await db.acquisitionTag.create({ data: { eventId, departmentId: "mechanical", tokenHash: hash(token) } });
   try {
@@ -69,6 +71,11 @@ test("NFC acquisition, profile data and model delivery survive UI integration", 
     expect((await db.player.findUniqueOrThrow({ where: { id: guest.id } })).nickname).toBe("統合確認");
     const models = await request.get("/api/character-models");
     expect(models.status()).toBe(200); expect(Object.keys((await models.json()).models)).toHaveLength(10);
+    for (const color of ["red", "blue", "green", "yellow"]) {
+      const asset = await request.get(`/models/bosses/des-dragoon-${color}.glb`);
+      expect(asset.status()).toBe(200);
+      expect((await asset.body()).readUInt32LE(0)).toBe(0x46546c67);
+    }
     await page.context().addCookies([{ name: "fourpro_guest", value: guest.token, url: origin }]);
     for (const viewport of [{width:375,height:667},{width:390,height:844},{width:430,height:932}]) {
       await page.setViewportSize(viewport); await page.goto("/collection/forest-golem");
@@ -76,6 +83,15 @@ test("NFC acquisition, profile data and model delivery survive UI integration", 
       expect((await collectSmallText(page)).filter(item=>item.size<=10)).toEqual([]);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
     }
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto("/battle");
+    await page.getByRole("button", { name: "このキャラで対戦", exact: true }).click();
+    const enemy = page.getByRole("img", { name: "敵のキャラ：デスドラグーン", exact: true });
+    await expect(enemy).toBeVisible();
+    await expect(enemy.locator("image")).toHaveAttribute("href", "/models/bosses/des-dragoon-red.webp");
+    expect(await page.evaluate(async () => { const image = new Image(); image.src = "/models/bosses/des-dragoon-red.webp"; await image.decode(); return image.naturalWidth; })).toBe(512);
+    expect((await collectSmallText(page)).filter(item=>item.size<=10)).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath("des-dragoon-cpu-mobile.png") });
   } finally {
     await db.acquisitionLog.deleteMany({ where: { tagId: tag.id } });
     await db.acquisitionTag.delete({ where: { id: tag.id } });
@@ -151,6 +167,8 @@ test("a real screen and two phones complete a round and reconnect after reload",
     const registered = await phoneContexts[0].request.get("/api/me"); playerIds.push((await registered.json()).player.id);
     const second = await player(); await phoneContexts[1].addCookies([{ name: "fourpro_guest", value: second.token, url: origin }]); await phones[1].goto("/battle/raid");
     await page.goto("/raid/screen");
+    await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-red.webp");
+    await expect(page.getByRole("heading", { name: "デスドラグーン", exact: true })).toBeVisible();
     await expect.poll(async () => (await snapshot(request)).participants).toBe(2);
     await expect(page.getByRole("link", { name: `参加URL ${origin}/battle/raid`, exact: true })).toHaveAttribute("href", `${origin}/battle/raid`);
     await page.getByRole("button", { name: "10秒の入力受付を開始", exact: true }).click();

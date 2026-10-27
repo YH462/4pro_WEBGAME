@@ -1,7 +1,8 @@
+import { boss } from "./boss";
 // Display fixtures only. No admission, combat decisions, or player data are persisted.
 // Timings and battle values remain provisional; RPS multipliers are confirmed.
 export const raidScreenPreview = {
-  bossName: "キング・アクア",
+  bossName: boss.name,
   maxHp: 24000,
   hp: 18540,
   damage: 3680,

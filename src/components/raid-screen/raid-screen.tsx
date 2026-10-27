@@ -1,5 +1,7 @@
 "use client";
 
+import { boss } from "@/lib/boss";
+
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Settings2, X } from "lucide-react";
 import { useLocalRaid } from "@/components/battle/use-local-raid";
@@ -58,7 +60,7 @@ export function RaidScreen({ local = false, production = false, canSync = false,
   const message = error || resetError || (live?.round.phase === "collecting" ? `${live.round.submitted} / ${live.round.eligible}人が送信済み。全員同じ「ぽん！」で勝負！` : last ? `ROUND ${last.turn}：全員共通のボスの手で、それぞれの勝敗を判定します。`
     : local ? "参加QRを読み取って、スマホから攻撃・回復を選ぼう。" : "開催前です。演出は右下の「演出確認ページ」から確認できます。");
   return <>
-    <RaidShowcase entryTargets={entryTargets} screen={{ scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? "キング・アクア", failed,
+    <RaidShowcase entryTargets={entryTargets} screen={{ scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? boss.name, failed,
       collection: live?.round.phase === "collecting" ? { round: live.round.number, seconds, submitted: live.round.submitted, eligible: live.round.eligible } : undefined,
       onComplete: complete, onReveal, onImpact, tools: <>{local && live?.round.phase === "lobby" && <button type="button" disabled={resetting || !live.alive} onClick={async () => {
         setResetting(true); try { await send({ type: "start", roomId: live.roomId }); setResetError(""); }

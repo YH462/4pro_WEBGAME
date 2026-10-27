@@ -18,7 +18,7 @@ test("shows both fighters and wins by guarding the forecast special, without gra
   const attack = page.getByRole("button", { name: "攻撃", exact: true });
   const special = page.getByRole("button", { name: "必殺", exact: true });
   await expect(page.getByRole("img", { name: "自分のキャラ：仮キャラ 09", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "敵のキャラ：キング・アクア", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "敵のキャラ：デスドラグーン", exact: true })).toBeVisible();
   await expect(special).toBeDisabled();
   for (let i = 0; i < 2; i++) {
     await expect(attack).toBeEnabled();
@@ -59,7 +59,7 @@ test("defense reduces damage and synchronous repeated clicks cannot spend multip
   await expect(field).toHaveAttribute("data-phase", "player");
   await page.clock.runFor(600);
   await expect(field).toHaveAttribute("data-phase", "cpu");
-  await expect(page.getByRole("status")).toContainText("キング・アクアの攻撃");
+  await expect(page.getByRole("status")).toContainText("デスドラグーンの攻撃");
   await expect(defend).toBeDisabled();
   await page.clock.runFor(600);
   await expect(page.getByRole("progressbar", { name: "自分のHP", exact: true })).toHaveAttribute("aria-valuenow", "164");

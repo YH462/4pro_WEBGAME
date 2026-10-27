@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { buildBoss } from "./battle-arena";
+import { createBossModel } from "./boss-model";
 import { counterImpactMs, counterLaunchMs, showcaseCounterFrame, type ShowcaseFrame } from "./raid-showcase-playback";
 import { showcaseImpactMs } from "./raid-showcase-scenes";
 import { characterColors, raidMemberPosition, type RaidArenaContext } from "./raid-screen-playback";
@@ -32,31 +32,11 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   const impactLight = new THREE.PointLight(0xffb63d, 0, 10);
   impactLight.position.set(.3, 1.7, 2); scene.add(impactLight);
 
-  const boss = buildBoss();
+  const bossModel = createBossModel(canvas);
+  const boss = bossModel.root;
   boss.scale.setScalar(1.35); scene.add(boss);
   const armor = new THREE.MeshStandardMaterial({ color: 0x302c36, roughness: .42, metalness: .65, flatShading: true });
   const ivory = new THREE.MeshStandardMaterial({ color: 0xf8e8dc, roughness: .44, metalness: .2 });
-  const red = new THREE.MeshBasicMaterial({ color: 0xff3258 });
-  // Additional plates and silhouette spikes belong only to the presentation model.
-  for (let i = 0; i < 10; i++) {
-    const angle = i / 10 * Math.PI * 2;
-    const plate = new THREE.Mesh(new THREE.IcosahedronGeometry(.3, 0), armor);
-    plate.position.set(Math.cos(angle) * .89, 1.43 + (i % 2) * .16, Math.sin(angle) * .78 - .13);
-    plate.scale.set(1.1, .42, .85); boss.add(plate);
-    if (i % 2 === 0) {
-      const spike = new THREE.Mesh(new THREE.ConeGeometry(.13, .48, 4), ivory);
-      spike.position.copy(plate.position).add(new THREE.Vector3(0, .28, 0));
-      spike.rotation.z = -Math.cos(angle) * .4; boss.add(spike);
-    }
-  }
-  const cracks = new THREE.Group();
-  for (let i = 0; i < 7; i++) {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(.025, .48, .025), red);
-    line.position.set((i - 3) * .22, 1.48 + Math.sin(i) * .17, .69 - Math.abs(i - 3) * .07);
-    line.rotation.z = i % 2 ? .5 : -.5; cracks.add(line);
-  }
-  boss.add(cracks);
-
   const floor = new THREE.Mesh(new THREE.CircleGeometry(5.8, 96), new THREE.MeshBasicMaterial({ color: 0xfff5f9, transparent: true, opacity: .52 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -.12; scene.add(floor);
   const grid = new THREE.GridHelper(24, 48, 0xd28fa6, 0xe8c5d2);
@@ -191,7 +171,8 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   });
 
   const breath = new THREE.Group(); scene.add(breath);
-  const mouth = new THREE.Vector3(-.32, 1.17, 1.95);
+  // Match the normalized dragon's raised head rather than the old turtle's mouth.
+  const mouth = new THREE.Vector3(-.32, 2.15, 1.35);
   let targets = allies.slice(0, 4).map(({ home }) => home.clone().add(new THREE.Vector3(0, .38, 0)));
   const teamCenter = new THREE.Vector3(0, .38, 2.9);
   const fanEdge = new THREE.CatmullRomCurve3(targets);
@@ -383,7 +364,6 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     boss.position.set(0, reduced ? 0 : Math.sin(time * 2.5) * .045, 0);
     boss.rotation.set(0, -.2 + (reduced ? 0 : Math.sin(time * .7) * .035), 0);
     boss.scale.setScalar(1.35);
-    cracks.visible = cue === "weaken" || cue === "victory";
     if (attacking && hit >= 0 && !reduced) {
       boss.rotation.z = -Math.sin(Math.min(burst * 4, Math.PI)) * (critical ? .17 : .07);
       boss.position.z = -Math.sin(Math.min(burst * 4, Math.PI)) * (critical ? .4 : .15);
@@ -622,6 +602,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     renderer.render(scene, camera);
   };
   return {
+    ready: bossModel.ready,
     setModels(next: CharacterModelCatalog) {
       if (disposed||catalogReady&&JSON.stringify(catalog)===JSON.stringify(next)) return;
       const ids=allies.map((ally)=>ally.modelId);
@@ -637,6 +618,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      bossModel.dispose();
       allies.forEach((ally) => { if (ally.model) ally.body.remove(ally.model); });
       modelLibrary.dispose();
       const materials = new Set<THREE.Material>(); const geometries = new Set<THREE.BufferGeometry>();

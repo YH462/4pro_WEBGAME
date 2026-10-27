@@ -13,6 +13,7 @@ import { EnemyArt } from "../battle/enemy-art";
 import { RaidJoinCard } from "./raid-join-card";
 import styles from "./raid-showcase.module.css";
 import { useCharacterModels } from "../battle/use-character-models";
+import { boss } from "@/lib/boss";
 
 const icons = { idle: Users, rps: HandFist, attack: Swords, critical: Sparkles, heal: Heart, counter: Waves, weaken: Waves, victory: Trophy };
 const handIcons = { rock: HandFist, scissors: Scissors, paper: Hand };
@@ -80,7 +81,12 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
         if(latest.current.models)arena.current.setModels(latest.current.models);
         const rect = target.getBoundingClientRect(); arena.current.resize(rect.width, rect.height);
         observer = new ResizeObserver(([entry]) => arena.current?.resize(entry.contentRect.width, entry.contentRect.height));
-        observer.observe(target); setRenderer("webgl");
+        observer.observe(target);
+        const activeArena = arena.current;
+        void activeArena.ready.then(() => { if (!cancelled && arena.current === activeArena) setRenderer("webgl"); }).catch(() => {
+          if (cancelled || arena.current !== activeArena) return;
+          observer?.disconnect(); activeArena.dispose(); arena.current = null; setRenderer("fallback");
+        });
       } catch { arena.current?.dispose(); arena.current = null; setRenderer("fallback"); }
     }).catch(() => { if (!cancelled) setRenderer("fallback"); });
     return () => { cancelled = true; observer?.disconnect(); target.removeEventListener("webglcontextlost", lost); document.removeEventListener("visibilitychange", visibility); arena.current?.dispose(); arena.current = null; };
@@ -151,7 +157,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
       <div className={styles.brand}>4<span>PRO</span></div>
       <div className={styles.demoBadge}>{screen?.status ?? "PC 演出デモ"}</div>
       <header className={styles.hud}>
-        <div className={styles.bossTitle}><h1>{screen?.bossName ?? "キング・アクア"}</h1><strong>{Math.round(hp / maxHp * 100)}<small>%</small></strong></div>
+        <div className={styles.bossTitle}><h1>{screen?.bossName ?? boss.name}</h1><strong>{Math.round(hp / maxHp * 100)}<small>%</small></strong></div>
         <div className={styles.health} role="progressbar" aria-label={screen ? "ボスHP" : "演出デモのボスHP"} aria-valuenow={hp} aria-valuemin={0} aria-valuemax={maxHp}>
           <span ref={delayedHealth} className={styles.delayedHealth} style={{ width: `${beforeHp / maxHp * 100}%` }}/><span ref={health} className={styles.currentHealth} style={{ width: `${beforeHp / maxHp * 100}%` }}/>
         </div>
@@ -160,7 +166,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
         <div className={styles.floor}/>
         {screen?.collection && <div className={styles.collection} role="timer" aria-label="全員共通の入力受付"><span>ROUND {String(screen.collection.round).padStart(2, "0")} / INPUT TIME</span><strong>{screen.collection.seconds}<small>秒</small></strong><p>{screen.collection.submitted} / {screen.collection.eligible}人 送信済み</p><i style={{ width: `${screen.collection.seconds * 10}%` }}/></div>}
         {renderer !== "webgl" && <div className={styles.fallback}><EnemyArt/></div>}
-        <canvas ref={canvas} aria-label="キング・アクアと攻撃エフェクト" role="img"/>
+        <canvas ref={canvas} aria-label={`${boss.name}と攻撃エフェクト`} role="img"/>
         <div ref={effects} key={key} className={styles.effects} style={{ "--impact-delay": `${showcaseImpactMs}ms`, "--counter-impact-delay": `${counterImpactMs}ms`, "--rps-reveal-delay": `${rpsRevealMs}ms` } as CSSProperties} aria-hidden="true">
           {cue === "rps" && <div className={styles.rpsPresentation} data-revealed={rps.revealed} data-rps-hand={rps.hand}>
             <div className={styles.rpsRevealRing}/>
