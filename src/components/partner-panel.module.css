@@ -96,10 +96,14 @@
 .gaugeFill { position: absolute; inset: 0; background: linear-gradient(color-mix(in srgb,var(--stat-color),white 22%),var(--stat-color)); }
 .gaugeDividers { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: #ffffffd9; stroke-width: 1.25; }
 .skills { height: 100%; }
-.skills > div {
+.infoFrame {
   --skill-cut: 10px;
   position: relative;
   isolation: isolate;
+  background: linear-gradient(135deg,#de3653,#fba7b7 48%,#df3652);
+  clip-path: polygon(var(--skill-cut) 0,calc(100% - var(--skill-cut)) 0,100% var(--skill-cut),100% calc(100% - var(--skill-cut)),calc(100% - var(--skill-cut)) 100%,var(--skill-cut) 100%,0 calc(100% - var(--skill-cut)),0 var(--skill-cut));
+}
+.skills > div {
   display: grid;
   grid-template-columns: 52px minmax(0,1fr) auto;
   grid-template-rows: auto;
@@ -108,11 +112,9 @@
   height: min(100%,260px);
   min-height: 0;
   padding: 24px 28px;
-  background: linear-gradient(135deg,#de3653,#fba7b7 48%,#df3652);
-  clip-path: polygon(var(--skill-cut) 0,calc(100% - var(--skill-cut)) 0,100% var(--skill-cut),100% calc(100% - var(--skill-cut)),calc(100% - var(--skill-cut)) 100%,var(--skill-cut) 100%,0 calc(100% - var(--skill-cut)),0 var(--skill-cut));
 }
-.skills > div::before { content: ""; position: absolute; inset: 1px; z-index: -3; clip-path: inherit; background: linear-gradient(135deg,#fff6f8,#fffffff7 58%,#fff4f7); box-shadow: inset 0 0 28px #f4acbd29; }
-.skills > div::after {
+.infoFrame::before { content: ""; position: absolute; inset: 1px; z-index: -3; clip-path: inherit; background: linear-gradient(135deg,#fff6f8,#fffffff7 58%,#fff4f7); box-shadow: inset 0 0 28px #f4acbd29; }
+.infoFrame::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -134,10 +136,26 @@
 .skillBadge { align-self: start; padding: 5px 14px; background: linear-gradient(#eeebef,#f9f7f9); color: #88818c; font-size: 11px; font-weight: 700; white-space: nowrap; clip-path: polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%); }
 .skills p { grid-column: 1 / -1; font-size: 15px; color: #53535e; line-height: 1.8; }
 .skillNote { grid-column: 1 / -1; display: block; border-top: 1px solid #ddd8df; padding-top: 14px; font-size: 12px; color: #82808c; }
-.about { color: var(--ink); font-size: 14px; line-height: 1.9; }
-.about > div { display: flex; align-items: center; gap: 12px; background: #fff1f3; border-left: 3px solid var(--red); padding: 14px; margin: 20px 0; }
-.about > div > svg { color: var(--red); }
-.about small { color: #707078; font-size: 11px; }
+.about {
+  height: 100%;
+  overflow: hidden;
+  color: #30242b;
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.9;
+  letter-spacing: .035em;
+}
+.about p {
+  height: 100%;
+  margin: 0;
+  padding: 30px 28px;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #db8b9a transparent;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
 
 @media (max-width: 1100px) {
   .panel { gap: 24px; padding: 24px; }
@@ -174,9 +192,8 @@
   .skillBadge { font-size: 0; padding: 4px 11px; }
   .skills p { font-size: 13px; }
   .skillNote { font-size: 0; padding-top: 11px; }
-  .about { font-size: 12px; }
-  .about > div { padding: 10px; margin: 12px 0; gap: 9px; }
-  .about small { font-size: 0; }
+  .about { font-size: 16px; line-height: 1.85; }
+  .about p { padding: 20px; }
 }
 @media (max-width: 760px) and (min-height: 501px) and (max-height: 740px) {
   .panel { grid-template-rows: minmax(0,1fr) 222px; padding: 10px 12px; gap: 8px; }
@@ -191,8 +208,7 @@
   .statIcon { width: 21px; height: 21px; }
   .gauge { height: 24px; }
   .skills > div { padding: 14px 16px; gap: 10px; }
-  .about { font-size: 11px; }
-  .about > div { margin: 8px 0; padding: 8px; }
+  .about p { padding: 16px 18px; }
 }
 @media (max-height: 500px) and (min-width: 600px) {
   .characterNavigation a,.characterNavigation button { width:32px; height:28px; min-height:28px; }
@@ -225,7 +241,6 @@
   .skillBadge { font-size: 0; padding: 3px 10px; }
   .skills p { font-size: 11px; line-height: 1.7; }
   .skillNote { font-size: 0; padding-top: 9px; }
-  .about { font-size: 11px; line-height: 1.7; }
-  .about > div { padding: 8px; margin: 7px 0; }
-  .about small { font-size: 0; }
+  .about { font-size: 16px; line-height: 1.8; }
+  .about p { padding: 16px 20px; }
 }

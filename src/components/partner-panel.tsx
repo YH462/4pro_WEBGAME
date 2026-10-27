@@ -139,7 +139,7 @@ export function PartnerPanel({ partner, previous, next }: { partner: PartnerView
             })}
           </div>}
           {tab === "skills" && <div className={`skill-list ${styles.skills}`}>
-            <div>
+            <div className={styles.infoFrame}>
               <svg className={styles.skillBackdrop} viewBox="0 0 200 200" aria-hidden="true">
                 <polygon points="138,14 158,14 168,32 158,50 138,50 128,32" opacity=".055"/>
                 <polygon points="68,62 122,62 149,109 122,156 68,156 41,109" opacity=".025"/>
@@ -155,7 +155,7 @@ export function PartnerPanel({ partner, previous, next }: { partner: PartnerView
 
             </div>
           </div>}
-          {tab === "about" && <div className={styles.about}>
+          {tab === "about" && <div className={`${styles.infoFrame} ${styles.about}`}>
             <p>{partner.description}</p>
 
 
