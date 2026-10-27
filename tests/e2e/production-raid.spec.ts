@@ -85,6 +85,10 @@ test("NFC acquisition, profile data and model delivery survive UI integration", 
       expect((await collectSmallText(page)).filter(item=>item.size<=10)).toEqual([]);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
     }
+    await page.getByRole("link", { name: /^次のキャラクター：/ }).click();
+    await expect(page).toHaveURL(`${origin}/collection/thunder-fox`);
+    await page.getByRole("link", { name: /^前のキャラクター：/ }).click();
+    await expect(page.getByRole("region", { name: "フォレストゴーレム", exact: true }).getByText("獲得済み", { exact: true })).toBeVisible();
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/battle");
     await expect(page.getByRole("heading", { name: "同期レイド", exact: true })).toBeVisible();

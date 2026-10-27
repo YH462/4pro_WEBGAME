@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type PointerEvent } from "react";
+import { useRouter } from "next/navigation";
 import { BarChart3, Check, FileText, Gauge, Heart, LockKeyhole, Shield, Sparkles, Swords } from "lucide-react";
 import { CharacterArt } from "./character-art";
 import type { PartnerView } from "@/lib/character-presentation";
@@ -14,13 +15,43 @@ const tabs = [
 const statIcons = [Heart, Swords, Shield, Gauge];
 const statColors = [styles.hp, styles.attack, styles.defense, styles.charge];
 
-export function PartnerPanel({ partner }: { partner: PartnerView }) {
+type AdjacentCharacter = { id: string; name: string; sortOrder: number };
+type SwipeStart = { pointerId: number; x: number; y: number; at: number };
+
+export function PartnerPanel({ partner, previous, next }: { partner: PartnerView; previous: AdjacentCharacter | null; next: AdjacentCharacter | null }) {
+  const router = useRouter();
+  const [navigating, startNavigation] = useTransition();
+  const swipe = useRef<SwipeStart | null>(null);
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("stats");
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const id = useId();
+  useEffect(() => { swipe.current = null; }, [partner.id]);
+  function beginSwipe(event: PointerEvent<HTMLElement>) {
+    swipe.current = null;
+    if (navigating || event.pointerType !== "touch" || !event.isPrimary) return;
+    if (event.target instanceof Element && event.target.closest("button,a,input,select,textarea,[role='tab']")) return;
+    // Leave the browser's edge navigation and text selection available.
+    if (event.clientX < 20 || event.clientX > window.innerWidth - 20 || window.getSelection()?.isCollapsed === false) return;
+    swipe.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, at: event.timeStamp };
+  }
+  function moveSwipe(event: PointerEvent<HTMLElement>) {
+    const start = swipe.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const dx = event.clientX - start.x, dy = event.clientY - start.y;
+    if (Math.abs(dy) > 16 && Math.abs(dy) >= Math.abs(dx)) { swipe.current = null; return; }
+  }
+  function endSwipe(event: PointerEvent<HTMLElement>) {
+    const start = swipe.current; swipe.current = null;
+    if (!start || start.pointerId !== event.pointerId || navigating) return;
+    const dx = event.clientX - start.x, dy = event.clientY - start.y;
+    const threshold = Math.max(48, Math.min(80, event.currentTarget.clientWidth * 0.15));
+    if (Math.abs(dx) < threshold || Math.abs(dx) <= Math.abs(dy) * 1.5 || event.timeStamp - start.at > 1200) return;
+    const target = dx < 0 ? next : previous;
+    if (target) startNavigation(() => router.push(`/collection/${target.id}`, { scroll: false }));
+  }
 
   return (
-    <section className={styles.panel} aria-label={partner.name}>
+    <section className={styles.panel} aria-label={partner.name} aria-busy={navigating} data-character-id={partner.id} onPointerDown={beginSwipe} onPointerMove={moveSwipe} onPointerUp={endSwipe} onPointerCancel={() => { swipe.current = null; }}>
       <div className={styles.hero}>
         <div className={styles.portrait}>
           <span className={styles.number}>No. {String(partner.number).padStart(3, "0")}</span>
