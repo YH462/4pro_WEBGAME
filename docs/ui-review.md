@@ -39,3 +39,7 @@ npm.cmd run ui:verify
 撮影スクリプトはDB接続先とアプリURLがローカルであることを確認します。本番サーバーには接続しません。撮影専用ゲスト・管理者・タグだけを作成し、終了時に削除します。キャラ編集の保存リクエストをブロックし、撮影前後のキャラ・技・イベントの一致を確認します。DBの初期化、migration、seedは実行しません。
 
 `manifest.json` に撮影条件・未完了工程・ブラウザ例外を、`verification.json` に画像サイズ・検索・拡大表示の確認結果を記録します。画像と生成HTMLはGit管理対象外の `.local/` に置きます。
+
+## 本番レイドと統合した版
+
+統合版の専用DB・ポート・撮影手順は [統合検証](integration-validation.md) を参照してください。`UI_REVIEW_OUTPUT`、`UI_REVIEW_DATE`、`UI_GALLERY_URL`、`UI_GALLERY_PORT` で出力先と一覧の接続先を変更でき、以前の画面記録を保持できます。独立プレビューは `?preview=1` を使い、通常の会場スクリーンは撮影用管理者で開きます。`UI_TEXT_AUDIT=true` の撮影結果では、10px以下の可視文字が残ると `ui:verify` が失敗します。

@@ -15,7 +15,7 @@ const databaseUrl = new URL(process.env.DATABASE_URL || '');
 if (!['localhost', '127.0.0.1', '[::1]'].includes(databaseUrl.hostname) || !['localhost', '127.0.0.1'].includes(appUrl.hostname) || appUrl.protocol !== 'http:' || process.env.ENABLE_DEV_SIMULATOR !== 'true') {
   throw new Error('UI capture requires a local database and local HTTP development app with ENABLE_DEV_SIMULATOR=true.');
 }
-const output = path.resolve('.local/ui-review/2026-10-26');
+const output = path.resolve(process.env.UI_REVIEW_OUTPUT || '.local/ui-review/2026-10-26');
 const db = new PrismaClient();
 const masterSnapshot = async () => JSON.stringify(await Promise.all([
   db.character.findMany({orderBy:{id:'asc'}}),
@@ -54,7 +54,16 @@ async function settle(p = page) {
   await p.waitForTimeout(180);
 }
 async function go(route: string, p = page) {
-  await p.goto(route, { waitUntil: 'load', timeout: 120000 });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await p.goto(route, { waitUntil: 'load', timeout: 120000 });
+      break;
+    } catch (error) {
+      // First compilation in next dev can replace a navigation with a reload.
+      if (attempt >= 2 || !/net::ERR_ABORTED|interrupted by another navigation/.test(String(error))) throw error;
+      await p.waitForTimeout(500);
+    }
+  }
   await settle(p);
 }
 async function snap(id: string, title: string, group: string, note = '', p = page) {
@@ -169,7 +178,7 @@ try {
   await page.clock.resume().catch(() => {});
   await stage('raid preview', async () => {
     await page.clock.install();
-    await go('/battle/raid');
+    await go('/battle/raid?preview=1');
     await page.waitForTimeout(700);
     await snap('23-raid-preview', 'レイド／操作プレビュー', '06 レイド・プレビュー');
     await page.getByRole('button', { name: 'レイドのルールを開く' }).click();
@@ -228,7 +237,7 @@ try {
     }
     await go('/profile'); await page.getByRole('tab', { name: '冒険の記録', exact: true }).click();
     await snap('40-profile-records-complete', '冒険の記録／全12体獲得', '04 プロフィール');
-    await go('/battle/raid');
+    await go('/battle/raid?preview=1');
     await page.getByRole('combobox', { name: '参加キャラクター' }).selectOption('four-pro');
     await page.waitForTimeout(600);
     await snap('41-raid-four-pro', 'レイド／4プロ選択', '06 レイド・プレビュー');
@@ -390,7 +399,7 @@ try {
     })()`);
     const fp = await fallback.newPage();
     try {
-      await go('/battle/raid', fp);
+      await go('/battle/raid?preview=1', fp);
       await expect(fp.locator('[data-renderer]')).toHaveAttribute('data-renderer', 'fallback');
       await snap('72-raid-fallback', 'レイド／WebGL非対応の代替表示', '06 レイド・プレビュー', 'WebGLを利用できないブラウザを再現', fp);
       await fp.route('**/api/local-raid*', route => route.fulfill({ status: 503, json: { error: '同期サーバーに接続できません。' } }));
@@ -413,6 +422,7 @@ try {
     // Release the ten model previews before rendering the full-size venue scene.
     await page.goto('about:blank');
     const screenContext = await browser.newContext({baseURL:origin,viewport:{width:1920,height:1080},locale:'ja-JP'});
+    await screenContext.addCookies(await ctx.cookies());
     const sp=await screenContext.newPage();
     try {
       for (const [id,route,title] of [
@@ -430,7 +440,7 @@ try {
   await stage('small and large viewport', async () => {
     for (const size of [{ width: 375, height: 667 }, { width: 430, height: 932 }]) {
       await page.setViewportSize(size);
-      for (const [id, route, title] of [['home', '/', 'ホーム'], ['collection', '/collection', 'キャラ図鑑'], ['detail', '/collection/forest-golem', 'キャラ詳細'], ['profile', '/profile', 'プロフィール'], ['cpu', '/battle', 'CPU選択'], ['raid', '/battle/raid', 'レイド']]) {
+      for (const [id, route, title] of [['home', '/', 'ホーム'], ['collection', '/collection', 'キャラ図鑑'], ['detail', '/collection/forest-golem', 'キャラ詳細'], ['profile', '/profile', 'プロフィール'], ['cpu', '/battle', 'CPU選択'], ['raid', '/battle/raid?preview=1', 'レイド']]) {
         await go(route);
         await snap(`69-${size.width}-${id}`, `${title}／${size.width}×${size.height}`, '12 サイズ比較');
       }

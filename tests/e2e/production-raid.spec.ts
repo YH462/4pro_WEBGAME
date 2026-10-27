@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { hashAdminPassword } from "../../src/lib/admin-password";
 import type { LocalRaidSnapshot } from "../../src/lib/local-raid-types";
+import { collectSmallText } from "../../scripts/ui-review/small-text";
 
 const eventId = "raid-production-test", origin = "http://localhost:13026";
 const configured = process.env.EVENT_ID === eventId && new URL(process.env.DATABASE_URL || "postgresql://localhost:5432/unused").port === "55436";
@@ -10,6 +11,7 @@ test.skip(!configured, "Use playwright.production.config.ts with the isolated pr
 const db = new PrismaClient(), playerIds: string[] = [], adminIds: string[] = [];
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 let adminHeaders: Record<string, string>, adminToken: string;
+let adminUsername: string, adminPassword: string;
 async function player() {
   const token = randomBytes(32).toString("base64url");
   const row = await db.player.create({ data: { eventId, nickname: `同期${playerIds.length + 1}`, sessions: { create: { tokenHash: hash(token), expiresAt: new Date(Date.now() + 3600_000) } } } });
@@ -26,7 +28,8 @@ test.beforeEach(async () => {
   await db.event.upsert({ where: { id: eventId }, create: { id: eventId, name: "本番同期の専用検証" }, update: { status: "ACTIVE", endedAt: null, purgeAt: null } });
   await db.raidRoom.deleteMany({ where: { eventId } });
   adminToken = randomBytes(32).toString("base64url");
-  const admin = await db.adminUser.create({ data: { username: `raid_${randomUUID().slice(0,8)}`, passwordHash: await hashAdminPassword(randomUUID()), sessions: { create: { tokenHash: hash(adminToken), expiresAt: new Date(Date.now() + 3600_000) } } } });
+  adminUsername = `raid_${randomUUID().slice(0,8)}`; adminPassword = randomUUID();
+  const admin = await db.adminUser.create({ data: { username: adminUsername, passwordHash: await hashAdminPassword(adminPassword), sessions: { create: { tokenHash: hash(adminToken), expiresAt: new Date(Date.now() + 3600_000) } } } });
   adminIds.push(admin.id); adminHeaders = { origin, cookie: `fourpro_admin=${adminToken}` };
 });
 test.afterEach(async () => {
@@ -37,6 +40,47 @@ test.afterEach(async () => {
   await db.rateLimitBucket.deleteMany({ where: { key: { startsWith: "raid-" } } });
 });
 test.afterAll(async () => { await db.$disconnect(); });
+
+test("staff login returns to the live screen and the cleaned header retains its screen link", async ({ page }) => {
+  await page.goto("/raid/screen");
+  await expect(page).toHaveURL(/\/admin\/login\?next=raid-screen$/);
+  await page.getByRole("textbox", { name: "ユーザー名" }).fill(adminUsername);
+  await page.getByLabel("パスワード", { exact: true }).fill(adminPassword);
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(`${origin}/raid/screen`);
+  expect((await page.request.get("/api/raid")).status()).toBe(200);
+  await page.goto("/admin");
+  await expect(page.getByText("ADMINISTRATION", { exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "会場スクリーン", exact: true }).click();
+  await expect(page).toHaveURL(`${origin}/raid/screen`);
+});
+
+test("NFC acquisition, profile data and model delivery survive UI integration", async ({ page, request }) => {
+  const guest = await player(), token = randomBytes(32).toString("base64url");
+  const tag = await db.acquisitionTag.create({ data: { eventId, departmentId: "mechanical", tokenHash: hash(token) } });
+  try {
+    const first = await request.post("/api/acquisitions", { headers: guest.headers, data: { token } });
+    expect(first.status()).toBe(200); expect((await first.json()).acquired).toBe(true);
+    const owned = await db.playerCharacter.findUniqueOrThrow({ where: { playerId_characterId: { playerId: guest.id, characterId: "forest-golem" } } });
+    const repeated = await request.post("/api/acquisitions", { headers: guest.headers, data: { token } });
+    expect(repeated.status()).toBe(200); expect((await repeated.json()).acquired).toBe(false);
+    expect(await db.playerCharacter.findUniqueOrThrow({ where: { id: owned.id } })).toEqual(owned);
+    expect((await request.patch("/api/me", { headers: guest.headers, data: { nickname: "統合確認" } })).status()).toBe(200);
+    expect((await db.player.findUniqueOrThrow({ where: { id: guest.id } })).nickname).toBe("統合確認");
+    const models = await request.get("/api/character-models");
+    expect(models.status()).toBe(200); expect(Object.keys((await models.json()).models)).toHaveLength(10);
+    await page.context().addCookies([{ name: "fourpro_guest", value: guest.token, url: origin }]);
+    for (const viewport of [{width:375,height:667},{width:390,height:844},{width:430,height:932}]) {
+      await page.setViewportSize(viewport); await page.goto("/collection/forest-golem");
+      await expect(page.getByRole("tab", {name:"ステータス",exact:true})).toBeVisible();
+      expect((await collectSmallText(page)).filter(item=>item.size<=10)).toEqual([]);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
+    }
+  } finally {
+    await db.acquisitionLog.deleteMany({ where: { tagId: tag.id } });
+    await db.acquisitionTag.delete({ where: { id: tag.id } });
+  }
+});
 
 test("production raid protects staff controls, event boundaries and character ownership", async ({ request, page }) => {
   expect((await request.get("/api/local-raid")).status()).toBe(404);
