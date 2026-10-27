@@ -8,6 +8,8 @@ import { resolve } from "node:path";
 import { characterModels,characterModelUrl,type CharacterModelAsset } from "../src/lib/character-models";
 
 // Run with the local server and DB active. No administrator passwords are needed.
+const onlyId=process.argv.find(arg=>arg.startsWith("--id="))?.slice(5);
+if(onlyId&&!Object.hasOwn(characterModels,onlyId))throw new Error(`Unknown bundled character: ${onlyId}`);
 const db=new PrismaClient(),origin=process.env.APP_URL||"http://localhost:3000";
 const bundle=await build({entryPoints:["src/lib/character-thumbnail.ts"],bundle:true,format:"iife",globalName:"CharacterThumbnails",platform:"browser",write:false});
 const browser=await chromium.launch({headless:true});
@@ -15,7 +17,7 @@ try {
   const page=await browser.newPage();await page.goto(`${origin}/start`);await page.addScriptTag({content:bundle.outputFiles[0].text});
   const bundled=process.argv.includes("--bundled"),additional=process.argv.includes("--additional");
   const characters=bundled?Object.entries(characterModels).filter(([,asset])=>!additional||Boolean(asset.displayName)).map(([id,asset])=>({id,modelId:null,modelYaw:asset.yaw*180/Math.PI,model:null})):await db.character.findMany({where:{modelId:{not:null}},select:{id:true,modelId:true,modelYaw:true,model:{select:{data:true}}}});
-  for(const character of characters) {
+  for(const character of characters.filter(character=>!onlyId||character.id===onlyId)) {
     const initial=characterModels[character.id];
     const asset=bundled?initial:{url:characterModelUrl(character.modelId)!,yaw:character.modelYaw*Math.PI/180};
     const bytes=await page.evaluate(async(asset:CharacterModelAsset)=>{

@@ -52,15 +52,42 @@
 | 学科なし | `Morinokami.blend` | `morinokami.glb` | `temp-06` | 0 |
 | 学科なし | `PasoconMon.blend` | `pasocon-mon.glb` | `temp-07` | −90 |
 | 学科なし | `コートロン.blend` | `coatoron.glb` | `temp-08` | 0 |
-| 学科なし | `デンラコ.blend` | `denrako.glb` | `temp-09` | −90 |
+| 学科なし | `デンラコ.blend` | `denrako.glb` | `temp-09` | 0 |
 | 学科なし | `トショカン.blend` | `toshokan.glb` | `temp-10` | 0 |
-| 学科なし | `ブシラッコ.blend` | `bushirakko.glb` | `temp-11` | −90 |
+| 学科なし | `ブシラッコ.blend` | `bushirakko.glb` | `temp-11` | 0 |
 
 追加6体は既存の仮キャラIDを引き継ぎ、学科なしの通常キャラに変更しています。名前はファイル名を仮採用し、紹介文は作成者への確認待ちです。能力値・NFCタグ・所持情報は維持し、`temp-12` は仮キャラのまま残します。
 
 追加分だけを書き出す場合はコマンド末尾に `-- --additional`、1体だけなら `-- --id=temp-10` を付けます。USBケーブルなどのカーブは書き出し時にメッシュへ変換します。重いモデルは表示用に頂点数を削減し、トショカンの重複頂点は結合します。いずれも元のBlenderデータには保存しません。
 
 書き出し後、開発サーバーを起動して `npx tsx scripts/generate-character-thumbnails.ts --bundled --additional` で追加6体の同梱画像を生成できます。このモードはDBを変更しません。
+
+### デンラコ・ブシラッコの上下修正（2026-10-27）
+
+2体の元 `.blend` は上下を反転し、Blenderで上が+Z・正面が−Yになるよう修正済みです。デンラコの稲妻が頭上、ブシラッコの赤い帯が目の上に来ます。原本の編集可能なメッシュ・Mirrorモディファイアは維持しています。
+
+`scripts/normalize-character-orientation.py` は旧原本を修正する一度限りの処理です。元データを `.local/model-orientation-originals/` にバックアップし、シーンの `webgame_orientation=upright-front-v1` で二重反転を防ぎます。修正済み原本では再実行不要です。
+
+通常の書き出しスクリプトは、このマーカーがある静的モデルの評価済みメッシュをすべて取得してから、ワールド変換を頂点に反映します。Mirrorの左右を維持し、負スケールの面の表裏も補正します。出力GLBは上が+Y・正面が+Zで、ノードの回転・負スケール・表示側の上下補正を必要としません。DB／初期マニフェストの正面角度は0度です。
+
+```powershell
+# 修正済み原本から再出力する場合（2体それぞれ実行）
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --disable-autoexec --python-exit-code 1 --python scripts/export-character-models.py -- --id=temp-09
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --disable-autoexec --python-exit-code 1 --python scripts/export-character-models.py -- --id=temp-11
+npx tsx scripts/generate-character-thumbnails.ts --bundled --id=temp-09
+npx tsx scripts/generate-character-thumbnails.ts --bundled --id=temp-11
+```
+
+既存DBはGitの更新・seedだけでは差し替わりません。サーバー反映時は通常のDBバックアップ後、接続先 `DATABASE_URL` を確認して以下を実行します。自動起動処理やマイグレーションには組み込んでいません。
+
+```powershell
+npx tsx scripts/update-character-orientation.ts          # 検証のみ
+npx tsx scripts/update-character-orientation.ts --apply  # 対象2体だけ反映
+```
+
+この処理は既知の旧GLBのSHA-256と角度−90度が一致した場合だけ更新し、管理画面で変更した別モデルや角度は拒否します。旧GLB・画像・IDは `.local/model-orientation-backups/` に保存し、管理画面と同じ検証・revision付きトランザクションでGLB／画像／角度を変更します。更新済みの場合はスキップします。キャラ名・能力値・NFC・所持・レイド記録は変更しません。別のモデルを登録済みなら管理画面でプレビューし、修正GLBを角度0度でアップロードしてください。
+
+ローカル専用検証DBのみ反映済みです。本番DBへの反映は別途必要です。`tests/unit/character-orientation.test.ts` はGLBの実頂点から目が+Z・稲妻と帯が目より上・両手が左右に存在することと、回転補正なしの構造を確認します。
 
 ## 既存環境の更新
 

@@ -6,6 +6,7 @@ import bpy
 import json
 import sys
 from pathlib import Path
+from mathutils import Matrix
 
 root = Path(__file__).resolve().parents[1]
 destination = root / 'public' / 'models' / 'characters'
@@ -94,6 +95,25 @@ for asset in manifest:
                         modifier.ratio = 120000 / welded_count
                         modifier.use_collapse_triangulate = True
                     print(f'EXPORT_WELD {source.name}: {obj.name}, triangles={remaining} -> {welded_count}', flush=True)
+    if bpy.context.scene.get('webgame_orientation') == 'upright-front-v1':
+        if any(obj.type == 'ARMATURE' for obj in selected):
+            raise RuntimeError('World-space export is only supported for these static characters')
+        # Evaluate all meshes before modifying any: Mirror can reference another
+        # selected object. Bake source transforms into vertices, so the portable
+        # GLB is upright/+Z-front without a runtime rotation or negative scales.
+        graph = bpy.context.evaluated_depsgraph_get()
+        evaluated = [(obj, bpy.data.meshes.new_from_object(
+            obj.evaluated_get(graph), preserve_all_data_layers=True, depsgraph=graph
+        ), obj.matrix_world.copy()) for obj in selected if obj.type == 'MESH']
+        for obj, mesh, matrix in evaluated:
+            mesh.transform(matrix)
+            if matrix.determinant() < 0:
+                mesh.flip_normals()
+            obj.modifiers.clear()
+            obj.parent = None
+            obj.data = mesh
+            obj.matrix_world = Matrix.Identity(4)
+        selected = [obj for obj, _, _ in evaluated]
     bpy.ops.object.select_all(action='DESELECT')
     for obj in selected:
         obj.select_set(True)
