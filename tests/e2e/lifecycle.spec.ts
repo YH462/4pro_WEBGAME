@@ -14,7 +14,9 @@ test("active events cannot be purged; explicit end, retention and confirmation a
     const tag = await db.acquisitionTag.create({ data: { eventId: id, departmentId: "mechanical", tokenHash: randomUUID().replaceAll("-", "").padEnd(64, "0") } });
     await db.acquisitionLog.create({ data: { playerId: player.id, tagId: tag.id, characterId: "forest-golem", granted: true } });
     await db.raidRoom.create({ data: { eventId: id, state: { nickname: "削除テスト", playerId: player.id } } });
-    await db.raidResult.create({ data: { playerId: player.id, roomId: randomUUID(), characterId: "forest-golem", characterName: "削除テストのキャラ", bossName: "デスドラグーン", won: true, turns: 1 } });
+    const result=await db.raidResult.create({ data: { playerId: player.id, roomId: randomUUID(), characterId: "forest-golem", characterName: "削除テストのキャラ", bossName: "デスドラグーン", won: true, turns: 1 } });
+    await db.raidReward.create({data:{playerId:player.id,raidResultId:result.id,points:100}});
+    await db.playerAchievement.create({data:{playerId:player.id,code:"victory-1"}});
     await db.rateLimitBucket.create({ data: { key: `nickname:${player.id}`, hits: 1, expiresAt: new Date(Date.now() + 60_000) } });
     await db.rateLimitBucket.create({ data: { key: `acquire:${player.id}`, hits: 1, expiresAt: new Date(Date.now() + 60_000) } });
     await expect(cli("purge", "--confirm")).rejects.toThrow();
@@ -33,6 +35,8 @@ test("active events cannot be purged; explicit end, retention and confirmation a
     expect(await db.guestSession.count({ where: { playerId: player.id } })).toBe(0);
     expect(await db.playerCharacter.count({ where: { playerId: player.id } })).toBe(0);
     expect(await db.raidResult.count({ where: { playerId: player.id } })).toBe(0);
+    expect(await db.raidReward.count({where:{playerId:player.id}})).toBe(0);
+    expect(await db.playerAchievement.count({where:{playerId:player.id}})).toBe(0);
     expect(await db.rateLimitBucket.count({ where: { key: `nickname:${player.id}` } })).toBe(0);
     expect(await db.rateLimitBucket.count({ where: { key: `acquire:${player.id}` } })).toBe(0);
     expect(await db.acquisitionLog.count({ where: { playerId: player.id } })).toBe(0);

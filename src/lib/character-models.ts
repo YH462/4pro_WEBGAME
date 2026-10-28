@@ -1,6 +1,7 @@
 import bundled from "./bundled-character-models.json" with { type: "json" };
 /** Shared export/seed manifest. Character IDs remain stable when placeholders gain models. */
-export type CharacterModelAsset = { url: string; yaw: number };
+export type CharacterMotions = Partial<Record<"attack" | "heal", { url: string; yaw: number }>>;
+export type CharacterModelAsset = { url: string; yaw: number; motions?: CharacterMotions };
 export type CharacterModelCatalog = Record<string, CharacterModelAsset>;
 export const maxCharacterModelBytes = 20 * 1024 * 1024;
 export const characterModelUrl = (id: string | null | undefined) => id ? `/api/character-models/${encodeURIComponent(id)}` : null;

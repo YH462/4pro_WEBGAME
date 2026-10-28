@@ -3,15 +3,17 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Check, Copy, SquarePen, Swords, Trophy, UserRound } from "lucide-react";
+import { Award, BookOpen, Check, Copy, Medal, SquarePen, Swords, Trophy, UserRound } from "lucide-react";
 import { GuestForm } from "./guest-form";
 import { CharacterArt } from "./character-art";
 import type { AdventureRecords } from "@/lib/adventure-records";
 import styles from "./profile-panel.module.css";
+import { PlayerAwards } from "./player-awards";
 
 const tabs = [
   { id: "profile", label: "プロフィール", icon: UserRound },
   { id: "records", label: "冒険の記録", icon: BookOpen },
+  { id: "awards", label: "報酬・称号", icon: Medal },
 ] as const;
 
 export function ProfilePanel({ id, nickname, initialRecords }: { id: string; nickname: string; initialRecords: AdventureRecords }) {
@@ -25,7 +27,7 @@ export function ProfilePanel({ id, nickname, initialRecords }: { id: string; nic
   const prefix = useId();
   useEffect(() => { setRecords(initialRecords); }, [initialRecords]);
   useEffect(() => {
-    if (tab !== "records") return;
+    if (tab === "profile") return;
     let active = true;
     let controller: AbortController | undefined;
     const refresh = async () => {
@@ -80,6 +82,7 @@ export function ProfilePanel({ id, nickname, initialRecords }: { id: string; nic
             setTab("profile");
             requestAnimationFrame(() => input.current?.focus());
           }}><SquarePen size={20}/></button></div>
+          {records.awards.activeTitle&&<p className={styles.earnedTitle} aria-label="獲得した称号"><Award size={16} aria-hidden="true"/>{records.awards.activeTitle}</p>}
         </div>
       </div>
 
@@ -97,7 +100,7 @@ export function ProfilePanel({ id, nickname, initialRecords }: { id: string; nic
           onKeyDown={(event) => {
             if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
             event.preventDefault();
-            const next = event.key === "Home" ? 0 : event.key === "End" ? 1 : 1 - index;
+            const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length-1 : event.key === "ArrowRight" ? (index+1)%tabs.length : (index+tabs.length-1)%tabs.length;
             setTab(tabs[next].id);
             tabRefs.current[next]?.focus();
           }}
@@ -119,7 +122,7 @@ export function ProfilePanel({ id, nickname, initialRecords }: { id: string; nic
             <p className={styles.copyMessage} aria-live="polite">{copyMessage}</p>
 
           </div>
-        </div> : <div className={`${styles.records} ${styles.adventureRecords}`}>
+        </div> : tab==="awards" ? <div className={styles.awardsPanel}>{recordsError&&<p role="alert" className={styles.recordError}>{recordsError}</p>}<PlayerAwards awards={records.awards}/></div> : <div className={`${styles.records} ${styles.adventureRecords}`}>
           <div className={styles.recordStats}>
             <div className={`${styles.recordCard} ${styles.partners}`} role="group" aria-label="パートナー収集数"><BookOpen size={24}/><strong>{records.collected}<small> / {records.total}</small></strong><span>パートナー</span></div>
             <div className={`${styles.recordCard} ${styles.trophies}`} role="group" aria-label="討伐成功数"><Trophy size={24}/><strong>{records.victories}</strong><span>討伐成功</span></div>

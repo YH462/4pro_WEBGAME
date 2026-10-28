@@ -51,7 +51,7 @@ test.describe("viewport-contained game screens", () => {
             for (const name of ["フォレストゴーレム", "サンダーフォックス", "フレイムドラゴン", "アクアスピリット", "4プロ"]) {
               await page.getByRole("link", { name: `${name}の詳細を見る（未獲得）`, exact: true }).click();
               await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
-              for (const tab of ["必殺技", "紹介", "ステータス"]) { await page.getByRole("tab", { name: tab, exact: true }).click(); await expectScreenFits(page); }
+              for (const tab of ["紹介", "ステータス"]) { await page.getByRole("tab", { name: tab, exact: true }).click(); await expectScreenFits(page); }
               await page.getByRole("link", { name: "図鑑に戻る", exact: true }).click();
               await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
             }

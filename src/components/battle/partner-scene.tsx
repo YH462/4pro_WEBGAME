@@ -5,15 +5,18 @@ import type { CharacterModelAsset } from "@/lib/character-models";
 import { useCharacterModels } from "./use-character-models";
 import { CharacterArt } from "../character-art";
 import styles from "./raid-mobile.module.css";
+import type { CharacterMotionCue } from "@/lib/character-motion-player";
 
-export function PartnerScene({ element, characterId, imageUrl, model }: { element: string; characterId: string; imageUrl?:string|null; model?:CharacterModelAsset|null }) {
+export function PartnerScene({ element, characterId, imageUrl, model, motion }: { element: string; characterId: string; imageUrl?:string|null; model?:CharacterModelAsset|null; motion?: CharacterMotionCue | null }) {
   const canvas=useRef<HTMLCanvasElement>(null);
+  const currentArena=useRef<ReturnType<typeof createRaidPartnerArena> | null>(null);
+  const latestMotion=useRef(motion); latestMotion.current=motion;
   const models = useCharacterModels(model===undefined);
   const resolved = model===undefined ? models?.[characterId]??null : model;
-  const asset = useMemo(()=>resolved,[resolved?.url,resolved?.yaw]);
+  const asset = useMemo(()=>resolved,[resolved?.url,resolved?.yaw,JSON.stringify(resolved?.motions)]);
   const catalogReady=model!==undefined||models!==null;
   const imageOnly = Boolean(imageUrl && !asset);
-  const sceneKey = `${characterId}:${element}:${imageOnly ? imageUrl : "model"}:${asset?.url??""}:${asset?.yaw??0}`;
+  const sceneKey = `${characterId}:${element}:${imageOnly ? imageUrl : "model"}:${asset?.url??""}:${asset?.yaw??0}:${JSON.stringify(asset?.motions)}`;
   const [view,setView]=useState({ key:"", mode:"loading", model:"loading" });
   const mode=imageOnly?"image":view.key===sceneKey ? view.mode : "loading";
   const modelState=imageOnly?"image":view.key===sceneKey?view.model:"loading";
@@ -30,13 +33,15 @@ export function PartnerScene({ element, characterId, imageUrl, model }: { elemen
         arena=createRaidPartnerArena(target,element,characterId,(model)=>{
           if(!disposed) setView({key:sceneKey,mode:"webgl",model});
         },asset);
+        currentArena.current=arena; arena.play(latestMotion.current??null);
         observer=new ResizeObserver(([entry])=>arena?.resize(entry.contentRect.width,entry.contentRect.height)); observer.observe(target);
         const rect=target.getBoundingClientRect(); arena.resize(rect.width,rect.height);
         setView({key:sceneKey,mode:"webgl",model:asset?"loading":"procedural"});
       } catch { arena?.dispose(); arena=undefined; setView({key:sceneKey,mode:"fallback",model:"fallback"}); }
     }).catch(()=>{ if(!disposed) setView({key:sceneKey,mode:"fallback",model:"fallback"}); });
-    return () => { disposed=true; target.removeEventListener("webglcontextlost",lost); observer?.disconnect(); arena?.dispose(); };
+    return () => { disposed=true; currentArena.current=null; target.removeEventListener("webglcontextlost",lost); observer?.disconnect(); arena?.dispose(); };
   },[element,characterId,imageOnly,sceneKey,asset,catalogReady]);
+  useEffect(()=>{currentArena.current?.play(motion??null);},[motion?.key,motion?.action]);
   return <div className={styles.partnerModel} data-renderer={mode} data-facing="front" data-character-id={characterId} data-model-url={asset?.url} data-model-state={modelState} aria-busy={pending}>
     {pending?<div className={styles.partnerLoading} role="status"><span aria-hidden="true"/>モデルを読み込み中…</div>:<div className={styles.partnerFallback}><CharacterArt element={element} imageUrl={imageUrl} portrait/></div>}
     <canvas ref={canvas} key={sceneKey} aria-hidden="true" hidden={pending}/>

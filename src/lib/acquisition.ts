@@ -5,6 +5,7 @@ import { tokenHash } from "./tokens";
 import { validAcquisitionToken } from "./acquisition-links";
 import { characterImageUrl } from "./character-edit-input";
 import { departments } from "./master-data";
+import { synchronizePlayerAwards } from "./player-awards";
 
 const departmentIds = departments.map((department) => department.id);
 export type AcquisitionResult = { character: { id: string; name: string; element: string; imageUrl?:string|null }; acquired: boolean; departmentCount: number; legend: { id: string; name: string; element: string } | null };
@@ -45,6 +46,7 @@ export async function acquireCharacter(playerId: string, token: string): Promise
       const granted = await tx.playerCharacter.createMany({ data: [{ playerId, characterId: master.id }], skipDuplicates: true });
       if (granted.count) legend = { id: master.id, name: master.name, element: master.element };
     }
+    await synchronizePlayerAwards(tx,playerId);
     return { character: { id: character.id, name: character.name, element: character.element, imageUrl:characterImageUrl(character.imageId) }, acquired, departmentCount: owned.length, legend };
   });
 }

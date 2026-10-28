@@ -1,0 +1,9 @@
+[
+  {"id":"thunder-fox","file":"e","yaw":180,"visibilitySource":"E科ポケモン修正版.blend","attack":"E科ポケモン修正版 _攻撃.glb","heal":"E科ポケモン修正版 _回復.glb"},
+  {"id":"aqua-spirit","file":"c","yaw":0,"attack":"学科モデルC科_ポンタス.blend 攻撃.blend","heal":"学科モデルC科_ポンタス.blend 回復.blend"},
+  {"id":"temp-06","file":"morinokami","yaw":0,"attack":"Morinokami _攻撃.glb","heal":"Morinokami _回復.glb"},
+  {"id":"temp-08","file":"coatoron","yaw":0,"attack":"コートロン.blend 攻撃","heal":"コートロン.blend 回復"},
+  {"id":"temp-09","file":"denrako","yaw":-90,"flip":true,"attack":"デンラコ.blend 攻撃","heal":"デンラコ.blend 回復"},
+  {"id":"temp-11","file":"bushirakko","yaw":-90,"attack":"ブシラッコ _攻撃.glb","heal":"ブシラッコ _回復.glb"},
+  {"id":"des-dragoon","file":"des-dragoon-red","yaw":0,"attack":"敵キャラ_デスドラグーン（赤）攻撃.blend"}
+]

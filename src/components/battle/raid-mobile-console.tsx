@@ -14,6 +14,7 @@ import { PartnerScene } from "./partner-scene";
 import { RaidHpGauge } from "./raid-hp-gauge";
 import { LocalRaidGuide } from "./local-raid-guide";
 import styles from "./raid-mobile.module.css";
+import type { CharacterMotionCue } from "@/lib/character-motion-player";
 
 type ResultView = Pick<LocalRaidResult, "action" | "hand" | "boss" | "outcome" | "label" | "multiplier" | "amount" | "counterDamage"> & { key: string; submitted?: boolean };
 type Attempt = { type: "command"; roomId: string; round: number; requestId: string; action: LocalRaidAction; hand: RaidHand };
@@ -37,6 +38,8 @@ export function RaidMobileConsole({ partners, local = false, production = false 
   const [previewWaiting, setPreviewWaiting] = useState(false);
   const [result, setResult] = useState<ResultView | null>(null);
   const [impact, setImpact] = useState<{ key: string; kind: "heal" | "counter"; amount: number } | null>(null);
+  const [motionCue, setMotionCue] = useState<CharacterMotionCue | null>(null);
+  const motionSeen = useRef({ roomId: "", turn: 0 });
   const impactSeen = useRef({ roomId: "", action: 0, counter: 0 });
   const seen = useRef({ roomId: "", turn: 0 });
   const joined = useRef("");
@@ -74,10 +77,23 @@ export function RaidMobileConsole({ partners, local = false, production = false 
   }, [local, raw?.roomId, raw?.me?.characterId, partnerId, join]);
   const inputRound = useRef(0);
   useEffect(() => {
+    if (!raw) return;
+    if (motionSeen.current.roomId !== raw.roomId) {
+      motionSeen.current = { roomId: raw.roomId, turn: raw.actionTurn };
+      setMotionCue(null); return;
+    }
+    if (raw.actionTurn <= motionSeen.current.turn) return;
+    const latest = raw.me?.lastResult;
+    if (latest?.submitted && latest.characterId === partnerId && latest.turn === raw.actionTurn) {
+      setMotionCue({ action: latest.action, key: `${raw.roomId}:${latest.turn}` });
+    }
+    motionSeen.current.turn = raw.actionTurn;
+  }, [raw?.roomId, raw?.actionTurn, raw?.me?.lastResult?.id, partnerId]);
+  useEffect(() => {
     if (raw?.round.phase !== "collecting" || inputRound.current === raw.round.number) return;
     inputRound.current = raw.round.number;
     token.current++; locked.current = false;
-    setResult(null); setHand(null); setAttempt(null); setSending(false); setError("");
+    setResult(null); setMotionCue(null); setHand(null); setAttempt(null); setSending(false); setError("");
     if (local) setAction(null);
   }, [raw?.roomId, raw?.round.number, raw?.round.phase]);
 
@@ -178,7 +194,7 @@ export function RaidMobileConsole({ partners, local = false, production = false 
   const retry = local && Boolean(attempt && error) && !busy && !ended && accepting;
   const rejoin = local && interactive && Boolean(raw) && !joining && !busy && !ended && raw?.me?.characterId !== partnerId;
   const localStatus = ended ? "戦闘不能" : sending ? "送信中…" : waiting || result ? "次の受付まで待機" : joining ? "参加中…" : !accepting ? "受付開始を待っています" : !action ? "① 攻撃か回復を選ぼう" : "② 手をタップして決定";
-  function selectPartner(id: string) { if(characterFrozen || unsettled) return; setPartnerId(id); setHand(null); setError(""); }
+  function selectPartner(id: string) { if(characterFrozen || unsettled) return; setPartnerId(id); setMotionCue(null); setHand(null); setError(""); }
   function cyclePartner(direction: number) { selectPartner(partners[(partners.findIndex((item)=>item.id===partner.id)+direction+partners.length)%partners.length].id); }
 
   return <div className={`${styles.console} ${styles.partnerLayout} ${local ? styles.localConsole : ""}`} data-phase={victory ? "victory" : phase}>
@@ -194,7 +210,7 @@ export function RaidMobileConsole({ partners, local = false, production = false 
         {local && <div className={styles.localPartnerSelect} title={`パートナー変更：${partner.name}`}><select aria-label="参加キャラクター" value={partner.id} disabled={characterFrozen || unsettled} onChange={event=>selectPartner(event.target.value)}>{partners.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><Repeat2 size={17} aria-hidden="true"/></div>}
         <div className={styles.stageScenery} aria-hidden="true"><div className={styles.portalFloor}/>{Array.from({length:6},(_,i)=><i key={i} style={{"--prism":i} as CSSProperties}/>)}</div>
         <div className={styles.characterEffects} data-counter={impact?.kind === "counter"}>
-          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター`}><PartnerScene element={partner.element} characterId={partner.id} imageUrl={partner.imageUrl}/></div>
+          <div className={styles.character} role="img" aria-label={`${partner.name}：正面を向いた自分のキャラクター`}><PartnerScene element={partner.element} characterId={partner.id} imageUrl={partner.imageUrl} motion={local?motionCue:result&&result.submitted!==false?{action:result.action,key:result.key}:null}/></div>
           {(result || impact) && <div key={impact?.key ?? result?.key} className={styles.particles} aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <Sparkles key={i} style={{ "--i": i } as CSSProperties}/>)}</div>}
           {(impact?.kind === "heal" || (!local && result?.action === "heal")) && <span className={styles.healNumber}>+{impact?.kind === "heal" ? impact.amount : result!.amount}<Heart size={18}/></span>}
           {impact?.kind === "counter" && <span className={styles.hitNumber}>−{impact.amount}</span>}

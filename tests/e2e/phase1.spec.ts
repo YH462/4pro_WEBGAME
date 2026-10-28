@@ -32,8 +32,8 @@ test("guest entry, persistent session, dictionary and nickname update", async ({
   for (const label of ["HP", "攻撃", "防御", "チャージ効率"]) {
     await expect(page.getByRole("group", { name: label, exact: true })).toBeVisible();
   }
-  await page.getByRole("tab", { name: "必殺技", exact: true }).click();
-  await expect(page.locator(".skill-list > div")).toHaveCount(1);
+  await expect(page.getByRole("tab", { name: "必殺技", exact: true })).toHaveCount(0);
+  await page.getByRole("tab", { name: "紹介", exact: true }).click();
   await page.goto("/profile");
   await page.getByRole("button", { name: "ニックネームを編集", exact: true }).click();
   await expect(page.getByRole("textbox", { name: /ニックネーム/ })).toBeFocused();

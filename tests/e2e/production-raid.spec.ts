@@ -8,6 +8,9 @@ import { collectSmallText } from "../../scripts/ui-review/small-text";
 const eventId = "raid-production-test", origin = "http://localhost:13026";
 const configured = process.env.EVENT_ID === eventId && new URL(process.env.DATABASE_URL || "postgresql://localhost:5432/unused").port === "55436";
 test.skip(!configured, "Use playwright.production.config.ts with the isolated production-raid test database.");
+// Three recorded software-WebGL surfaces can dominate the ten-second input
+// window. Other test files retain traces; this suite checks the live surfaces.
+test.use({trace:"off"});
 const db = new PrismaClient(), playerIds: string[] = [], adminIds: string[] = [];
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 let adminHeaders: Record<string, string>, adminToken: string;
@@ -154,6 +157,8 @@ test("twenty concurrent phones keep all inputs, deduplicate retries and share on
   const finishes = await Promise.all(Array.from({ length: 4 }, () => post(request, adminHeaders, { type: "finish", roomId: state.roomId, turn: 1 })));
   expect(finishes.map((response) => response.status())).toEqual(Array(4).fill(200));
   expect((await snapshot(request)).round.phase).toBe("finished");
+  expect(await db.raidReward.count({where:{playerId:{in:guests.map(guest=>guest.id)}}})).toBe(20);
+  expect((await db.raidReward.aggregate({where:{playerId:{in:guests.map(guest=>guest.id)}},_sum:{points:true}}))._sum.points).toBe(2000);
   expect((await post(request, adminHeaders, { type: "reset", roomId: state.roomId })).status()).toBe(200);
   expect((await post(request, adminHeaders, { type: "reset", roomId: state.roomId })).status()).toBe(409);
   expect((await post(request, guests[0].headers, commands[0])).status()).toBe(409);
@@ -188,4 +193,37 @@ test("a real screen and two phones complete a round and reconnect after reload",
     await page.getByRole("button", { name: "同期設定", exact: true }).click(); await page.getByRole("button", { name: "同期をリセット", exact: true }).click();
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");
   } finally { for (const context of phoneContexts) await context.close(); }
+});
+
+test("authored motions follow two synchronized participants with the same character and different actions", async ({ page, browser, request }) => {
+  test.setTimeout(120_000);
+  const guests = await Promise.all([player(), player()]);
+  for (const guest of guests) expect((await post(request, guest.headers, { type: "join", characterId: "temp-09" })).status()).toBe(200);
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  const contexts = await Promise.all(guests.map(()=>browser.newContext({baseURL:origin,viewport:{width:390,height:844},isMobile:true,hasTouch:true})));
+  try {
+    const phones = await Promise.all(contexts.map(async(context,index)=>{
+      await context.addCookies([{name:"fourpro_guest",value:guests[index].token,url:origin}]);
+      const phone=await context.newPage(); await phone.goto("/battle/raid");
+      await expect(phone.locator('[data-character-id="temp-09"] canvas')).toHaveAttribute("data-raid-motions-ready","true",{timeout:30_000});
+      return phone;
+    }));
+    await page.goto("/raid/screen");
+    const screen=page.getByRole("region",{name:"ボスとエフェクト"}).locator("canvas");
+    await expect(screen).toHaveAttribute("data-character-models","temp-09,temp-09",{timeout:30_000});
+    const state=await snapshot(request);
+    expect((await post(request,adminHeaders,{type:"start",roomId:state.roomId})).status()).toBe(200);
+    const commands=await Promise.all(guests.map((guest,index)=>post(request,guest.headers,{type:"command",roomId:state.roomId,round:1,requestId:randomUUID(),action:index===0?"attack":"heal",hand:"rock"})));
+    expect(commands.map(response=>response.status())).toEqual([200,200]);
+    await Promise.all([
+      expect(screen).toHaveAttribute("data-character-motions",/0:temp-09:attack,1:temp-09:heal/,{timeout:30_000}),
+      expect(phones[0].locator('[data-character-id="temp-09"] canvas')).toHaveAttribute("data-raid-motion","attack",{timeout:30_000}),
+      expect(phones[1].locator('[data-character-id="temp-09"] canvas')).toHaveAttribute("data-raid-motion","heal",{timeout:30_000}),
+    ]);
+    await expect.poll(async()=>(await snapshot(request)).round.number,{timeout:30_000}).toBe(2);
+    const resolved=await snapshot(request);
+    expect(resolved.results.map(result=>result.action).sort()).toEqual(["attack","heal"]);
+    await phones[0].reload();
+    await expect(phones[0].locator('[data-character-id="temp-09"] canvas')).toHaveAttribute("data-raid-motion","idle",{timeout:30_000});
+  } finally { for(const context of contexts) await context.close(); }
 });

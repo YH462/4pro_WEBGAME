@@ -28,8 +28,12 @@ export type RaidScreenPresentation = {
   onImpact: (id: string, kind: "action" | "counter") => void;
 };
 
-export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntryTarget[]; screen?: RaidScreenPresentation }) {
+type DemoCharacter = { id:string; name:string; sortOrder:number };
+export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initialDemoCharacterId }: { entryTargets: RaidEntryTarget[]; screen?: RaidScreenPresentation; demoCharacters?:DemoCharacter[]; initialDemoCharacterId?:string }) {
   const models=useCharacterModels();
+  const [demoCharacterId,setDemoCharacterId]=useState(()=>demoCharacters.some(c=>c.id===initialDemoCharacterId)?initialDemoCharacterId!:"");
+  const [demoReadiness,setDemoReadiness]=useState({id:"",ready:false});
+  const demoCharacter=screen?undefined:demoCharacters.find(c=>c.id===demoCharacterId);
   const [demoCue, setCue] = useState<ShowcaseCue>("idle");
   const cue = screen?.scene.cue ?? demoCue;
   const [iteration, setIteration] = useState(0);
@@ -49,9 +53,14 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   const effects = useRef<HTMLDivElement>(null);
   const health = useRef<HTMLSpanElement>(null);
   const delayedHealth = useRef<HTMLSpanElement>(null);
-  const context: RaidArenaContext | undefined = screen ? { members: screen.members, actorId: screen.scene.actorId, counterIds: screen.scene.counterIds, actions: screen.scene.actions } : undefined;
-  const latest = useRef({ auto: false, paused: false, context, complete: screen?.onComplete, models });
-  latest.current = { auto: !screen && auto, paused: !screen && paused, context, complete: screen?.onComplete, models };
+  const demoActor="motion-preview";
+  const context: RaidArenaContext | undefined = screen ? { members: screen.members, actorId: screen.scene.actorId, counterIds: screen.scene.counterIds, actions: screen.scene.actions } : demoCharacter ? {
+    members:[{id:demoActor,nickname:demoCharacter.name,characterId:demoCharacter.id,characterName:demoCharacter.name,hp:100,maxHp:100}],actorId:demoActor,counterIds:[demoActor],
+    actions:cue==="attack"||cue==="critical"?[{participantId:demoActor,action:"attack",multiplier:cue==="critical"?2:1,amount:cue==="critical"?100:50}]:cue==="heal"?[{participantId:demoActor,action:"heal",multiplier:1,amount:60}]:[],
+  } : undefined;
+  const latest = useRef({ auto: false, paused: false, context, complete: screen?.onComplete, models, demoCharacterId:demoCharacter?.id });
+  latest.current = { auto: !screen && auto, paused: !screen && paused, context, complete: screen?.onComplete, models, demoCharacterId:demoCharacter?.id };
+  const demoPlayable=renderer!=="loading"&&(!demoCharacter||renderer==="fallback"||demoReadiness.id===demoCharacter.id&&demoReadiness.ready);
   const fixture = showcaseScenes.find((item) => item.id === cue)!;
   const scene = screen?.scene ?? fixture;
   const { beforeHp, hp: targetHp, seconds } = scene;
@@ -110,6 +119,11 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
       if (now - lastDraw < 25 && frame.phase === lastPhase) return;
       lastDraw = now; lastPhase = frame.phase;
       arena.current?.render(frame, latest.current.context);
+      const selected=latest.current.demoCharacterId;
+      if(selected){
+        const ready=arena.current?.characterReady(selected)??false;
+        setDemoReadiness(previous=>previous.id===selected&&previous.ready===ready?previous:{id:selected,ready});
+      }
       animations.forEach((animation) => { animation.currentTime = frame.visualMs; });
       const width = (progress: number) => `${(beforeHp + (targetHp - beforeHp) * progress) / maxHp * 100}%`;
       if (health.current) health.current.style.width = width(frame.hpProgress);
@@ -152,7 +166,7 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
   }
 
   return <div className={styles.viewport}>
-    <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} data-actor-ids={screen?.scene.actions.map((action) => action.participantId).join(",")} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
+    <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-demo-character-id={demoCharacter?.id} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} data-actor-ids={screen?.scene.actions.map((action) => action.participantId).join(",")} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
       <div className={styles.honeycomb}/>
       <div className={styles.brand}>4<span>PRO</span></div>
       <div className={styles.demoBadge}>{screen?.status ?? "PC 演出デモ"}</div>
@@ -193,22 +207,31 @@ export function RaidShowcase({ entryTargets, screen }: { entryTargets: RaidEntry
         {renderer === "loading" && <p className={styles.rendererNote} role="status">3D演出を準備しています…</p>}
         {renderer === "fallback" && <p className={styles.rendererNote} role="status">簡易表示 · 3D表示にはWebGL対応ブラウザを使用してください</p>}
       </section>
-      <div className={styles.members}><Users/><strong>{screen ? screen.members.length : 12}<small>人</small></strong><span>{screen ? `生存 ${screen.members.filter((member) => member.hp > 0).length} 人` : "DEMO TEAM"}</span></div>
+      <div className={styles.members}><Users/><strong>{screen ? screen.members.length : demoCharacter?1:4}<small>人</small></strong><span>{screen ? `生存 ${screen.members.filter((member) => member.hp > 0).length} 人` : "DEMO TEAM"}</span></div>
       <div className={styles.qr}><RaidJoinCard targets={entryTargets} local={screen?.local ?? false} production={screen?.production} compact={!screen}/></div>
       {screen && <ul className={styles.liveMembers} aria-label="参加者とキャラクター">{screen.members.map((member, i) => <li key={member.id} data-participant-id={member.id} data-character-id={member.characterId} data-active={screen.scene.actions.some((action) => action.participantId === member.id)} style={{ "--member-color": `#${(characterColors[member.characterId] ?? 0xb18aff).toString(16).padStart(6, "0")}` } as CSSProperties}><b>{String(i + 1).padStart(2, "0")}</b><span>{member.nickname}<small>{member.characterName}</small></span><strong>{member.hp}<small> / {member.maxHp}</small></strong></li>)}</ul>}
       {!screen && <div className={styles.controls} aria-label="演出デモの操作">
+        {demoCharacters.length>0&&<div className={styles.characterPicker}>
+          <label htmlFor="demo-character">確認するキャラ</label>
+          <select id="demo-character" value={demoCharacterId} onChange={event=>{setDemoCharacterId(event.target.value);select("idle");}}>
+            <option value="" disabled>キャラを選択</option>
+            {demoCharacters.map(character=><option key={character.id} value={character.id}>No.{String(character.sortOrder).padStart(3,"0")} {character.name}</option>)}
+          </select>
+          {demoCharacter&&!demoPlayable&&<span role="status">読み込み中…</span>}
+          {demoCharacter&&<a href="/raid/screen?demo=effects">4人デモ</a>}
+        </div>}
         {cue === "rps" && <div className={styles.rpsPicker} role="group" aria-label="デモのボスの手"><span>デモの手</span>{raidHands.map(({ id, label }) => {
           const Icon = handIcons[id];
           return <button type="button" key={id} aria-label={`${label}で再生`} aria-pressed={bossHand === id} onClick={() => { setBossHand(id); select("rps"); }}><Icon/>{label}</button>;
         })}</div>}
         <div className={styles.playback}>
-          <button type="button" disabled={renderer === "loading"} className={auto ? styles.active : ""} aria-pressed={auto} onClick={() => { setAuto((value) => !value); setPaused(false); if (cue === "victory") { setCue("idle"); setIteration((value) => value + 1); } }}><Play/>連続デモ</button>
+          <button type="button" disabled={!demoPlayable} className={auto ? styles.active : ""} aria-pressed={auto} onClick={() => { setAuto((value) => !value); setPaused(false); if (cue === "victory") { setCue("idle"); setIteration((value) => value + 1); } }}><Play/>連続デモ</button>
           <button type="button" aria-label={paused ? "演出を再開" : "演出を一時停止"} aria-pressed={paused} onClick={() => setPaused((value) => !value)}>{paused ? <Play/> : <Pause/>}</button>
           <button type="button" aria-label="今の演出をもう一度" onClick={() => { setPaused(false); setIteration((value) => value + 1); }}><RotateCcw/></button>
         </div>
         <div className={styles.scenes} role="group" aria-label="演出を選ぶ">{showcaseScenes.map((item) => {
           const Icon = icons[item.id];
-          return <button type="button" key={item.id} disabled={renderer === "loading"} aria-pressed={cue === item.id} onClick={() => select(item.id)}><Icon/><span>{item.label}</span></button>;
+          return <button type="button" key={item.id} title={item.label} disabled={!demoPlayable} aria-pressed={cue === item.id} onClick={() => select(item.id)}><Icon/><span>{item.label}</span></button>;
         })}</div>
       </div>}
       {screen && <footer className={styles.liveFooter}><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</footer>}

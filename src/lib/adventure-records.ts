@@ -8,4 +8,6 @@ export type RaidHistoryRecord = {
 export type AdventureRecords = {
   playerId: string; collected: number; total: number; raidCount: number; victories: number;
   characters: CollectedPartnerRecord[]; raids: RaidHistoryRecord[];
+  awards: PlayerAwardsView;
 };
+import type { PlayerAwardsView } from "./achievement-rules";

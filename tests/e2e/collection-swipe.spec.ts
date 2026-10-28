@@ -50,7 +50,7 @@ test("vertical, diagonal, short, cancelled, mouse and multi-touch gestures do no
   await page.getByRole("tab", { name: "紹介", exact: true }).tap();
   await expect(page.getByRole("tab", { name: "紹介", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "ステータス", exact: true }).focus(); await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("tab", { name: "必殺技", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "紹介", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(/\/collection\/forest-golem$/);
 });
 

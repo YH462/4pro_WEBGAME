@@ -13,3 +13,6 @@
 @media(max-width:1000px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.stage { height:300px; } }
 @media(max-width:540px) { .page { padding:20px 14px; }.grid { gap:12px; }.card { padding:12px; }.card h2 { font-size:13px; gap:6px; }.stage { height:235px; }.card>a { font-size:11px; padding:8px 2px; } }
 .category { color:#796570; font-size:12px; margin:6px 0; }
+.motionControls { display:flex; gap:6px; margin:0 0 12px; }
+.motionControls button { flex:1; min-height:36px; border:1px solid #d9bbc5; border-radius:6px; background:#fff5f7; color:#9c2240; font-size:13px; font-weight:700; }
+.motionControls button:hover { background:#fce1e8; }

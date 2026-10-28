@@ -42,6 +42,8 @@ model Player {
   characters PlayerCharacter[]
   acquisitions AcquisitionLog[]
   raidResults RaidResult[]
+  raidRewards RaidReward[]
+  achievements PlayerAchievement[]
   @@index([eventId])
 }
 
@@ -57,8 +59,32 @@ model RaidResult {
   turns         Int
   finishedAt    DateTime @default(now())
   player        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reward        RaidReward?
   @@unique([roomId, playerId])
   @@index([playerId, finishedAt])
+}
+
+// Immutable points ledger: one reward for one recorded player/battle result.
+model RaidReward {
+  id           String @id @default(uuid())
+  raidResultId String @unique
+  playerId     String
+  points       Int
+  awardedAt    DateTime @default(now())
+  raidResult   RaidResult @relation(fields: [raidResultId], references: [id], onDelete: Cascade)
+  player       Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  @@index([playerId, awardedAt])
+}
+
+// Each milestone grants its configured title and badge together, once.
+model PlayerAchievement {
+  id        String @id @default(uuid())
+  playerId  String
+  code      String @db.VarChar(64)
+  earnedAt  DateTime @default(now())
+  player    Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  @@unique([playerId, code])
+  @@index([playerId, earnedAt])
 }
 
 model GuestSession {

@@ -14,7 +14,8 @@ test("an unregistered visitor browses collection and detail tabs without a nickn
   await expect(page.getByRole("progressbar", { name: "キャラクター獲得進捗" })).toHaveAttribute("aria-valuenow", "0");
   await page.getByRole("link", { name: "フォレストゴーレムの詳細を見る（未獲得）", exact: true }).click();
   await expect(page.getByRole("heading", { name: "フォレストゴーレム", exact: true })).toBeVisible();
-  for (const label of ["必殺技", "紹介", "ステータス"]) {
+  await expect(page.getByRole("tab", { name: "必殺技", exact: true })).toHaveCount(0);
+  for (const label of ["紹介", "ステータス"]) {
     await page.getByRole("tab", { name: label, exact: true }).click();
     await expect(page.getByRole("tab", { name: label, exact: true })).toHaveAttribute("aria-selected", "true");
   }

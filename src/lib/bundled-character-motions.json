@@ -1,0 +1,86 @@
+{
+  "thunder-fox": {
+    "baseSha256": "b01541601c27e92d5649152dfb6406bb2015e541587f78f0959e8135b4c4f767",
+    "baseYaw": 180,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/e-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/e-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
+  "aqua-spirit": {
+    "baseSha256": "89c7cb1e1dcb2aebfc2903a70bfda24173d445486c8f35dfed7c5f8655fc0b36",
+    "baseYaw": 0,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/c-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/c-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
+  "temp-06": {
+    "baseSha256": "fdfc82f075527ea949326f872af9545013bc6c8b8878b51759aac4712e697cd3",
+    "baseYaw": 0,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/morinokami-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/morinokami-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
+  "temp-08": {
+    "baseSha256": "6407df4610904f924acf16fdde9115d8b8fe44f0ba674f0575b4df6ed08a5545",
+    "baseYaw": 0,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/coatoron-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/coatoron-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
+  "temp-09": {
+    "baseSha256": "7ae7badfc8c8d5ff051eec7958f1570d0e3fa3e8baa40a69ee99a49036903ec2",
+    "baseYaw": 0,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/denrako-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/denrako-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
+  "temp-11": {
+    "baseSha256": "6682e0c98b8aef1971f29cba2d0686dadd95744c3cb82914bcfdcdc2bb3ff2a3",
+    "baseYaw": 0,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/bushirakko-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/bushirakko-heal.glb",
+        "yaw": 0
+      }
+    }
+  }
+}

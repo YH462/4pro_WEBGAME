@@ -10,4 +10,5 @@ export const boss = {
   modelUrl: bossVariants.red,
   imageUrl: "/models/bosses/des-dragoon-red.webp",
   yaw: 0,
+  motions: { attack: { url: "/models/motions/des-dragoon-red-attack.glb", yaw: 0 } },
 } as const;

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { characterModel, type CharacterModelAsset } from "./character-models";
+import { createCharacterMotionPlayer, raidMotionWindowMs, type CharacterMotionCue } from "./character-motion-player";
 import { createCharacterModelLibrary, disposeModel } from "./character-model-loader";
 
 type Point = [number, number];
@@ -108,9 +109,12 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
   const hasModel=Boolean(asset);
   character.visible=!hasModel;
   const size = new THREE.Vector3(), center = new THREE.Vector3();
+  const restBounds = new THREE.Box3(), motionBounds = new THREE.Box3();
   const camera = new THREE.OrthographicCamera(-2,2,2,-2,.1,50);
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let frame = 0, disposed = false, imported = false, last = -Infinity, dirty = true;
+  let motionPlayer: ReturnType<typeof createCharacterMotionPlayer> | undefined;
+  let motionCue: (CharacterMotionCue & { startedAt: number }) | null = null;
   let width = 1, height = 1;
   const fit = () => {
     const aspect = width / height, half = Math.max(size.y * .57, size.x * .57 / aspect);
@@ -120,6 +124,7 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
   };
   const measure = () => {
     const bounds = new THREE.Box3().setFromObject(character);
+    restBounds.copy(bounds);
     bounds.getSize(size); bounds.getCenter(center); fit();
   };
   measure(); // Fixed front: no automatic orbit.
@@ -130,6 +135,17 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
       if (disposed) return;
       scene.remove(character); disposeModel(character);
       character = model; imported = true; scene.add(character); measure();
+      motionPlayer = createCharacterMotionPlayer(model, library, asset.motions);
+      void motionPlayer.ready.then(()=>{
+        if(disposed)return;
+        // Keep one camera framing for idle, attack and heal. Changing it only
+        // during an action made the character appear to jump/shrink on start.
+        character.position.y=0;
+        if(motionPlayer?.bounds(motionBounds)){
+          motionBounds.union(restBounds);motionBounds.getSize(size);motionBounds.getCenter(center);fit();
+        }
+        canvas.dataset.raidMotionsReady="true";dirty=true;
+      });
       renderer.render(scene,camera); // Reveal the canvas only after the first real-model frame is drawn.
       onModelState?.("ready");
     }).catch((error: unknown) => {
@@ -145,11 +161,19 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
     frame = requestAnimationFrame(draw);
     if (document.hidden || (!dirty && (motion.matches || now-last<30))) return;
     dirty=false; last=now;
+    const progress = motionCue ? (now - motionCue.startedAt) / raidMotionWindowMs : 1;
+    const active = motionPlayer?.sample(motion.matches ? null : motionCue?.action ?? null, progress);
+    canvas.dataset.raidMotion = active ? motionCue!.action : "idle";
     character.position.y = motion.matches ? 0 : Math.sin(now/900)*.015;
     renderer.render(scene,camera);
   };
   frame=requestAnimationFrame(draw);
   return {
+    play(cue: CharacterMotionCue | null) {
+      if (cue?.key === motionCue?.key && cue?.action === motionCue?.action) return;
+      motionCue = cue ? { ...cue, startedAt: performance.now() } : null;
+      dirty = true;
+    },
     resize(nextWidth: number,nextHeight: number) {
       if (disposed || nextWidth<=0 || nextHeight<=0) return;
       width = nextWidth; height = nextHeight;
@@ -161,7 +185,7 @@ export function createRaidPartnerArena(canvas: HTMLCanvasElement, element: strin
       // Imported resources belong to the library; the procedural fallback belongs to this arena.
       if (character.parent) scene.remove(character);
       if (!imported) disposeModel(character);
-      library.dispose(); renderer.dispose(); renderer.forceContextLoss();
+      motionPlayer?.dispose(); library.dispose(); renderer.dispose(); renderer.forceContextLoss();
     },
   };
 }

@@ -1,0 +1,27 @@
+.panel { display:flex; flex-direction:column; gap:14px; padding:0 4px 10px; color:var(--ink); }
+.points { display:flex; align-items:center; gap:12px; padding:18px 20px; border:1px solid #dbb363; border-radius:8px; background:linear-gradient(120deg,#fff5d5,#fffaf0 65%,#fff); color:#705019; }
+.points>svg { width:34px; height:34px; flex-shrink:0; color:#b27912; }
+.points>span { font-size:15px; font-weight:800; }
+.points strong { margin-left:auto; font-size:30px; font-weight:900; line-height:1.2; }
+.points small { margin-left:5px; font-size:14px; }
+.panel h3 { font-size:16px; font-weight:850; }
+.badges { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+.badges li { display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:12px; padding:14px; border:1px solid #ded8dc; border-radius:7px; background:#faf8f9; }
+.badges li[data-earned=true] { border-color:#df9caa; background:linear-gradient(120deg,#fff0f4,#fff); box-shadow:0 3px 12px #9b204610; }
+.emblem { display:grid; place-items:center; width:38px; height:42px; color:#66525d; background:#eae3e7; clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+.emblem svg { width:23px; height:23px; }
+[data-earned=true]>.emblem { color:white; background:linear-gradient(135deg,#ee405b,#b91636); }
+.badges strong { display:block; font-size:15px; font-weight:850; overflow-wrap:anywhere; }
+.badges p { margin:3px 0; font-size:13px; font-weight:700; }
+.badges li>div>span { display:block; font-size:12px; font-weight:600; }
+.progress { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:12px; white-space:nowrap; color:#66525d; }
+[data-earned=true]>.progress { color:#b01836; }
+.history { border-top:1px solid #e8d5dd; padding-top:12px; }
+.history summary { cursor:pointer; font-size:14px; font-weight:800; }
+.history ul { list-style:none; padding:10px 0 0; margin:0; display:grid; gap:8px; }
+.history li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid #eddec1; border-radius:5px; background:#fffbf1; }
+.history strong { display:block; font-size:13px; font-weight:750; }
+.history time { display:block; margin-top:3px; font-size:12px; }
+.history b { color:#825710; font-size:14px; white-space:nowrap; }
+@media(min-width:1100px){.badges{grid-template-columns:repeat(2,minmax(0,1fr));}.badges li{gap:8px;padding:12px;}}
+@media(max-width:430px){.points{padding:14px 12px;gap:8px;}.points strong{font-size:26px;}.points>span{font-size:14px;}.badges li{grid-template-columns:32px minmax(0,1fr) auto;gap:8px;padding:11px 9px;}.emblem{width:32px;height:36px;}.badges strong{font-size:14px;}.badges p{font-size:12px;}}

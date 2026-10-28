@@ -2,14 +2,13 @@
 
 import { useEffect, useId, useRef, useState, useTransition, type PointerEvent } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Check, FileText, Gauge, Heart, LockKeyhole, Shield, Sparkles, Swords } from "lucide-react";
+import { BarChart3, Check, FileText, Gauge, Heart, LockKeyhole, Shield, Swords } from "lucide-react";
 import { CharacterArt } from "./character-art";
 import type { PartnerView } from "@/lib/character-presentation";
 import styles from "./partner-panel.module.css";
 
 const tabs = [
   { id: "stats", label: "ステータス", icon: BarChart3 },
-  { id: "skills", label: "必殺技", icon: Sparkles },
   { id: "about", label: "紹介", icon: FileText },
 ] as const;
 const statIcons = [Heart, Swords, Shield, Gauge];
@@ -137,23 +136,6 @@ export function PartnerPanel({ partner, previous, next }: { partner: PartnerView
                 </div>
               );
             })}
-          </div>}
-          {tab === "skills" && <div className={`skill-list ${styles.skills}`}>
-            <div className={styles.infoFrame}>
-              <svg className={styles.skillBackdrop} viewBox="0 0 200 200" aria-hidden="true">
-                <polygon points="138,14 158,14 168,32 158,50 138,50 128,32" opacity=".055"/>
-                <polygon points="68,62 122,62 149,109 122,156 68,156 41,109" opacity=".025"/>
-                <polygon points="116,135 156,135 176,170 156,205 116,205 96,170" opacity=".025"/>
-              </svg>
-              <span className={styles.skillEmblem}><Sparkles className={styles.skillIcon} size={24}/></span>
-              <div className={styles.skillHeading}>
-
-                <strong>{partner.specialMove?.name ?? "必殺技"}</strong>
-              </div>
-              <small className={styles.skillBadge}>{partner.specialMove?.confirmed ? "登録済み" : "準備中"}</small>
-
-
-            </div>
           </div>}
           {tab === "about" && <div className={`${styles.infoFrame} ${styles.about}`}>
             <p>{partner.description}</p>

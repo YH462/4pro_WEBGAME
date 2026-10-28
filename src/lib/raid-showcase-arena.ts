@@ -5,6 +5,7 @@ import { showcaseImpactMs } from "./raid-showcase-scenes";
 import { characterColors, raidMemberPosition, type RaidArenaContext } from "./raid-screen-playback";
 import type { CharacterModelCatalog } from "./character-models";
 import { createCharacterModelLibrary } from "./character-model-loader";
+import { createCharacterMotionPlayer, raidMotionWindowMs } from "./character-motion-player";
 
 const clamp = THREE.MathUtils.clamp;
 const ease = (value: number) => 1 - (1 - clamp(value, 0, 1)) ** 3;
@@ -125,7 +126,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       const hand = new THREE.Object3D(); hand.position.y = -.14; arm.add(hand); hands.push(hand);
     }
     ally.scale.setScalar(.8); ally.position.set(x * .9, 0, 2.75 + Math.abs(x) * .08); ally.rotation.y = Math.atan2(-x, 3.5); ally.visible = i < 4; scene.add(ally);
-    return { root: ally, body, arms, hands, legs, suit, fallbackParts, home: ally.position.clone(), modelId: "", modelVersion: 0, model: null as THREE.Group | null };
+    return { root: ally, body, arms, hands, legs, suit, fallbackParts, home: ally.position.clone(), modelId: "", modelVersion: 0, model: null as THREE.Group | null, motionPlayer: null as ReturnType<typeof createCharacterMotionPlayer> | null, ready:false };
   });
   let actorIndex = 2;
   let attacker = allies[actorIndex];
@@ -253,6 +254,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   const reportModels = () => {
     canvas.dataset.characterModels = allies.filter((ally) => ally.model).map((ally) => ally.modelId).join(",");
     canvas.dataset.characterModelUrls = allies.filter((ally) => ally.model).map((ally) => catalog[ally.modelId]?.url??"").join(",");
+    canvas.dataset.characterMotionsReady = allies.filter(ally=>ally.root.visible&&ally.ready).map(ally=>ally.modelId).join(",");
   };
   const setAllyModel = (ally: typeof allies[number], characterId: string) => {
     const asset=catalog[characterId];
@@ -260,7 +262,9 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     if (ally.root.userData.modelKey === key) return;
     ally.root.userData.modelKey=key;
     ally.modelId = characterId;
+    ally.ready = catalogReady&&!asset;
     const version = ++ally.modelVersion;
+    ally.motionPlayer?.dispose(); ally.motionPlayer = null;
     if (ally.model) { ally.body.remove(ally.model); ally.model = null; }
     ally.fallbackParts.forEach((part) => { part.visible = catalogReady&&!asset; }); reportModels();
     if (!asset) return;
@@ -272,9 +276,14 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       // Models face the boss; the hidden hand anchors retain the shared effects' original transforms.
       model.rotation.y = Math.atan2(-ally.home.x, -ally.home.z) - ally.root.rotation.y;
       ally.model = model; ally.body.add(model);
+      ally.motionPlayer = createCharacterMotionPlayer(model, modelLibrary, asset.motions);
+      void ally.motionPlayer.ready.then(()=>{
+        if(disposed||ally.modelVersion!==version)return;
+        ally.ready=true;reportModels();
+      });
       ally.fallbackParts.forEach((part) => { part.visible = false; }); reportModels();
     }).catch((error: unknown) => {
-      if (!disposed && ally.modelVersion === version) { ally.fallbackParts.forEach((part)=>{part.visible=true;}); console.warn(`Could not load screen character: ${characterId}`, error); }
+      if (!disposed && ally.modelVersion === version) { ally.ready=true;ally.fallbackParts.forEach((part)=>{part.visible=true;});reportModels(); console.warn(`Could not load screen character: ${characterId}`, error); }
     });
   };
   let demoModels = false;
@@ -356,6 +365,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
     const attacking = cue === "attack" || cue === "critical";
     const critical = cue === "critical";
     const counter = cue === "counter";
+    bossModel.sample(counter && !reduced, frame.visualMs / raidMotionWindowMs);
     const counterFrame = showcaseCounterFrame(frame.visualMs);
     const hit = time - showcaseImpactMs / 1000;
     const burst = Math.max(0, hit);
@@ -525,11 +535,14 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       ring.position.set(allies[i].home.x, .025, allies[i].home.z); glow.position.set(allies[i].home.x, .6, allies[i].home.z);
       ring.material.opacity = pulse; ring.scale.setScalar(1 + pulse * .7); glow.material.opacity = pulse * .6; glow.scale.set(1.1, 1.8, 1);
     });
-    allies.forEach(({ root, body, arms, legs, home }, i) => {
+    allies.forEach(({ root, body, arms, legs, home, motionPlayer }, i) => {
       // All four react at arrival; vary the pose without staggering the hit.
       const recoil = counter && counterIndices.includes(i) && !reduced ? counterFrame.recoil * [.9, 1, .95, 1.08][i % 4] : 0;
       const slide = counter && counterIndices.includes(i) && !reduced ? counterFrame.slide : 0;
       const ownAction = context?.actions?.find((item) => item.participantId === context.members[i]?.id && item.action === "attack");
+      const authoredAction = context?.actions?.find(item=>item.participantId===context.members[i]?.id)?.action;
+      const motionKind = attacking || cue === "heal" ? context?.actions ? authoredAction ?? null : i === actorIndex ? cue === "heal" ? "heal" : "attack" : null : null;
+      motionPlayer?.sample(reduced ? null : motionKind, frame.visualMs / raidMotionWindowMs);
       const cast = attacking && (context?.actions ? Boolean(ownAction) : i === actorIndex) ? reduced ? 1 : 1 - ease((time - showcaseImpactMs / 1000 - 1.5) / .5) : 0;
       root.position.copy(home);
       root.position.y = reduced ? 0 : cue === "victory" ? Math.abs(Math.sin(time * 5 + i)) * .15 : Math.sin(time * 3 + i) * .02 * (1 - cast);
@@ -544,6 +557,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       });
       legs.forEach((leg, index) => { leg.rotation.x = recoil * (index ? -.65 : .45); leg.position.z = index ? slide * -.12 : 0; });
     });
+    canvas.dataset.characterMotions = allies.flatMap((ally,i)=>ally.model?.userData.raidMotion && ally.model.userData.raidMotion!=="idle"?[`${i}:${ally.modelId}:${ally.model.userData.raidMotion}`]:[]).join(",");
     breath.visible = counter;
     fanSheet.geometry.setDrawRange(0, Math.floor(counterFrame.flight * fanRows) * fanColumns * 6);
     fanMaterial.opacity = counterFrame.beam * (reduced ? .06 : .2);
@@ -603,10 +617,14 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
   };
   return {
     ready: bossModel.ready,
+    characterReady(id:string) {
+      const matching=allies.filter(ally=>ally.root.visible&&ally.modelId===id);
+      return matching.length>0&&matching.every(ally=>ally.ready);
+    },
     setModels(next: CharacterModelCatalog) {
       if (disposed||catalogReady&&JSON.stringify(catalog)===JSON.stringify(next)) return;
       const ids=allies.map((ally)=>ally.modelId);
-      allies.forEach((ally)=>{ ++ally.modelVersion; if(ally.model){ally.body.remove(ally.model);ally.model=null;} ally.root.userData.modelKey=""; });
+      allies.forEach((ally)=>{ ++ally.modelVersion; ally.motionPlayer?.dispose(); ally.motionPlayer=null; if(ally.model){ally.body.remove(ally.model);ally.model=null;} ally.root.userData.modelKey=""; });
       modelLibrary.dispose(); modelLibrary=createCharacterModelLibrary(); catalog=next; catalogReady=true;
       allies.forEach((ally,i)=>setAllyModel(ally,ids[i]));
     },
@@ -619,7 +637,7 @@ export function createShowcaseArena(canvas: HTMLCanvasElement) {
       if (disposed) return;
       disposed = true;
       bossModel.dispose();
-      allies.forEach((ally) => { if (ally.model) ally.body.remove(ally.model); });
+      allies.forEach((ally) => { ally.motionPlayer?.dispose(); if (ally.model) ally.body.remove(ally.model); });
       modelLibrary.dispose();
       const materials = new Set<THREE.Material>(); const geometries = new Set<THREE.BufferGeometry>();
       scene.traverse((object) => {

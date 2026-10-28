@@ -4,6 +4,7 @@ import { config } from "./config";
 import { HttpError } from "./http-error";
 import { LocalRaidError, LocalRaidRoom, type SavedRaidRoom } from "./local-raid-room";
 import { battlePreview } from "./battle-preview";
+import { synchronizePlayerAwards } from "./player-awards";
 
 type PersistedRaidRoom = SavedRaidRoom & { resultRecorded?: boolean };
 
@@ -19,6 +20,7 @@ async function recordFinishedRaid(tx: Prisma.TransactionClient, state: SavedRaid
     won: state.bossHp <= 0, turns: state.turn, finishedAt,
   }));
   if (data.length) await tx.raidResult.createMany({ data, skipDuplicates: true });
+  for(const playerId of data.map(result=>result.playerId).sort())await synchronizePlayerAwards(tx,playerId);
 }
 
 /** Each request reconstructs the room from PostgreSQL, never a process-local cache. */

@@ -8,10 +8,11 @@ import QRCode from "qrcode";
 import { localNetworkHosts } from "@/lib/local-network";
 import { raidEntryUrls } from "@/lib/raid-entry";
 import { RaidShowcase } from "@/components/raid-screen/raid-showcase";
+import { db } from "@/lib/db";
 
 export const metadata: Metadata = { title: "会場レイドスクリーン" };
 
-export default async function RaidScreenPage({ searchParams }: { searchParams: Promise<{ sync?: string; demo?: string }> }) {
+export default async function RaidScreenPage({ searchParams }: { searchParams: Promise<{ sync?: string; demo?: string; character?: string }> }) {
   const params = await searchParams;
   const showcase = params.demo === "effects";
   const local = !showcase && params.sync === "local";
@@ -24,5 +25,9 @@ export default async function RaidScreenPage({ searchParams }: { searchParams: P
     url,
     qrImage: await QRCode.toDataURL(url, { errorCorrectionLevel: "M", margin: 4, scale: 12, color: { dark: "#000000", light: "#ffffff" } }),
   })));
-  return showcase ? <RaidShowcase entryTargets={entryTargets}/> : <RaidScreen local production={!local} canSync={cfg.simulator} entryTargets={entryTargets}/>;
+  if (showcase) {
+    const characters=await db.character.findMany({select:{id:true,name:true,sortOrder:true},orderBy:{sortOrder:"asc"}});
+    return <RaidShowcase entryTargets={entryTargets} demoCharacters={characters} initialDemoCharacterId={params.character}/>;
+  }
+  return <RaidScreen local production={!local} canSync={cfg.simulator} entryTargets={entryTargets}/>;
 }

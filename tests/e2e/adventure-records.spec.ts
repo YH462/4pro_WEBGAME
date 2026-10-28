@@ -69,6 +69,12 @@ test("collection records refresh after NFC acquisitions and match raid-owned cha
   await expect(page.getByRole("link", { name: "4プロの収集記録", exact: true })).toBeVisible();
   const saved = await records(request, guest.headers);
   expect(saved.collected).toBe(5); expect(saved.characters.map(item => item.id)).toContain("four-pro");
+  expect(saved.awards.points).toBe(0);
+  expect(saved.awards.activeTitle).toBe("4学科の探究者");
+  expect(saved.awards.achievements.filter(item=>item.earnedAt).map(item=>item.code).sort()).toEqual(["department-complete","first-companion"]);
+  await page.getByRole("tab",{name:"報酬・称号",exact:true}).click();
+  await expect(page.getByRole("listitem",{name:"4学科コンプリート（獲得済み）",exact:true})).toBeVisible();
+  await expect(page.getByRole("group",{name:"討伐ポイント",exact:true})).toContainText("0");
   expect((await post(request, guest.headers, { type: "join", characterId: "four-pro" })).status()).toBe(200);
   const raid = await request.get("/api/raid?personal=1", { headers: guest.headers }); expect((await raid.json()).state.me.characterId).toBe("four-pro");
   expect((await records(request, guest.headers)).collected).toBe(5);
@@ -93,6 +99,9 @@ test("completed production raids appear live, survive reset and retries, and rem
   const before = await records(request, team[0].headers);
   expect(before).toMatchObject({ raidCount: 1, victories: 1, collected: 0 });
   expect(before.raids[0]).toMatchObject({ characterId: "forest-golem", bossName: "デスドラグーン", won: true });
+  expect(before.awards).toMatchObject({points:100,activeTitle:"ドラグーン討伐者"});
+  expect(before.awards.rewards).toHaveLength(1);
+  expect(await db.raidReward.count({where:{playerId:{in:team.map(member=>member.id)}}})).toBe(5);
   expect(await db.raidResult.count({ where: { roomId: snapshot.roomId } })).toBe(5);
   expect((await post(request, adminHeaders, { type: "finish", roomId: snapshot.roomId, turn: snapshot.turn })).status()).toBe(200);
   expect((await post(request, late.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(409);
@@ -100,6 +109,7 @@ test("completed production raids appear live, survive reset and retries, and rem
   expect(await records(request, team[0].headers)).toEqual(before);
   const other = await request.get(`/api/profile/records?playerId=${team[0].id}`, { headers: outsider.headers });
   expect((await other.json()).records).toMatchObject({ playerId: outsider.id, raidCount: 0, victories: 0, characters: [], raids: [] });
+  expect((await records(request,outsider.headers)).awards).toMatchObject({points:0,activeTitle:null,rewards:[]});
   expect((await request.get("/api/profile/records")).status()).toBe(401);
   await page.reload(); await page.getByRole("tab", { name: "冒険の記録", exact: true }).click();
   for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
@@ -107,6 +117,15 @@ test("completed production raids appear live, survive reset and retries, and rem
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
     expect((await collectSmallText(page)).filter(item => item.size <= 10)).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath(`adventure-raid-${viewport.width}.png`) });
+  }
+  await page.getByRole("tab",{name:"報酬・称号",exact:true}).click();
+  for(const viewport of [{width:375,height:667},{width:390,height:844},{width:430,height:932},{width:844,height:390}]){
+    await page.setViewportSize(viewport);
+    await expect(page.getByRole("group",{name:"討伐ポイント",exact:true})).toContainText("100");
+    await expect(page.getByRole("listitem",{name:"初討伐（獲得済み）",exact:true})).toBeVisible();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
+    expect((await collectSmallText(page)).filter(item=>item.size<=10)).toEqual([]);
+    await page.screenshot({path:testInfo.outputPath(`awards-${viewport.width}.png`)});
   }
 });
 
@@ -122,6 +141,9 @@ test("defeat is recorded while unfinished resets and trial characters do not add
   for (let i = 0; i < 9; i++) snapshot = await closeRound(request);
   expect(snapshot.round.phase).toBe("finished"); expect(snapshot.bossHp).toBe(450);
   expect(await records(request, guest.headers)).toMatchObject({ collected: 0, raidCount: 1, victories: 0, raids: [{ won: false }] });
+  const failedAwards=(await records(request,guest.headers)).awards;
+  expect(failedAwards.points).toBe(0);expect(failedAwards.activeTitle).toBe("レイドの仲間");
+  expect(failedAwards.achievements.filter(item=>item.earnedAt).map(item=>item.code)).toEqual(["first-raid"]);
   expect((await post(request, adminHeaders, { type: "reset", roomId: snapshot.roomId })).status()).toBe(200);
   expect((await records(request, guest.headers)).raidCount).toBe(1);
 });

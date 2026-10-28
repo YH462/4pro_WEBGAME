@@ -30,6 +30,9 @@
 .name h2 { font-size:clamp(24px,2.5vw,35px); font-weight:850; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .name button { display:grid; place-items:center; flex-shrink:0; width:34px; height:34px; padding:0; border:0; background:transparent; color:#a48c9b; }
 .name button:hover { color:var(--red); }
+.earnedTitle { display:inline-flex; align-items:center; gap:5px; margin:7px 0 0; padding:4px 10px; border:1px solid #e7b4c0; border-radius:4px; background:#fff1f5; color:#a21b38; font-size:13px; font-weight:800; line-height:1.4; }
+.earnedTitle svg { flex-shrink:0; }
+.awardsPanel { height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
 .tabs { display:flex; gap:1px; filter:drop-shadow(0 5px 9px #6c1e3612); min-height:0; }
 .tabs button { display:flex; align-items:center; justify-content:center; gap:12px; flex:1; min-width:0; padding:5px 12px; border:0; background:#fff; color:var(--ink); font-size:14px; font-weight:750; clip-path:polygon(15px 0,calc(100% - 15px) 0,100% 50%,calc(100% - 15px) 100%,15px 100%,0 50%); }
 .tabs button:hover { background:#fff0f2; }
