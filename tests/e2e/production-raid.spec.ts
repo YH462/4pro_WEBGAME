@@ -52,6 +52,102 @@ test.afterEach(async () => {
 });
 test.afterAll(async () => { await db.$disconnect(); });
 
+type MusicProbe = { contexts: AudioContext[]; sources: AudioBufferSourceNode[]; gains: GainNode[]; analyser?: AnalyserNode };
+declare global { interface Window { __raidMusicProbe: MusicProbe } }
+async function observeMusic(page: import("@playwright/test").Page) {
+  await page.addInitScript(() => {
+    const probe: MusicProbe = { contexts: [], sources: [], gains: [] };
+    window.__raidMusicProbe = probe;
+    const NativeAudioContext = window.AudioContext;
+    window.AudioContext = class extends NativeAudioContext {
+      constructor(options?: AudioContextOptions) { super(options); probe.contexts.push(this); }
+      createBufferSource() {
+        const source = super.createBufferSource(); probe.sources.push(source);
+        // Traverse the actual 60-second files twice during this browser test.
+        source.playbackRate.value = 20; return source;
+      }
+      createGain() {
+        const gain = super.createGain(); probe.gains.push(gain);
+        if (probe.gains.length === 1) { probe.analyser = this.createAnalyser(); gain.connect(probe.analyser); }
+        return gain;
+      }
+    };
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...args: unknown[]) {
+      return kind.includes("webgl") ? null : Reflect.apply(original, this, [kind, ...args]);
+    } as typeof original;
+  });
+}
+
+test("screen BGM loops continuously, follows reception and battle, and obeys the operator mute", async ({ page, request }, testInfo) => {
+  await observeMusic(page);
+  const downloads: string[] = [];
+  page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/music/")) downloads.push(request.url()); });
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  await page.setViewportSize({ width: 1292, height: 724 }); await page.goto("/raid/screen");
+  const turnOn = page.getByRole("button", { name: "BGMをオンにする", exact: true });
+  await expect(turnOn).toHaveAttribute("aria-pressed", "false");
+  expect(downloads).toHaveLength(0);
+  expect(await page.evaluate(() => window.__raidMusicProbe.contexts.length)).toBe(0);
+  await turnOn.click();
+  await expect(page.getByRole("button", { name: "BGMをオフにする", exact: true })).toHaveText("BGM オン");
+  expect(downloads).toHaveLength(2);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources.map(source => ({ loop: source.loop, duration: source.buffer?.duration, start: source.loopStart, end: source.loopEnd })))).toEqual([
+    { loop: true, duration: 60, start: 0, end: 60 }, { loop: true, duration: 60, start: 0, end: 60 },
+  ]);
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.contexts[0].currentTime), { timeout: 10_000 }).toBeGreaterThan(6.2);
+  const audible = () => page.evaluate(() => {
+    const analyser = window.__raidMusicProbe.analyser!, samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples); return samples.some(sample => Math.abs(sample) > .0001);
+  });
+  await expect.poll(audible).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.gains.map(gain => Math.round(gain.gain.value * 1000) / 1000))).toEqual([.4, 1, 0]);
+  await page.screenshot({ path: testInfo.outputPath("lobby-bgm-on.png") });
+  const guest = await player();
+  expect((await post(request, guest.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(200);
+  await page.getByRole("button", { name: "10秒の入力受付を開始", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.gains.slice(1).map(gain => gain.gain.value))).toEqual([0, 1]);
+  await expect.poll(audible).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("battle-bgm-on.png") });
+  const current = await snapshot(request);
+  expect((await post(request, adminHeaders, { type: "reset", roomId: current.roomId })).status()).toBe(200);
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.gains.slice(1).map(gain => gain.gain.value))).toEqual([1, 0]);
+  await page.getByRole("button", { name: "BGMをオフにする", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.contexts[0].state)).toBe("suspended");
+  await turnOn.click();
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.contexts[0].state)).toBe("running");
+  await expect.poll(audible).toBe(true);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources.length)).toBe(2);
+  expect(downloads).toHaveLength(2);
+  await page.reload(); await expect(turnOn).toBeVisible();
+  expect(await page.evaluate(() => window.__raidMusicProbe.contexts.length)).toBe(0);
+});
+
+test("screen BGM can cancel loading and recover from an audio download failure", async ({ page }) => {
+  await observeMusic(page);
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  let release!: () => void;
+  const delayed = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/music/*.wav", async route => { await delayed; await route.continue(); });
+  await page.goto("/raid/screen");
+  await page.getByRole("button", { name: "BGMをオンにする", exact: true }).click();
+  await expect(page.getByRole("button", { name: "BGMをオフにする", exact: true })).toHaveText("BGM 読込中");
+  await page.getByRole("button", { name: "BGMをオフにする", exact: true }).click();
+  release();
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.sources.length)).toBe(2);
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.contexts[0].state)).toBe("suspended");
+  await expect(page.getByRole("button", { name: "BGMをオンにする", exact: true })).toBeVisible();
+  await page.unroute("**/music/*.wav");
+  await page.reload();
+  await page.route("**/music/*.wav", route => route.fulfill({ status: 503, body: "unavailable" }));
+  await page.getByRole("button", { name: "BGMをオンにする", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "BGMを再生できません" })).toBeVisible();
+  await page.unroute("**/music/*.wav");
+  await page.getByRole("button", { name: "BGMをオンにする", exact: true }).click();
+  await expect(page.getByRole("button", { name: "BGMをオフにする", exact: true })).toHaveText("BGM オン");
+  await expect(page.getByRole("alert").filter({ hasText: "BGMを再生できません" })).toHaveCount(0);
+});
+
 test("reception QR, removal and voluntary leave prevent silent re-entry and close admission after start", async ({ page, browser, request }, testInfo) => {
   test.setTimeout(90_000);
   const first = await player(), second = await player(), late = await player();

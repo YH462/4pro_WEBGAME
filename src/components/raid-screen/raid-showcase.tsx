@@ -14,6 +14,8 @@ import { RaidJoinCard } from "./raid-join-card";
 import styles from "./raid-showcase.module.css";
 import { useCharacterModels } from "../battle/use-character-models";
 import { boss } from "@/lib/boss";
+import type { RaidMusicTrack } from "@/lib/raid-music";
+import { RaidMusicControl } from "./raid-music-control";
 
 const icons = { idle: Users, rps: HandFist, attack: Swords, critical: Sparkles, heal: Heart, counter: Waves, weaken: Waves, victory: Trophy };
 const handIcons = { rock: HandFist, scissors: Scissors, paper: Hand };
@@ -26,6 +28,7 @@ export type RaidScreenPresentation = {
   production?: boolean;
   bossAttack?: number;
   admissionOpen?: boolean;
+  musicTrack: RaidMusicTrack;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
   onImpact: (id: string, kind: "action" | "counter") => void;
 };
@@ -238,14 +241,14 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
           return <button type="button" key={item.id} title={item.label} disabled={!demoPlayable} aria-pressed={cue === item.id} onClick={() => select(item.id)}><Icon/><span>{item.label}</span></button>;
         })}</div>
       </div>}
-      {!screen && <div className={styles.tools}><a href="/raid/screen?sync=local" aria-label="同期スクリーンへ戻る"><RotateCcw size={18}/>同期スクリーンへ戻る</a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>}
+      {!screen && <div className={styles.tools}><RaidMusicControl track={cue === "idle" ? "lobby" : "battle"}/><a href="/raid/screen?sync=local" aria-label="同期スクリーンへ戻る"><RotateCcw size={18}/>同期スクリーンへ戻る</a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>}
       {!screen && <p className={styles.caption} role="status">{fixture.label} </p>}
       {fullscreenError && <p className={styles.error} role="alert">{fullscreenError}</p>}
     </main>
     </div>
     {screen && <footer className={styles.operatorBar} aria-label="レイドの進行操作">
       <div className={styles.liveFooter} role="status"><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</div>
-      <div className={styles.operatorActions}>{screen.tools}<a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+      <div className={styles.operatorActions}>{screen.tools}<RaidMusicControl track={screen.musicTrack}/><a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
     </footer>}
   </div>;
 }
