@@ -4,6 +4,7 @@ import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { hashAdminPassword } from "../../src/lib/admin-password";
 import type { LocalRaidSnapshot } from "../../src/lib/local-raid-types";
 import { collectSmallText } from "../../scripts/ui-review/small-text";
+import { LocalRaidRoom } from "../../src/lib/local-raid-room";
 
 const eventId = "raid-production-test", origin = "http://localhost:13026";
 const configured = process.env.EVENT_ID === eventId && new URL(process.env.DATABASE_URL || "postgresql://localhost:5432/unused").port === "55436";
@@ -43,6 +44,94 @@ test.afterEach(async () => {
   await db.rateLimitBucket.deleteMany({ where: { key: { startsWith: "raid-" } } });
 });
 test.afterAll(async () => { await db.$disconnect(); });
+
+test("screen controls and participant labels remain readable at laptop sizes and browser zoom", async ({ page, request }, testInfo) => {
+  test.setTimeout(90_000);
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...args: unknown[]) {
+      if (kind.includes("webgl")) return null;
+      return original.apply(this, [kind, ...args] as never);
+    } as typeof original;
+  });
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  await page.goto("/raid/screen");
+  const start = page.getByRole("button", { name: "10秒の入力受付を開始", exact: true });
+  await expect(start).toBeDisabled();
+  for (let i = 0; i < 7; i++) {
+    const guest = await player();
+    expect((await post(request, guest.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(200);
+  }
+  await expect(start).toBeEnabled();
+  const participants = page.getByRole("list", { name: "参加者とキャラクター" });
+  await expect(participants.getByRole("listitem")).toHaveCount(7);
+  for (const [width, height] of [[1292, 724], [1366, 768], [1920, 1080], [1024, 768], [844, 390]]) {
+    await page.setViewportSize({ width, height });
+    const audit = await page.evaluate(() => {
+      const controls = document.querySelector('footer[aria-label="レイドの進行操作"]')!;
+      const labels = document.querySelectorAll('[data-participant-id] > span, [data-participant-id] b, [data-participant-id] small, [data-participant-id] strong, footer[aria-label="レイドの進行操作"] button, footer[aria-label="レイドの進行操作"] a, a[aria-label^="参加URL"]');
+      const hidden = [...labels].filter(node => parseFloat(getComputedStyle(node).fontSize) < 12).map(node => node.textContent);
+      const blocked = [...controls.querySelectorAll('button,a')].filter(node => {
+        const rect = node.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return rect.height < 44 || rect.left < 0 || rect.right > innerWidth || rect.top < 0 || rect.bottom > innerHeight || !hit || !node.contains(hit);
+      }).map(node => node.textContent || node.getAttribute('aria-label'));
+      return { hidden, blocked, overflow: document.documentElement.scrollWidth > innerWidth };
+    });
+    expect(audit, `${width}x${height}`).toEqual({ hidden: [], blocked: [], overflow: false });
+    expect((await collectSmallText(page)).filter(item => item.size <= 10)).toEqual([]);
+    if (width === 1292 || width === 844) await page.screenshot({ path: testInfo.outputPath(`readable-lobby-${width}.png`) });
+  }
+  await start.click();
+  await expect(page.getByRole("button", { name: "入力受付中", exact: true })).toBeDisabled();
+  await expect(page.getByRole("timer", { name: "全員共通の入力受付" })).toContainText("秒");
+  expect((await snapshot(request)).round.phase).toBe("collecting");
+});
+
+test("a completed raid exposes the next battle action and retains results when returning to reception", async ({ page, request }, testInfo) => {
+  test.setTimeout(90_000);
+  let now = Date.now();
+  const room = new LocalRaidRoom(() => "paper", () => now);
+  const guests = [];
+  for (let i = 0; i < 7; i++) {
+    const guest = await player(); guests.push(guest);
+    room.join(guest.id, "temp-09", 170, guest.nickname!, "デンラコ");
+  }
+  const roomId = room.snapshot().roomId;
+  room.start(roomId);
+  for (const guest of guests) room.command(guest.id, { roomId, round: 1, requestId: randomUUID(), action: "attack", hand: "scissors" });
+  now += 10_000; room.snapshot(); room.finish(roomId, 1);
+  expect(room.snapshot().round.phase).toBe("finished");
+  await db.raidRoom.create({ data: { eventId, state: JSON.parse(JSON.stringify(room.save())) } });
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  await page.setViewportSize({ width: 1292, height: 724 });
+  await page.goto("/raid/screen");
+  const next = page.getByRole("button", { name: "次のバトルを準備", exact: true });
+  await expect(next).toBeEnabled();
+  await expect(page.getByRole("main")).toHaveAttribute("data-cue", "victory");
+  await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toHaveAttribute("data-renderer", "webgl");
+  await expect(page.locator('canvas[data-boss-model="ready"]')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("readable-victory-next-battle.png") });
+  await expect.poll(() => db.raidResult.count({ where: { roomId } })).toBe(7);
+  const [resetResponse] = await Promise.all([
+    page.waitForResponse(response => response.url().endsWith("/api/raid") && response.request().method() === "POST"),
+    next.click(),
+  ]);
+  expect(resetResponse.status(), await resetResponse.text()).toBe(200);
+  await expect(page.getByRole("button", { name: "10秒の入力受付を開始", exact: true })).toBeDisabled({ timeout: 10_000 });
+  const reception = await snapshot(request);
+  expect(reception.roomId).not.toBe(roomId); expect(reception.participants).toBe(0);
+  expect(await db.raidResult.count({ where: { roomId } })).toBe(7);
+  expect(await db.raidReward.count({ where: { playerId: { in: guests.map(guest => guest.id) } } })).toBe(7);
+  for (let i = 7; i < 20; i++) guests.push(await player());
+  for (const guest of guests) expect((await post(request, guest.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(200);
+  const participants = page.getByRole("list", { name: "参加者とキャラクター" });
+  await expect(participants.getByRole("listitem")).toHaveCount(20);
+  await participants.getByRole("listitem").last().scrollIntoViewIfNeeded();
+  await expect(participants.getByRole("listitem").last()).toBeInViewport();
+  await expect(page.getByRole("button", { name: "10秒の入力受付を開始", exact: true })).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath("readable-twenty-participants.png") });
+});
 
 test("staff login returns to the live screen and the cleaned header retains its screen link", async ({ page }) => {
   await page.goto("/raid/screen");

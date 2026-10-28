@@ -165,7 +165,8 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
     } catch { setFullscreenError("全画面にできませんでした。ブラウザの全画面表示をお試しください。"); }
   }
 
-  return <div className={styles.viewport}>
+  return <div className={`${styles.viewport} ${screen ? styles.liveViewport : ""}`}>
+    <div className={styles.stageViewport}>
     <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-demo-character-id={demoCharacter?.id} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} data-actor-ids={screen?.scene.actions.map((action) => action.participantId).join(",")} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
       <div className={styles.honeycomb}/>
       <div className={styles.brand}>4<span>PRO</span></div>
@@ -234,10 +235,14 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
           return <button type="button" key={item.id} title={item.label} disabled={!demoPlayable} aria-pressed={cue === item.id} onClick={() => select(item.id)}><Icon/><span>{item.label}</span></button>;
         })}</div>
       </div>}
-      {screen && <footer className={styles.liveFooter}><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</footer>}
-      <div className={styles.tools}>{screen ? <><a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認ページ<Play size={18}/></a>{screen.tools}</> : <a href="/raid/screen?sync=local" aria-label="同期スクリーンへ戻る"><RotateCcw size={18}/>同期スクリーンへ戻る</a>}<button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+      {!screen && <div className={styles.tools}><a href="/raid/screen?sync=local" aria-label="同期スクリーンへ戻る"><RotateCcw size={18}/>同期スクリーンへ戻る</a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>}
       {!screen && <p className={styles.caption} role="status">{fixture.label} </p>}
       {fullscreenError && <p className={styles.error} role="alert">{fullscreenError}</p>}
     </main>
+    </div>
+    {screen && <footer className={styles.operatorBar} aria-label="レイドの進行操作">
+      <div className={styles.liveFooter} role="status"><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</div>
+      <div className={styles.operatorActions}>{screen.tools}<a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+    </footer>}
   </div>;
 }
