@@ -23,11 +23,12 @@ const colors: Record<string, string> = { FOREST: "#49a878", THUNDER: "#e1a52d", 
 const elements = { FOREST: { label:"森属性",Icon:Leaf }, THUNDER: { label:"雷属性",Icon:Zap }, FLAME: { label:"炎属性",Icon:Flame }, AQUA: { label:"水属性",Icon:Droplets }, LEGEND: { label:"レジェンド",Icon:Crown } };
 const handName = (hand: RaidHand) => raidHands.find((item) => item.id === hand)!.label;
 
-export function RaidMobileConsole({ partners, local = false, production = false }: { partners: PartnerView[]; local?: boolean; production?: boolean }) {
+export function RaidMobileConsole({ partners, local = false, production = false, entryRoomId }: { partners: PartnerView[]; local?: boolean; production?: boolean; entryRoomId?: string }) {
   const [interactive, setInteractive] = useState(false);
   useEffect(() => { setInteractive(true); }, []);
   const { state: raw, error: connectionError, send } = useLocalRaid(local, true, production ? "/api/raid" : "/api/local-raid");
   const state = raw ? visibleLocalRaid(raw) : null;
+  const matchingReception = !production || !entryRoomId || entryRoomId === raw?.roomId;
   const [partnerId, setPartnerId] = useState(partners[0]?.id ?? "");
   const [action, setAction] = useState<LocalRaidAction | null>(local ? null : "attack");
   const [hand, setHand] = useState<RaidHand | null>(null);
@@ -53,19 +54,21 @@ export function RaidMobileConsole({ partners, local = false, production = false 
   const sentCommand = local && submitted ? raw?.me?.submission : null;
   const pendingCommand = sentCommand ?? (local && sending ? attempt : null);
   const SentHandIcon = pendingCommand ? handIcons[pendingCommand.hand] : null;
-  const accepting = !local || Boolean(raw?.round.phase === "collecting" && seconds > 0 && raw.me && raw.me.eligibleRound <= raw.round.number);
+  const accepting = !local || Boolean(matchingReception && raw?.round.phase === "collecting" && seconds > 0 && raw.me && raw.me.eligibleRound <= raw.round.number);
   const waiting = previewWaiting || Boolean(local && (raw?.round.phase === "playing" || (raw?.round.phase === "collecting" && submitted)));
   const phase = result ? "result" : waiting ? "waiting" : sending ? "sending" : "select";
   const busy = phase !== "select";
 
   const join = useCallback(async () => {
     setJoining(true); setError("");
-    try { await send({ type: "join", characterId: partnerId }); }
+    try { await send({ type: "join", characterId: partnerId, ...(production ? { roomId: entryRoomId ?? raw?.roomId } : {}) }); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "参加に失敗しました。"); }
     finally { setJoining(false); }
-  }, [send, partnerId]);
+  }, [send, partnerId, production, entryRoomId, raw?.roomId]);
   useEffect(() => {
     if (!local || !raw || !partnerId || raw.me?.characterId === partnerId) return;
+    // Empty/reset production rosters require explicit admission from this QR.
+    if (production && (!matchingReception || !raw.me)) return;
     if (seen.current.roomId !== raw.roomId && raw.me && partners.some((item) => item.id === raw.me!.characterId)) {
       setPartnerId(raw.me.characterId);
       return;
@@ -74,7 +77,7 @@ export function RaidMobileConsole({ partners, local = false, production = false 
     if (joined.current === key) return;
     joined.current = key;
     void join();
-  }, [local, raw?.roomId, raw?.me?.characterId, partnerId, join]);
+  }, [local, raw?.roomId, raw?.me?.characterId, partnerId, join, production, matchingReception, raw?.round.phase]);
   const inputRound = useRef(0);
   useEffect(() => {
     if (!raw) return;
@@ -151,9 +154,9 @@ export function RaidMobileConsole({ partners, local = false, production = false 
   const bossHp = local ? state?.bossHp : battlePreview.bossHp;
   const bossMaxHp = state?.bossMaxHp ?? battlePreview.bossHp;
   const ended = local && (bossHp === 0 || hp <= 0);
-  const ready = interactive && (!local || Boolean(state?.me && state.me.characterId === partnerId && !joining && !connectionError));
+  const ready = interactive && matchingReception && (!local || Boolean(state?.me && state.me.characterId === partnerId && !joining && !connectionError));
   const frozen = busy || joining || Boolean(attempt) || ended || !accepting;
-  const characterFrozen = !interactive || busy || joining || Boolean(attempt) || ended || Boolean(local && raw?.round.phase !== "lobby" && !accepting);
+  const characterFrozen = !interactive || !matchingReception || busy || joining || Boolean(attempt) || ended || Boolean(local && raw?.round.phase !== "lobby" && !accepting);
   const unsettled = Boolean(raw?.me?.lastResult && raw.me.lastResult.turn > raw.counterTurn);
   const feedback = local ? impact?.kind === "heal" ? "heal" : result?.submitted === false ? "idle" : result?.outcome ?? "idle" : result ? result.action === "heal" ? "heal" : result.outcome : "idle";
   const status = connectionError || error || (joining ? "レイドへ参加しています…" : local && !raw ? "会場に接続しています…"
@@ -188,7 +191,10 @@ export function RaidMobileConsole({ partners, local = false, production = false 
     finally { if (current === token.current) { setSending(false); locked.current = false; } }
   }
 
-  const victory = local && bossHp === 0;
+  const victory = local && bossHp === 0 && (!production || Boolean(raw?.me && matchingReception));
+  const needsAdmission = production && (!raw?.me || !matchingReception);
+  const canJoin = Boolean(interactive && entryRoomId && matchingReception && raw?.round.phase === "lobby" && !raw.removedFromLobby && !connectionError);
+  const admissionTitle = !raw ? "会場に接続しています…" : !matchingReception ? "次の受付QRを読み取ってください" : raw.removedFromLobby ? "参加が解除されています" : raw.round.phase !== "lobby" ? "このレイドの参加受付は終了しました" : !entryRoomId ? "会場の受付QRを読み取ってください" : "参加受付中";
   const summary = result ?? (state?.me?.lastResult?.turn === raw?.round.number ? state?.me?.lastResult : null);
   const element = elements[partner.element as keyof typeof elements] ?? elements.LEGEND;
   const retry = local && Boolean(attempt && error) && !busy && !ended && accepting;
@@ -220,7 +226,12 @@ export function RaidMobileConsole({ partners, local = false, production = false 
       <RaidHpGauge value={hp} max={maxHp} caption="自分のHP" label={`自分のHP（${local ? "同期" : "プレビュー"}）`}/>
     </section>
 
-    {victory ? <section className={`${styles.controls} ${styles.victory}`} aria-label="討伐成功の結果">
+    {needsAdmission ? <section className={`${styles.controls} ${styles.admissionPanel}`} aria-label="レイド参加受付">
+      <h2>{admissionTitle}</h2>
+      <p>{raw?.removedFromLobby ? "運営スタッフに確認してください。" : canJoin ? "パートナーを選んで、このレイドへの参加を確定してください。" : "待機中のスクリーンに表示される最新のQRから参加できます。"}</p>
+      {canJoin ? <button type="button" className={styles.confirm} disabled={joining} onClick={() => void join()}>{joining ? "参加しています…" : "このレイドに参加"}</button> : <Link className={styles.confirm} href="/battle">受付QRを読み取る</Link>}
+      {(error || connectionError) && <p className={styles.feedback} role="alert">{error || connectionError}</p>}
+    </section> : victory ? <section className={`${styles.controls} ${styles.victory}`} aria-label="討伐成功の結果">
       {local && <div className={styles.confetti} aria-hidden="true">{Array.from({length:12},(_,i)=><i key={i} style={{"--i":i} as CSSProperties}/>)}</div>}
       <div className={styles.victoryHeading}>{local ? <><Trophy size={42}/></> : <><Trophy size={30}/></>}<h2>討伐成功！</h2></div>
       <div className={local ? "sr-only" : styles.victoryStats}><div><span>今回の勝敗</span><strong>{summary ? summary.submitted === false ? "未入力" : `${summary.label} ×${summary.multiplier}` : "—"}</strong></div><div><span>{summary?.action === "heal" ? "自己回復" : "攻撃値"}</span><strong>{summary?.amount ?? "—"}</strong></div><div><span>ボスの反撃</span><strong>{summary?.counterDamage ?? "—"}</strong></div></div>
@@ -244,7 +255,11 @@ export function RaidMobileConsole({ partners, local = false, production = false 
         </div>}
       </div>
       <p className={`${connectionError || error ? styles.feedback : "sr-only"} raid-feedback`} role="status" aria-live="polite">{status}</p>
-      {local ? retry || rejoin ? <button type="button" className={styles.confirm} disabled={retry && (!ready || !accepting)} onClick={()=>{ if (rejoin) void join(); else void submit(); }}>{rejoin ? "同期に参加する" : "同じ行動を再送する"}</button> : <div className={`${styles.confirm} ${styles.commandStatus}`} role="status">{(sending || waiting || result) && !ended && <LoaderCircle className={styles.spinner} size={18} aria-hidden="true"/>}<span>{localStatus}</span></div> : <button type="button" className={styles.confirm} disabled={!interactive || busy || ended || joining || Boolean(connectionError) || (ready && !hand)} onClick={() => void submit()}>
+      {local ? retry || rejoin ? <button type="button" className={styles.confirm} disabled={retry && (!ready || !accepting)} onClick={()=>{ if (rejoin) void join(); else void submit(); }}>{rejoin ? "同期に参加する" : "同じ行動を再送する"}</button> : <div className={`${styles.confirm} ${styles.commandStatus}`} role="status">{(sending || waiting || result) && !ended && <LoaderCircle className={styles.spinner} size={18} aria-hidden="true"/>}<span>{localStatus}</span>{production && raw?.me && raw.round.phase === "lobby" && <button type="button" className={styles.waitingLeave} disabled={joining} onClick={async () => {
+        setJoining(true); setError(""); try { await send({ type: "leave", roomId: raw.roomId }); }
+        catch (reason) { setError(reason instanceof Error ? reason.message : "参加を取り消せませんでした。"); }
+        finally { setJoining(false); }
+      }}>参加取消</button>}</div> : <button type="button" className={styles.confirm} disabled={!interactive || busy || ended || joining || Boolean(connectionError) || (ready && !hand)} onClick={() => void submit()}>
         {ended ? <span>戦闘不能</span> : sending || waiting || (local && result) ? <><LoaderCircle className={styles.spinner} size={18}/><span>{sending ? "送信中…" : "次の受付まで待機"}</span></> : result ? <><Check size={19}/><span>まもなく次の行動へ</span></> : <><Radio size={24} aria-hidden="true"/><span className={styles.confirmLabel}><strong>{joining ? "参加中…" : local && !accepting ? "受付開始を待っています" : !ready ? "同期に参加する" : !hand ? "じゃんけんの手を選ぼう" : attempt ? "同じ行動を再送する" : local ? "じゃんけんで送信" : "じゃんけんで試す"}</strong></span><ChevronsRight size={24} aria-hidden="true"/></>}
       </button>}
     </section>}

@@ -8,7 +8,9 @@ import { config } from "@/lib/config";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const inputSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("join"), characterId: z.string().min(1).max(80) }),
+  z.strictObject({ type: z.literal("join"), characterId: z.string().min(1).max(80), roomId: z.uuid().optional() }),
+  z.strictObject({ type: z.literal("leave"), roomId: z.uuid() }),
+  z.strictObject({ type: z.literal("remove"), roomId: z.uuid(), participantId: z.uuid() }),
   z.strictObject({ type: z.literal("command"), roomId: z.uuid(), round: z.number().int().positive(), requestId: z.uuid(), action: z.enum(["attack", "heal"]), hand: z.enum(["rock", "scissors", "paper"]) }),
   z.strictObject({ type: z.literal("start"), roomId: z.uuid() }),
   z.strictObject({ type: z.literal("reset"), roomId: z.uuid() }),
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
   return api(async () => {
     checkOrigin(request);
     const input = inputSchema.parse(await readJson(request));
-    if (input.type !== "join" && input.type !== "command") {
+    if (input.type !== "join" && input.type !== "command" && input.type !== "leave") {
       const admin = await requireAdmin();
       await rateLimit(`raid-write:admin:${admin.id}`, 120);
       return json(await withProductionRaid((room) => {
@@ -45,6 +47,7 @@ export async function POST(request: Request) {
           return { state: room.reset() };
         }
         if (input.type === "start") return { state: room.start(input.roomId) };
+        if (input.type === "remove") return { state: room.remove(input.roomId, input.participantId) };
         if (input.type === "reveal") return { state: room.reveal(input.roomId, input.turn) };
         if (input.type === "impact") return { state: room.impact(input.roomId, input.turn, input.kind) };
         return { state: room.finish(input.roomId, input.turn) };
@@ -57,6 +60,9 @@ export async function POST(request: Request) {
       const current = await tx.player.findUnique({ where: { id: player.id }, include: { characters: true } });
       if (!current || current.eventId !== config().EVENT_ID) throw new HttpError(401, "ゲストではじめてから参加してください。");
       if (input.type === "command") return room.command(current.id, input);
+      if (input.type === "leave") return { state: room.leave(input.roomId, current.id) };
+      const admission = room.snapshot(current.id);
+      if (input.roomId ? input.roomId !== admission.roomId : !admission.me) throw new HttpError(409, "会場の最新の受付QRを読み取ってください。");
       const character = await tx.character.findUnique({ where: { id: input.characterId } });
       const owned = current.characters.find((item) => item.characterId === input.characterId);
       if (!character || (current.characters.length ? !owned : character.isLegendary || character.isDraft)) throw new HttpError(403, "このキャラクターは参加に使用できません。");

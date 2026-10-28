@@ -13,6 +13,8 @@ const inputSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("start"), roomId: z.uuid() }).strict(),
   z.object({ type: z.literal("finish"), roomId: z.uuid(), turn: z.number().int().positive() }).strict(),
   z.object({ type: z.literal("reset") }).strict(),
+  z.object({ type: z.literal("remove"), roomId: z.uuid(), participantId: z.uuid() }).strict(),
+  z.object({ type: z.literal("leave"), roomId: z.uuid() }).strict(),
   z.object({ type: z.literal("reveal"), roomId: z.uuid(), turn: z.number().int().positive() }).strict(),
   z.object({ type: z.literal("impact"), roomId: z.uuid(), turn: z.number().int().positive(), kind: z.enum(["action", "counter"]) }).strict(),
 ]);
@@ -45,6 +47,7 @@ export async function POST(request: Request) {
       // Local development operator control; this is not the production staff interface.
       if (input.type === "reset") return json({ state: room.reset() });
       if (input.type === "start") return json({ state: room.start(input.roomId) });
+      if (input.type === "remove") return json({ state: room.remove(input.roomId, input.participantId) });
       if (input.type === "finish") return json({ state: room.finish(input.roomId, input.turn) });
       if (input.type === "reveal") return json({ state: room.reveal(input.roomId, input.turn) });
       if (input.type === "impact") return json({ state: room.impact(input.roomId, input.turn, input.kind) });
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
       if (!player) throw new HttpError(401, "ゲストではじめてから参加してください。");
       if (player.event.status !== "ACTIVE") throw new HttpError(409, "イベントは終了しています。");
       if (input.type === "command") return json(room.command(player.id, input));
+      if (input.type === "leave") return json({ state: room.leave(input.roomId, player.id) });
       const character = await db.character.findUnique({ where: { id: input.characterId } });
       const owned = player.characters.find((item) => item.characterId === input.characterId);
       if (!character || (player.characters.length ? !owned : character.isLegendary || character.isDraft)) throw new HttpError(403, "このキャラクターは参加に使用できません。");

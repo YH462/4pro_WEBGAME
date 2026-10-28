@@ -57,24 +57,25 @@ describe("participant-scaled raid balance", () => {
     const average = totalTurns / 120;
     expect(average).toBeGreaterThanOrEqual(8); expect(average).toBeLessThanOrEqual(10);
   });
-  it("adds HP for arrivals during input, preserving damage and ignoring reconnects and character swaps", () => {
-    const { room, roomId, close } = team(2); room.start(roomId); attack(room, roomId, 2); close(); room.finish(roomId, 1);
+  it("scales waiting arrivals and ignores reconnects and character swaps", () => {
+    const { room } = team(2);
     const before = room.snapshot();
     for (let i = 2; i < 10; i++) room.join(`p${i}`, "forest-golem", 170, `P${i}`);
     const scaled = room.snapshot();
-    expect(scaled).toMatchObject({ bossMaxHp: 4500, bossHp: 4300, bossAttack: 14, difficultyPlayers: 10, totalDamage: 200 });
+    expect(scaled).toMatchObject({ bossMaxHp: 4500, bossHp: 4500, bossAttack: 14, difficultyPlayers: 10, totalDamage: 0 });
     expect(scaled.bossHp - before.bossHp).toBe(scaled.bossMaxHp - before.bossMaxHp);
     room.join("p0", "forest-golem", 170, "P0"); room.join("p0", "aqua-spirit", 135, "P0");
-    expect(room.snapshot()).toMatchObject({ bossMaxHp: 4500, bossHp: 4300, bossAttack: 14, difficultyPlayers: 10 });
+    expect(room.snapshot()).toMatchObject({ bossMaxHp: 4500, bossHp: 4500, bossAttack: 14, difficultyPlayers: 10 });
   });
-  it("defers mid-animation arrivals until the next input window and preserves strength across reload", () => {
+  it("rejects mid-animation and subsequent-round arrivals and preserves strength across reload", () => {
     const { room, roomId, close } = team(2); room.start(roomId); attack(room, roomId, 2); close();
-    for (let i = 2; i < 10; i++) room.join(`p${i}`, "forest-golem", 170, `P${i}`);
+    for (let i = 2; i < 10; i++) expect(() => room.join(`p${i}`, "forest-golem", 170, `P${i}`)).toThrow("バトル開始後");
     expect(room.snapshot()).toMatchObject({ bossMaxHp: 900, bossHp: 700, bossAttack: 12, difficultyPlayers: 2 });
-    expect(room.snapshot("p9").me?.eligibleRound).toBe(2);
+    expect(room.snapshot("p9").me).toBeNull();
     room.finish(roomId, 1);
     const reloaded = LocalRaidRoom.restore(JSON.parse(JSON.stringify(room.save())), () => 10_000);
-    expect(reloaded.snapshot()).toMatchObject({ bossMaxHp: 4500, bossHp: 4300, bossAttack: 14, difficultyPlayers: 10 });
+    expect(reloaded.snapshot()).toMatchObject({ bossMaxHp: 900, bossHp: 700, bossAttack: 12, difficultyPlayers: 2 });
+    expect(() => reloaded.join("p9", "forest-golem", 170, "P9")).toThrow("バトル開始後");
     expect(reloaded.snapshot().members.map(member => member.hp)).toEqual(room.snapshot().members.map(member => member.hp));
   });
   it("does not weaken the boss as allies are knocked out", () => {

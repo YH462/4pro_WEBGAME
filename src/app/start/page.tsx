@@ -8,7 +8,7 @@ import { UserRound } from "lucide-react";
 import styles from "./start.module.css";
 export const dynamic = "force-dynamic";
 export const metadata = { referrer: "no-referrer" as const };
-export default async function Start({ searchParams }: { searchParams: Promise<{ next?: string | string[]; tag?: string | string[] }> }) {
+export default async function Start({ searchParams }: { searchParams: Promise<{ next?: string | string[]; tag?: string | string[]; room?: string | string[] }> }) {
   const destination = startDestination(await searchParams);
   if (await currentPlayer()) redirect(destination);
   return <Shell><div className={styles.screen}>

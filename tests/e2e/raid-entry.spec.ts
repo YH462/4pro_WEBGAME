@@ -2,6 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import QRCode from "qrcode";
 import { collectSmallText } from "../../scripts/ui-review/small-text";
+import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { raidAdmissionUrl } from "../../src/lib/raid-admission";
 
 const eventId = "raid-production-test", origin = "http://localhost:13026";
 test.skip(process.env.EVENT_ID !== eventId || new URL(process.env.DATABASE_URL || "postgresql://localhost:5432/unused").port !== "55436", "Use the isolated production raid environment.");
@@ -37,7 +39,10 @@ test("guest registration returns to the raid QR entry instead of the retired CPU
 });
 
 test("battle reads the venue QR from camera frames, releases the camera and joins the persisted raid", async ({ page }) => {
-  const source = await QRCode.toDataURL(`${origin}/battle/raid`, { width: 640, margin: 4 });
+  const room = new LocalRaidRoom();
+  await db.raidRoom.create({ data: { eventId, state: JSON.parse(JSON.stringify(room.save())) } });
+  const entryUrl = raidAdmissionUrl(origin, room.snapshot().roomId);
+  const source = await QRCode.toDataURL(entryUrl, { width: 640, margin: 4 });
   await page.addInitScript(({ source }) => {
     const state = { started: 0, stopped: 0 };
     Object.defineProperty(window, "qrCameraState", { value: state });
@@ -63,7 +68,8 @@ test("battle reads the venue QR from camera frames, releases the camera and join
   await expect(page.getByRole("button", { name: "QRでレイドに参加", exact: true })).toBeVisible();
   expect(raidRequests).toEqual([]);
   await page.getByRole("button", { name: "QRでレイドに参加", exact: true }).click();
-  await expect(page).toHaveURL(`${origin}/battle/raid`);
+  await expect(page).toHaveURL(entryUrl);
+  await page.getByRole("button", { name: "このレイドに参加", exact: true }).click();
   await expect.poll(async () => (await (await page.request.get("/api/raid?personal=1")).json()).state?.me?.characterId).toBeTruthy();
   const camera = await page.evaluate(() => (window as unknown as { qrCameraState: { started: number; stopped: number } }).qrCameraState);
   expect(camera.started).toBe(1); expect(camera.stopped).toBeGreaterThanOrEqual(1);

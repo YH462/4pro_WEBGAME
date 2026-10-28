@@ -25,6 +25,7 @@ export type RaidScreenPresentation = {
   local: boolean; status: string; title: string; message: string; pending: number;
   production?: boolean;
   bossAttack?: number;
+  admissionOpen?: boolean;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
   onImpact: (id: string, kind: "action" | "counter") => void;
 };
@@ -211,7 +212,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
         {renderer === "fallback" && <p className={styles.rendererNote} role="status">簡易表示 · 3D表示にはWebGL対応ブラウザを使用してください</p>}
       </section>
       <div className={styles.members}><Users/><strong>{screen ? screen.members.length : demoCharacter?1:4}<small>人</small></strong><span>{screen ? `生存 ${screen.members.filter((member) => member.hp > 0).length} 人` : "DEMO TEAM"}</span></div>
-      <div className={styles.qr}><RaidJoinCard targets={entryTargets} local={screen?.local ?? false} production={screen?.production} compact={!screen}/></div>
+      {(!screen || screen.admissionOpen) && <div className={styles.qr}><RaidJoinCard targets={entryTargets} local={screen?.local ?? false} production={screen?.production} compact={!screen}/></div>}
       {screen && <ul className={styles.liveMembers} aria-label="参加者とキャラクター">{screen.members.map((member, i) => <li key={member.id} data-participant-id={member.id} data-character-id={member.characterId} data-active={screen.scene.actions.some((action) => action.participantId === member.id)} style={{ "--member-color": `#${(characterColors[member.characterId] ?? 0xb18aff).toString(16).padStart(6, "0")}` } as CSSProperties}><b>{String(i + 1).padStart(2, "0")}</b><span>{member.nickname}<small>{member.characterName}</small></span><strong>{member.hp}<small> / {member.maxHp}</small></strong></li>)}</ul>}
       {!screen && <div className={styles.controls} aria-label="演出デモの操作">
         {demoCharacters.length>0&&<div className={styles.characterPicker}>

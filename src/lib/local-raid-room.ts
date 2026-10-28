@@ -14,6 +14,7 @@ export type SavedRaidRoom = {
   members: [string, Member][]; receipts: [string, string][];
   // Absent on old saves: those running fights keep their original 450/20 rules.
   balance?: RaidBalance;
+  removed?: string[];
 };
 export const raidInputMs = 10_000;
 export class LocalRaidError extends Error {
@@ -51,6 +52,7 @@ export class LocalRaidRoom {
   private results: LocalRaidResult[] = [];
   private rounds: LocalRaidRoundResult[] = [];
   private members = new Map<string, Member>();
+  private removed = new Set<string>();
   private receipts = new Map<string, string>();
 
   constructor(private drawHand: () => RaidHand = () => raidHands[randomInt(raidHands.length)].id, private now = () => Date.now()) {}
@@ -59,15 +61,16 @@ export class LocalRaidRoom {
     return structuredClone({ version: 1, roomId: this.roomId, revision: this.revision, bossHp: this.bossHp, turn: this.turn,
       phase: this.phase, closesAt: this.closesAt, revealedTurn: this.revealedTurn, actionTurn: this.actionTurn,
       counterTurn: this.counterTurn, completedTurn: this.completedTurn, totalDamage: this.totalDamage,
-      totalHealing: this.totalHealing, rounds: this.rounds, members: [...this.members], receipts: [...this.receipts], ...(this.balance ? { balance: this.balance } : {}) });
+      totalHealing: this.totalHealing, rounds: this.rounds, members: [...this.members], receipts: [...this.receipts], removed: [...this.removed], ...(this.balance ? { balance: this.balance } : {}) });
   }
 
   static restore(saved: SavedRaidRoom, now = () => Date.now()) {
     if (saved.version !== 1) throw new Error("Unsupported raid state version.");
     const room = new LocalRaidRoom(undefined, now);
-    const { version: _version, members, receipts, balance, ...fields } = structuredClone(saved);
+    const { version: _version, members, receipts, balance, removed, ...fields } = structuredClone(saved);
     Object.assign(room, fields);
     room.balance = balance ?? null;
+    room.removed = new Set(removed ?? []);
     room.members = new Map(members); room.receipts = new Map(receipts);
     room.results = room.rounds.flatMap((round) => round.results);
     return room;
@@ -88,6 +91,8 @@ export class LocalRaidRoom {
   join(playerId: string, characterId: string, maxHp: number, nickname: string, characterName = characterId) {
     this.tick();
     const existing = this.members.get(playerId);
+    if (this.removed.has(playerId)) throw new LocalRaidError(409, "運営側で参加が解除されています。スタッフに確認してください。");
+    if (!existing && this.phase !== "lobby" && this.phase !== "finished") throw new LocalRaidError(409, "バトル開始後は参加できません。次の受付をお待ちください。");
     if (this.phase === "finished") {
       if (!existing) throw new LocalRaidError(409, "終了したレイドです。次の受付をお待ちください。");
       return this.snapshot(playerId);
@@ -111,6 +116,22 @@ export class LocalRaidRoom {
     if (this.phase !== "lobby") return this.snapshot();
     if (![...this.members.values()].some((member) => member.hp > 0)) throw new LocalRaidError(409, "参加者が入ってから開始してください。");
     this.openRound();
+    return this.snapshot();
+  }
+  private removeWaitingPlayer(playerId: string) {
+    if (this.phase !== "lobby") throw new LocalRaidError(409, "参加者の整理はバトル開始前に行ってください。");
+    if (!this.members.delete(playerId)) return;
+    this.updateBalance(); this.changed();
+  }
+  leave(roomId: string, playerId: string) {
+    this.checkRoom(roomId); this.removeWaitingPlayer(playerId);
+    return this.snapshot(playerId);
+  }
+  remove(roomId: string, participantId: string) {
+    this.checkRoom(roomId);
+    if (this.phase !== "lobby") throw new LocalRaidError(409, "参加者の整理はバトル開始前に行ってください。");
+    const playerId = [...this.members].find(([, member]) => member.screenId === participantId)?.[0];
+    if (playerId) { this.removeWaitingPlayer(playerId); this.removed.add(playerId); }
     return this.snapshot();
   }
   private openRound() {
@@ -200,7 +221,7 @@ export class LocalRaidRoom {
     this.roomId = randomUUID(); this.bossHp = battlePreview.bossHp; this.turn = this.completedTurn = 0;
     this.balance = raidBalance(0);
     this.phase = "lobby"; this.closesAt = null; this.revealedTurn = this.actionTurn = this.counterTurn = 0;
-    this.totalDamage = this.totalHealing = 0; this.results = []; this.rounds = []; this.receipts.clear(); this.members.clear(); this.changed();
+    this.totalDamage = this.totalHealing = 0; this.results = []; this.rounds = []; this.receipts.clear(); this.members.clear(); this.removed.clear(); this.changed();
     return this.snapshot();
   }
   snapshot(playerId?: string): LocalRaidSnapshot {
@@ -213,7 +234,7 @@ export class LocalRaidRoom {
       revealedTurn: this.revealedTurn, actionTurn: this.actionTurn, counterTurn: this.counterTurn,
       bossName: battlePreview.bossName, bossHp: this.bossHp, bossMaxHp: this.balance?.maxHp ?? battlePreview.bossHp,
       bossAttack: this.balance?.attack ?? 20, difficultyPlayers: this.balance?.participants ?? 0, turn: Math.max(1, this.turn),
-      participants: members.length, alive: members.filter((member) => member.hp > 0).length,
+      participants: members.length, alive: members.filter((member) => member.hp > 0).length, removedFromLobby: playerId ? this.removed.has(playerId) : false,
       attackCount: members.filter((member) => member.submission?.action === "attack").length, healCount: members.filter((member) => member.submission?.action === "heal").length,
       totalDamage: this.totalDamage, totalHealing: this.totalHealing, lastResult: this.results.at(-1) ? { ...this.results.at(-1)! } : null,
       me: me ? { characterId: me.characterId, hp: me.hp, maxHp: me.maxHp, lastResult: me.lastResult ? { ...me.lastResult } : null, submission: me.submission ? { ...me.submission } : null, eligibleRound: me.eligibleRound } : null,

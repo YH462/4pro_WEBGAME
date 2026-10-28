@@ -19,7 +19,7 @@ export default async function RaidScreenPage({ searchParams }: { searchParams: P
   const cfg = config();
   if (local && !cfg.simulator) notFound();
   if (!local && !showcase && !await currentAdmin()) redirect("/admin/login?next=raid-screen");
-  const urls = !local && !showcase ? [new URL("/battle/raid", cfg.origin).href]
+  const urls = !local && !showcase ? []
     : raidEntryUrls({ appUrl: cfg.APP_URL, local, lanHosts: localNetworkHosts(), requestHost: (await headers()).get("host") });
   const entryTargets = await Promise.all(urls.map(async (url) => ({
     url,

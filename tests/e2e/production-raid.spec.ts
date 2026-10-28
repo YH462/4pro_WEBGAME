@@ -22,7 +22,14 @@ async function player() {
   playerIds.push(row.id);
   return { ...row, token, headers: { origin, cookie: `fourpro_guest=${token}` } };
 }
-const post = (request: APIRequestContext, headers: Record<string, string>, data: object) => request.post("/api/raid", { headers, data });
+async function post(request: APIRequestContext, headers: Record<string, string>, data: object) {
+  if ((data as { type?: string }).type === "join" && !(data as { roomId?: string }).roomId) {
+    const response = await request.get("/api/raid", { headers: adminHeaders });
+    expect(response.status()).toBe(200);
+    data = { ...data, roomId: (await response.json()).state.roomId };
+  }
+  return request.post("/api/raid", { headers, data });
+}
 async function snapshot(request: APIRequestContext, headers = adminHeaders, personal = false): Promise<LocalRaidSnapshot> {
   const response = await request.get(`/api/raid${personal ? "?personal=1" : ""}`, { headers });
   expect(response.status()).toBe(200); return (await response.json()).state;
@@ -44,6 +51,99 @@ test.afterEach(async () => {
   await db.rateLimitBucket.deleteMany({ where: { key: { startsWith: "raid-" } } });
 });
 test.afterAll(async () => { await db.$disconnect(); });
+
+test("reception QR, removal and voluntary leave prevent silent re-entry and close admission after start", async ({ page, browser, request }, testInfo) => {
+  test.setTimeout(90_000);
+  const first = await player(), second = await player(), late = await player();
+  await db.playerCharacter.create({ data: { playerId: first.id, characterId: "forest-golem" } });
+  const initial = await snapshot(request);
+  expect((await request.get(`/api/raid/entry?roomId=${initial.roomId}`)).status()).toBe(401);
+  const getEntry = async (roomId: string) => {
+    const response = await request.get(`/api/raid/entry?roomId=${roomId}`, { headers: adminHeaders });
+    expect(response.status()).toBe(200); return (await response.json()).target as { url: string; qrImage: string };
+  };
+  const entry = await getEntry(initial.roomId);
+  expect(new URL(entry.url).searchParams.get("room")).toBe(initial.roomId);
+  const withoutWebGl = () => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...args: unknown[]) {
+      return kind.includes("webgl") ? null : Reflect.apply(original, this, [kind, ...args]);
+    } as typeof original;
+  };
+  await page.addInitScript(withoutWebGl);
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  await page.setViewportSize({ width: 1292, height: 724 }); await page.goto("/raid/screen");
+  await expect(page.getByRole("link", { name: `参加URL ${entry.url}`, exact: true })).toBeVisible();
+  const phoneContext = await browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  try {
+    await phoneContext.addInitScript(withoutWebGl);
+    await phoneContext.addCookies([{ name: "fourpro_guest", value: first.token, url: origin }]);
+    const phone = await phoneContext.newPage(); await phone.goto(entry.url);
+    await expect(phone.getByRole("button", { name: "このレイドに参加", exact: true })).toBeEnabled();
+    expect((await snapshot(request)).participants).toBe(0);
+    await phone.getByRole("button", { name: "このレイドに参加", exact: true }).click();
+    await expect.poll(async () => (await snapshot(request)).participants).toBe(1);
+    await page.getByRole("button", { name: "参加者管理", exact: true }).click();
+    const roster = page.getByRole("dialog", { name: "参加者管理", exact: true });
+    await expect(roster).toBeVisible();
+    await roster.getByRole("button", { name: `${first.nickname}の参加を解除`, exact: true }).click();
+    await expect(phone.getByRole("heading", { name: "参加が解除されています", exact: true })).toBeVisible();
+    expect((await snapshot(request)).participants).toBe(0);
+    await phone.reload();
+    expect((await post(request, first.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(409);
+    expect(await db.playerCharacter.count({ where: { playerId: first.id } })).toBe(1);
+    expect(await db.raidResult.count({ where: { playerId: first.id } })).toBe(0);
+    await page.getByRole("button", { name: "参加者管理を閉じる", exact: true }).click();
+    await phoneContext.addCookies([{ name: "fourpro_guest", value: second.token, url: origin }]);
+    await phone.goto(entry.url); await phone.getByRole("button", { name: "このレイドに参加", exact: true }).click();
+    await phone.getByRole("button", { name: "参加取消", exact: true }).click();
+    await expect(phone.getByRole("button", { name: "このレイドに参加", exact: true })).toBeEnabled();
+    expect((await snapshot(request)).participants).toBe(0);
+    await phone.getByRole("button", { name: "このレイドに参加", exact: true }).click();
+    await expect.poll(async () => (await snapshot(request)).participants).toBe(1);
+    const waiting = await snapshot(request);
+    expect((await post(request, second.headers, { type: "remove", roomId: waiting.roomId, participantId: waiting.members[0].id })).status()).toBe(401);
+    await page.getByRole("button", { name: "参加QRを大きく表示", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "スマホでレイドに参加", exact: true })).toBeVisible();
+    expect((await post(request, adminHeaders, { type: "start", roomId: waiting.roomId })).status()).toBe(200);
+    await expect(page.getByRole("region", { name: "レイド参加案内", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "スマホでレイドに参加", exact: true })).toHaveCount(0);
+    expect((await request.get(`/api/raid/entry?roomId=${waiting.roomId}`, { headers: adminHeaders })).status()).toBe(409);
+    expect((await post(request, late.headers, { type: "join", roomId: waiting.roomId, characterId: "forest-golem" })).status()).toBe(409);
+    expect((await post(request, adminHeaders, { type: "remove", roomId: waiting.roomId, participantId: waiting.members[0].id })).status()).toBe(409);
+    expect((await post(request, second.headers, { type: "leave", roomId: waiting.roomId })).status()).toBe(409);
+    expect((await snapshot(request)).participants).toBe(1);
+    await page.screenshot({ path: testInfo.outputPath("battle-admission-closed.png") });
+    expect((await post(request, adminHeaders, { type: "reset", roomId: waiting.roomId })).status()).toBe(200);
+    const reset = await snapshot(request), nextEntry = await getEntry(reset.roomId);
+    expect(nextEntry.url).not.toBe(entry.url); expect(nextEntry.qrImage).not.toBe(entry.qrImage);
+    await expect(page.getByRole("link", { name: `参加URL ${nextEntry.url}`, exact: true })).toBeVisible();
+    await expect(phone.getByRole("heading", { name: "次の受付QRを読み取ってください", exact: true })).toBeVisible();
+    await phone.reload();
+    expect((await snapshot(request)).participants).toBe(0);
+    expect((await post(request, late.headers, { type: "join", roomId: waiting.roomId, characterId: "forest-golem" })).status()).toBe(409);
+    expect((await request.post("/api/raid", { headers: late.headers, data: { type: "join", characterId: "forest-golem" } })).status()).toBe(409);
+    await phoneContext.addCookies([{ name: "fourpro_guest", value: first.token, url: origin }]);
+    await phone.goto(nextEntry.url); await phone.getByRole("button", { name: "このレイドに参加", exact: true }).click();
+    await expect.poll(async () => (await snapshot(request)).participants).toBe(1);
+    await phone.screenshot({ path: testInfo.outputPath("new-reception-explicit-admission.png") });
+  } finally { await phoneContext.close(); }
+});
+
+test("a simultaneous start and arrival has one serialized admission boundary", async ({ request }) => {
+  const host = await player(); expect((await post(request, host.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(200);
+  const initial = await snapshot(request), arrivals = await Promise.all(Array.from({ length: 10 }, player));
+  const [started, ...joined] = await Promise.all([
+    post(request, adminHeaders, { type: "start", roomId: initial.roomId }),
+    ...arrivals.map(guest => post(request, guest.headers, { type: "join", roomId: initial.roomId, characterId: "forest-golem" })),
+  ]);
+  expect(started.status()).toBe(200); expect(joined.every(response => [200, 409].includes(response.status()))).toBe(true);
+  const accepted = joined.filter(response => response.status() === 200).length;
+  const state = await snapshot(request);
+  expect(state.participants).toBe(1 + accepted); expect(state.difficultyPlayers).toBe(state.participants);
+  expect(state.bossMaxHp).toBe(state.participants * 450);
+  expect((await post(request, (await player()).headers, { type: "join", roomId: initial.roomId, characterId: "forest-golem" })).status()).toBe(409);
+});
 
 test("screen controls and participant labels remain readable at laptop sizes and browser zoom", async ({ page, request }, testInfo) => {
   test.setTimeout(90_000);
@@ -328,16 +428,19 @@ test("a real screen and two phones complete a round and reconnect after reload",
   const phoneContexts = await Promise.all(Array.from({ length: 2 }, () => browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })));
   try {
     const phones = await Promise.all(phoneContexts.map(async (context) => { await context.addInitScript(withoutWebGl); return context.newPage(); }));
-    await phones[0].goto("/battle/raid"); await expect(phones[0]).toHaveURL(/\/start\?next=raid$/);
+    const roomId = (await snapshot(request)).roomId;
+    const entryResponse = await request.get('/api/raid/entry?roomId=' + roomId, { headers: adminHeaders });
+    expect(entryResponse.status()).toBe(200); const entryUrl = (await entryResponse.json()).target.url;
+    await phones[0].goto(entryUrl); await expect(phones[0]).toHaveURL(origin + '/start?next=raid&room=' + roomId);
     await phones[0].getByRole("textbox", { name: "ニックネーム" }).fill("本番参加確認");
-    await phones[0].getByRole("button", { name: "この名前ではじめる" }).click(); await expect(phones[0]).toHaveURL(`${origin}/battle/raid`);
+    await phones[0].getByRole("button", { name: "この名前ではじめる" }).click(); await expect(phones[0]).toHaveURL(entryUrl); await phones[0].getByRole("button", { name: "このレイドに参加", exact: true }).click();
     const registered = await phoneContexts[0].request.get("/api/me"); playerIds.push((await registered.json()).player.id);
-    const second = await player(); await phoneContexts[1].addCookies([{ name: "fourpro_guest", value: second.token, url: origin }]); await phones[1].goto("/battle/raid");
+    const second = await player(); await phoneContexts[1].addCookies([{ name: "fourpro_guest", value: second.token, url: origin }]); await phones[1].goto(entryUrl); await phones[1].getByRole("button", { name: "このレイドに参加", exact: true }).click();
     await page.goto("/raid/screen");
     await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-red.webp");
     await expect(page.getByRole("heading", { name: "デスドラグーン", exact: true })).toBeVisible();
     await expect.poll(async () => (await snapshot(request)).participants).toBe(2);
-    await expect(page.getByRole("link", { name: `参加URL ${origin}/battle/raid`, exact: true })).toHaveAttribute("href", `${origin}/battle/raid`);
+    await expect(page.getByRole("link", { name: `参加URL ${entryUrl}`, exact: true })).toHaveAttribute("href", entryUrl);
     await page.getByRole("button", { name: "10秒の入力受付を開始", exact: true }).click();
     for (const phone of phones) { await phone.getByRole("button", { name: "攻撃を選択", exact: true }).click(); await phone.getByRole("button", { name: "チョキを選択", exact: true }).click(); }
     await phones[0].reload(); await expect(phones[0].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText("攻撃 / チョキ");
@@ -348,7 +451,8 @@ test("a real screen and two phones complete a round and reconnect after reload",
     await phones[0].screenshot({ path: testInfo.outputPath("production-raid-phone.png") });
     const stored = await db.raidRoom.findUniqueOrThrow({ where: { eventId } }); expect(JSON.stringify(stored.state)).toContain('"completedTurn":1');
     await page.getByRole("button", { name: "同期設定", exact: true }).click(); await page.getByRole("button", { name: "同期をリセット", exact: true }).click();
-    await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");
+    await expect(phones[0].getByRole("heading", { name: "次の受付QRを読み取ってください", exact: true })).toBeVisible();
+    expect((await snapshot(request)).participants).toBe(0);
   } finally { for (const context of phoneContexts) await context.close(); }
 });
 

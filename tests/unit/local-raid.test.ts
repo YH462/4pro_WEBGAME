@@ -45,13 +45,14 @@ describe("shared ten-second raid rounds", () => {
     const deadline = room.snapshot().round.closesAt;
     room.finish(roomId, 1); expect(room.snapshot().round.closesAt).toBe(deadline);
   });
-  it("skips non-submitted actions but applies one full-team counter, excluding mid-play joins", () => {
+  it("skips non-submitted actions, counters once and refuses mid-battle visitors", () => {
     const { room, roomId, send, advance } = setup(2); room.start(roomId); send(0, "scissors");
-    advance(); room.join("late", "aqua-spirit", 135, "LATE");
+    advance(); expect(() => room.join("late", "aqua-spirit", 135, "LATE")).toThrow("バトル開始後");
     expect(room.snapshot("p1").me?.lastResult).toMatchObject({ submitted: false, amount: 0, counterDamage: 12 });
-    expect(room.snapshot("late").me).toMatchObject({ hp: 135, eligibleRound: 2, lastResult: null });
+    expect(room.snapshot("late").me).toBeNull();
     room.finish(roomId, 1); advance();
-    expect(room.snapshot("late").me?.lastResult).toMatchObject({ turn: 2, submitted: false, counterDamage: 13 });
+    expect(() => room.join("late", "aqua-spirit", 135, "LATE")).toThrow("バトル開始後");
+    expect(room.snapshot("p1").me?.lastResult).toMatchObject({ turn: 2, submitted: false, counterDamage: 12 });
   });
   it("caps self-healing then counters everyone once and preserves rejoin HP", () => {
     const { room, roomId, send, advance } = setup(2); room.start(roomId); send(0, "scissors"); advance(); room.finish(roomId, 1);
@@ -75,8 +76,9 @@ describe("shared ten-second raid rounds", () => {
     room.finish(roomId, 5); expect(room.snapshot().round.phase).toBe("finished");
   });
   it("resets every pending intent, rejects old room IDs and enforces the cap", () => {
-    const { room, roomId, send } = setup(20); room.start(roomId); send(0, "rock");
+    const { room, roomId, send } = setup(20);
     expect(() => room.join("overflow", "forest-golem", 170, "OVER")).toThrow("20人");
+    room.start(roomId); send(0, "rock");
     expect(() => room.join("bad", "a", NaN, "bad")).toThrow();
     const state = room.reset(); expect(state).toMatchObject({ participants: 0, rounds: [], results: [], round: { number: 0, phase: "lobby" } });
     expect(() => room.start(roomId)).toThrow("リセット");

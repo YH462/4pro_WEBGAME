@@ -87,15 +87,15 @@ test("three phones share one countdown and hand, receive different outcomes, and
       await expect(phones[i].locator(".raid-rps-result")).toContainText(`${result.label} ×${result.multiplier}`);
       await expect(phones[i].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");
     }
-    await contexts[3].request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem" } });
-    expect((await snapshot(contexts[3].request, true)).me).toMatchObject({ hp: 170, eligibleRound: 2, lastResult: null });
+    expect((await contexts[3].request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem" } })).status()).toBe(409);
+    expect((await snapshot(contexts[3].request, true)).me).toBeNull();
     for (const phone of phones) await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "157", { timeout: 8000 });
-    expect((await snapshot(contexts[3].request, true)).me?.hp).toBe(170);
+    expect((await snapshot(contexts[3].request, true)).me).toBeNull();
     await expect.poll(async () => (await snapshot(request)).round.number, { timeout: 8000 }).toBe(2);
     for (const phone of phones) await expect(phone.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
     await phones[0].screenshot({ path: testInfo.outputPath("raid-mobile-shared-countdown.png") });
     expect(await phones[0].evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-    // Self-healing is visible before the single counter; an unsubmitted teammate still receives it.
+    // Self-healing is visible before the single counter.
     await phones[0].getByRole("button", { name: "回復を選択", exact: true }).click();
     await phones[0].getByRole("button", { name: "グーを選択", exact: true }).click();
     await expect(phones[0].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText("回復 / グー");
@@ -103,8 +103,8 @@ test("three phones share one countdown and hand, receive different outcomes, and
     const heal = (await snapshot(contexts[0].request, true)).me!.lastResult!;
     await expect(phones[0].locator(".raid-rps-result")).toContainText(`自己回復 ${heal.amount}`, { timeout: 6000 });
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(157 + heal.amount));
-    await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(130 + heal.amount), { timeout: 8000 });
-    expect((await snapshot(contexts[3].request, true)).me?.hp).toBe(157);
+    await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(144 + heal.amount), { timeout: 8000 });
+    expect((await snapshot(contexts[3].request, true)).me).toBeNull();
     await request.post("/api/local-raid", { headers, data: { type: "reset" } });
     await expect(phones[0].getByRole("status").filter({ hasText: /^受付開始を待っています$/ })).toBeVisible();
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");

@@ -1,10 +1,11 @@
 // Browser-safe URL helpers: only a validated token can become a return destination.
+import { validRaidRoomId } from "./raid-admission";
 export const validAcquisitionToken = (value: unknown): value is string => typeof value === "string" && /^[A-Za-z0-9_-]{43}$/.test(value);
-export type StartDestination = "/" | "/battle" | "/battle/raid" | "/battle/raid?sync=local" | `/acquire/${string}`;
-export function startDestination({ next, tag }: { next?: string | string[]; tag?: string | string[] }): StartDestination {
+export type StartDestination = "/" | "/battle" | "/battle/raid" | "/battle/raid?sync=local" | `/battle/raid?room=${string}` | `/acquire/${string}`;
+export function startDestination({ next, tag, room }: { next?: string | string[]; tag?: string | string[]; room?: string | string[] }): StartDestination {
   if (next === "battle") return "/battle";
   if (next === "local-raid") return "/battle/raid?sync=local";
-  if (next === "raid") return "/battle/raid";
+  if (next === "raid") return validRaidRoomId(room) ? `/battle/raid?room=${room}` : "/battle/raid";
   if (next === "acquire" && validAcquisitionToken(tag)) return `/acquire/${tag}`;
   return "/";
 }

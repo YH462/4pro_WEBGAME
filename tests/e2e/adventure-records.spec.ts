@@ -21,7 +21,14 @@ async function records(request: APIRequestContext, headers: Record<string, strin
   const response = await request.get("/api/profile/records", { headers });
   expect(response.status()).toBe(200); return (await response.json()).records;
 }
-const post = (request: APIRequestContext, headers: Record<string, string>, data: object) => request.post("/api/raid", { headers, data });
+async function post(request: APIRequestContext, headers: Record<string, string>, data: object) {
+  if ((data as { type?: string }).type === "join" && !(data as { roomId?: string }).roomId) {
+    const response = await request.get("/api/raid", { headers: adminHeaders });
+    expect(response.status()).toBe(200);
+    data = { ...data, roomId: (await response.json()).state.roomId };
+  }
+  return request.post("/api/raid", { headers, data });
+}
 async function state(request: APIRequestContext): Promise<LocalRaidSnapshot> {
   const response = await request.get("/api/raid", { headers: adminHeaders });
   expect(response.status()).toBe(200); return (await response.json()).state;

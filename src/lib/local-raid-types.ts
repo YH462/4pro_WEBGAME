@@ -58,6 +58,7 @@ export type LocalRaidSnapshot = {
   difficultyPlayers: number;
   turn: number;
   participants: number;
+  removedFromLobby: boolean;
   alive: number;
   attackCount: number;
   healCount: number;
