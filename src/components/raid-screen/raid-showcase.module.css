@@ -1,6 +1,5 @@
-.viewport { width:100vw; height:100dvh; display:grid; place-items:center; background:#21151b; }
+.viewport { width:100vw; height:100dvh; display:grid; grid-template-rows:minmax(0,1fr) auto; align-items:stretch; justify-items:stretch; background:#21151b; }
 .stageViewport { width:100%; height:100%; min-width:0; min-height:0; display:grid; place-items:center; container-type:size; overflow:hidden; }
-.liveViewport { grid-template-rows:minmax(0,1fr) auto; align-items:stretch; justify-items:stretch; }
 .screen { position:relative; isolation:isolate; overflow:hidden; container-type:size; width:min(100cqw,177.7778cqh); height:min(100cqh,56.25cqw); background:#fff8fb; color:#30212c; }
 .honeycomb { position:absolute; inset:0; z-index:-2; background:#fff url('/red-white-honeycomb-background.png') center/cover; }.honeycomb::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,#a8002633,transparent 35%,#fff5f855 75%,#ffffffbd); }
 .brand { position:absolute; z-index:3; top:1.4cqw; left:2.3cqw; font-size:max(12px,4.1cqw); line-height:.8; letter-spacing:-.35cqw; font-weight:950; font-style:italic; color:#fff; text-shadow:0 .15cqw .4cqw #71142935; }
@@ -94,6 +93,7 @@
 .liveMembers strong { flex:none; font-size:max(14px,.8cqw); text-align:right; }
 .liveMembers strong small { display:inline; font-size:max(12px,.65cqw); }
 .operatorBar { z-index:5; width:100%; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px 20px; padding:12px 20px; background:#fffafc; border-top:3px solid #df2638; box-shadow:0 -4px 20px #38132118; color:#30212c; }
+.demoOperatorBar { justify-content:flex-end; }
 .liveFooter { flex:1; min-width:220px; padding-left:12px; border-left:4px solid #df2638; }
 .liveFooter>strong { display:block; font-size:18px; font-weight:850; }
 .liveFooter>p,.liveFooter>small { display:block; color:#50323e; font-size:14px; line-height:1.5; }

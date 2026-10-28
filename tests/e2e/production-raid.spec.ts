@@ -54,8 +54,8 @@ test.afterAll(async () => { await db.$disconnect(); });
 
 type MusicProbe = { contexts: AudioContext[]; sources: AudioBufferSourceNode[]; gains: GainNode[]; analyser?: AnalyserNode };
 declare global { interface Window { __raidMusicProbe: MusicProbe } }
-async function observeMusic(page: import("@playwright/test").Page) {
-  await page.addInitScript(() => {
+async function observeMusic(page: import("@playwright/test").Page, accelerate = true) {
+  await page.addInitScript(({ accelerate }) => {
     const probe: MusicProbe = { contexts: [], sources: [], gains: [] };
     window.__raidMusicProbe = probe;
     const NativeAudioContext = window.AudioContext;
@@ -64,7 +64,8 @@ async function observeMusic(page: import("@playwright/test").Page) {
       createBufferSource() {
         const source = super.createBufferSource(); probe.sources.push(source);
         // Traverse the actual 60-second files twice during this browser test.
-        source.playbackRate.value = 20; return source;
+        if (accelerate) source.playbackRate.value = 20;
+        return source;
       }
       createGain() {
         const gain = super.createGain(); probe.gains.push(gain);
@@ -76,8 +77,111 @@ async function observeMusic(page: import("@playwright/test").Page) {
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...args: unknown[]) {
       return kind.includes("webgl") ? null : Reflect.apply(original, this, [kind, ...args]);
     } as typeof original;
-  });
+  }, { accelerate });
 }
+
+test("attack effects sound once at contact, distinguish critical hits and respect independent mute and replay", async ({ page }, testInfo) => {
+  await observeMusic(page, false);
+  await page.goto("/raid/screen?demo=effects");
+  await expect(page.getByRole("button", { name: "通常攻撃", exact: true })).toBeEnabled();
+  const enable = page.getByRole("button", { name: "効果音をオンにする", exact: true });
+  await expect(enable).toHaveAttribute("aria-pressed", "false");
+  await enable.click();
+  await expect(page.getByRole("button", { name: "効果音をオフにする", exact: true })).toHaveText("効果音 オン");
+  await page.screenshot({ path: testInfo.outputPath("attack-sound-control.png") });
+  await expect(page.getByRole("button", { name: "BGMをオンにする", exact: true })).toBeVisible();
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 200)));
+  const voices = () => page.evaluate(() => window.__raidMusicProbe.sources.length);
+  await page.getByRole("button", { name: "通常攻撃", exact: true }).click();
+  await page.clock.runFor(600); expect(await voices()).toBe(0);
+  await page.clock.runFor(100); expect(await voices()).toBe(1);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources[0].buffer?.duration)).toBeCloseTo(.42, 3);
+  await expect.poll(() => page.evaluate(() => {
+    const analyser = window.__raidMusicProbe.analyser!, data = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(data); return data.some(sample => Math.abs(sample) > .001);
+  }), { intervals: [10, 20, 50] }).toBe(true);
+  await page.clock.runFor(1800); expect(await voices()).toBe(1);
+  await page.getByRole("button", { name: "効果音をオフにする", exact: true }).click();
+  await page.getByRole("button", { name: "2倍攻撃", exact: true }).click();
+  await page.clock.runFor(900); expect(await voices()).toBe(1);
+  // Enabling after contact must not emit an old hit.
+  await enable.click(); await page.clock.runFor(400); expect(await voices()).toBe(1);
+  await page.getByRole("button", { name: "今の演出をもう一度", exact: true }).click();
+  await page.clock.runFor(700); expect(await voices()).toBe(2);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources[1].buffer?.duration)).toBeCloseTo(.9, 3);
+  await page.clock.runFor(1400); expect(await voices()).toBe(2);
+  // Cancelling an attack before contact cannot leave a delayed sound behind.
+  await page.getByRole("button", { name: "通常攻撃", exact: true }).click(); await page.clock.runFor(300);
+  await page.getByRole("button", { name: "待機", exact: true }).click(); await page.clock.runFor(1000);
+  expect(await voices()).toBe(2);
+  await page.getByRole("button", { name: "通常攻撃", exact: true }).click(); await page.clock.runFor(300);
+  await page.getByRole("button", { name: "演出を一時停止", exact: true }).click(); await page.clock.runFor(1000);
+  expect(await voices()).toBe(2);
+  await page.getByRole("button", { name: "演出を再開", exact: true }).click(); await page.clock.runFor(400);
+  expect(await voices()).toBe(3);
+  await page.clock.resume();
+  await page.getByRole("button", { name: "BGMをオンにする", exact: true }).click();
+  await expect(page.getByRole("button", { name: "BGMをオフにする", exact: true })).toHaveText("BGM オン");
+  await page.getByRole("button", { name: "効果音をオフにする", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.contexts.map(context => context.state))).toEqual(["suspended", "running"]);
+  await expect(page.getByRole("button", { name: "BGMをオフにする", exact: true })).toBeVisible();
+  await page.reload(); await expect(enable).toBeVisible();
+  expect(await page.evaluate(() => window.__raidMusicProbe.contexts.length)).toBe(0);
+});
+
+test("counter effects use a distinct breath sound at the team impact and obey mute and replay", async ({ page }) => {
+  await observeMusic(page, false);
+  await page.goto("/raid/screen?demo=effects");
+  await expect(page.getByRole("button", { name: "ボスの反撃", exact: true })).toBeEnabled();
+  const enable = page.getByRole("button", { name: "効果音をオンにする", exact: true });
+  await enable.click();
+  await expect(page.getByRole("button", { name: "効果音をオフにする", exact: true })).toHaveText("効果音 オン");
+  await page.clock.install(); await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 200)));
+  const voices = () => page.evaluate(() => window.__raidMusicProbe.sources.length);
+  await page.getByRole("button", { name: "ボスの反撃", exact: true }).click();
+  await page.clock.runFor(1500); expect(await voices()).toBe(0);
+  await page.clock.runFor(100); expect(await voices()).toBe(1);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources[0].buffer?.duration)).toBeCloseTo(1.3, 3);
+  await expect.poll(() => page.evaluate(() => {
+    const analyser = window.__raidMusicProbe.analyser!, samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples); return samples.some(sample => Math.abs(sample) > .001);
+  }), { intervals: [10, 20, 50] }).toBe(true);
+  await page.clock.runFor(2000); expect(await voices()).toBe(1);
+  await page.getByRole("button", { name: "効果音をオフにする", exact: true }).click();
+  await page.getByRole("button", { name: "今の演出をもう一度", exact: true }).click();
+  await page.clock.runFor(1700); expect(await voices()).toBe(1);
+  await enable.click(); await page.clock.runFor(400); expect(await voices()).toBe(1);
+  await page.getByRole("button", { name: "今の演出をもう一度", exact: true }).click();
+  await page.clock.runFor(1600); expect(await voices()).toBe(2);
+  await page.getByRole("button", { name: "ボスの反撃", exact: true }).click(); await page.clock.runFor(800);
+  await page.getByRole("button", { name: "待機", exact: true }).click(); await page.clock.runFor(1000);
+  expect(await voices()).toBe(2);
+  await page.clock.resume();
+});
+
+test("twenty simultaneous attackers share one attack and one counter sound across polling and the next round", async ({ page, request }) => {
+  await observeMusic(page, false);
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  await page.goto("/raid/screen");
+  await page.getByRole("button", { name: "効果音をオンにする", exact: true }).click();
+  await expect(page.getByRole("button", { name: "効果音をオフにする", exact: true })).toHaveText("効果音 オン");
+  let now = Date.now();
+  const room = new LocalRaidRoom(() => "paper", () => now);
+  const guests = [];
+  for (let i = 0; i < 20; i++) { const guest = await player(); guests.push(guest); room.join(guest.id, "forest-golem", 170, guest.nickname!); }
+  const roomId = room.snapshot().roomId; room.start(roomId);
+  for (const guest of guests) room.command(guest.id, { roomId, round: 1, requestId: randomUUID(), action: "attack", hand: "scissors" });
+  now += 10_000; room.snapshot(); room.reveal(roomId, 1);
+  await db.raidRoom.update({ where: { eventId }, data: { state: JSON.parse(JSON.stringify(room.save())) } });
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.sources.length)).toBe(1);
+  expect((await snapshot(request)).participants).toBe(20);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources[0].loop)).toBe(false);
+  await expect.poll(async () => (await snapshot(request)).round.number, { timeout: 15_000 }).toBe(2);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources.length)).toBe(2);
+  expect(await page.evaluate(() => window.__raidMusicProbe.sources.map(source => source.buffer?.duration))).toEqual([.9, 1.3]);
+  await expect(page.getByRole("button", { name: "BGMをオンにする", exact: true })).toBeVisible();
+});
 
 test("screen BGM loops continuously, follows reception and battle, and obeys the operator mute", async ({ page, request }, testInfo) => {
   await observeMusic(page);

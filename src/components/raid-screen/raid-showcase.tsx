@@ -16,6 +16,7 @@ import { useCharacterModels } from "../battle/use-character-models";
 import { boss } from "@/lib/boss";
 import type { RaidMusicTrack } from "@/lib/raid-music";
 import { RaidMusicControl } from "./raid-music-control";
+import { RaidAttackSoundControl, type RaidAttackSoundHandle } from "./raid-attack-sound-control";
 
 const icons = { idle: Users, rps: HandFist, attack: Swords, critical: Sparkles, heal: Heart, counter: Waves, weaken: Waves, victory: Trophy };
 const handIcons = { rock: HandFist, scissors: Scissors, paper: Hand };
@@ -58,6 +59,8 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
   const effects = useRef<HTMLDivElement>(null);
   const health = useRef<HTMLSpanElement>(null);
   const delayedHealth = useRef<HTMLSpanElement>(null);
+  const attackSound = useRef<RaidAttackSoundHandle>(null);
+  const soundedScene = useRef<string | null>(null);
   const demoActor="motion-preview";
   const context: RaidArenaContext | undefined = screen ? { members: screen.members, actorId: screen.scene.actorId, counterIds: screen.scene.counterIds, actions: screen.scene.actions } : demoCharacter ? {
     members:[{id:demoActor,nickname:demoCharacter.name,characterId:demoCharacter.id,characterName:demoCharacter.name,hp:100,maxHp:100}],actorId:demoActor,counterIds:[demoActor],
@@ -85,7 +88,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
     const lost = (event: Event) => {
       event.preventDefault(); observer?.disconnect(); arena.current?.dispose(); arena.current = null; setRenderer("fallback");
     };
-    const visibility = () => playback.current?.pause(latest.current.paused || document.hidden);
+    const visibility = () => { playback.current?.pause(latest.current.paused || document.hidden); if (document.hidden) attackSound.current?.stop(); };
     target.addEventListener("webglcontextlost", lost);
     document.addEventListener("visibilitychange", visibility);
     void import("@/lib/raid-showcase-arena").then(({ createShowcaseArena }) => {
@@ -124,6 +127,13 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
       if (now - lastDraw < 25 && frame.phase === lastPhase) return;
       lastDraw = now; lastPhase = frame.phase;
       arena.current?.render(frame, latest.current.context);
+      // Count muted contacts too, so enabling sound later cannot replay an old hit.
+      const soundContact = ((cue === "attack" || cue === "critical") && frame.phase !== "flight")
+        || (cue === "counter" && frame.visualMs >= counterImpactMs);
+      if (soundContact && soundedScene.current !== key) {
+        soundedScene.current = key;
+        attackSound.current?.play(cue === "counter" ? "counter" : cue === "critical" ? "critical" : "attack");
+      }
       const selected=latest.current.demoCharacterId;
       if(selected){
         const ready=arena.current?.characterReady(selected)??false;
@@ -151,6 +161,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
   }, [cue, key, renderer, bossHand, beforeHp, targetHp, maxHp, seconds]);
 
   useEffect(() => { playback.current?.pause((!screen && paused) || document.hidden); }, [paused, Boolean(screen)]);
+  useEffect(() => { attackSound.current?.stop(); }, [key, paused]);
 
   // Notify after the revealed hand has been committed to the screen, including the fallback renderer.
   const onReveal = screen?.onReveal;
@@ -170,7 +181,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
     } catch { setFullscreenError("全画面にできませんでした。ブラウザの全画面表示をお試しください。"); }
   }
 
-  return <div className={`${styles.viewport} ${screen ? styles.liveViewport : ""}`}>
+  return <div className={styles.viewport}>
     <div className={styles.stageViewport}>
     <main className={`${styles.screen} ${styles[cue]} ${screen ? styles.liveScreen : ""}`} data-cue={cue} data-demo-character-id={demoCharacter?.id} data-paused={!screen && paused} data-impact-phase={phase} data-counter-impact={cue === "counter" && contact === key} data-actor-id={screen?.scene.actorId ?? undefined} data-actor-ids={screen?.scene.actions.map((action) => action.participantId).join(",")} aria-label={screen ? "会場レイドスクリーン" : "PC用レイド演出デモ"}>
       <div className={styles.honeycomb}/>
@@ -241,14 +252,16 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
           return <button type="button" key={item.id} title={item.label} disabled={!demoPlayable} aria-pressed={cue === item.id} onClick={() => select(item.id)}><Icon/><span>{item.label}</span></button>;
         })}</div>
       </div>}
-      {!screen && <div className={styles.tools}><RaidMusicControl track={cue === "idle" ? "lobby" : "battle"}/><a href="/raid/screen?sync=local" aria-label="同期スクリーンへ戻る"><RotateCcw size={18}/>同期スクリーンへ戻る</a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>}
       {!screen && <p className={styles.caption} role="status">{fixture.label} </p>}
       {fullscreenError && <p className={styles.error} role="alert">{fullscreenError}</p>}
     </main>
     </div>
+    {!screen && <footer className={`${styles.operatorBar} ${styles.demoOperatorBar}`} aria-label="演出デモの音声と表示操作">
+      <div className={styles.operatorActions}><RaidMusicControl track={cue === "idle" ? "lobby" : "battle"}/><RaidAttackSoundControl ref={attackSound}/><a href="/raid/screen" aria-label="同期スクリーンへ戻る"><RotateCcw size={18}/>同期スクリーンへ戻る</a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+    </footer>}
     {screen && <footer className={styles.operatorBar} aria-label="レイドの進行操作">
       <div className={styles.liveFooter} role="status"><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</div>
-      <div className={styles.operatorActions}>{screen.tools}<RaidMusicControl track={screen.musicTrack}/><a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+      <div className={styles.operatorActions}>{screen.tools}<RaidMusicControl track={screen.musicTrack}/><RaidAttackSoundControl ref={attackSound}/><a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
     </footer>}
   </div>;
 }
