@@ -16,14 +16,14 @@ describe("shared ten-second raid rounds", () => {
     expect(room.snapshot().round.phase).toBe("lobby"); room.start(roomId);
     send(0, "scissors"); send(1, "paper"); send(2, "rock");
     expect(draw).not.toHaveBeenCalled();
-    expect(advance(9999)).toMatchObject({ bossHp: 450, results: [], round: { phase: "collecting", submitted: 3 } });
+    expect(advance(9999)).toMatchObject({ bossHp: 1350, results: [], round: { phase: "collecting", submitted: 3 } });
     const state = advance(1);
     expect(draw).toHaveBeenCalledOnce(); expect(state.round.phase).toBe("playing");
     expect(state.results.map((result) => result.boss)).toEqual(["paper", "paper", "paper"]);
     expect(state.results.map((result) => result.multiplier)).toEqual([2, 1, .5]);
     expect(state.results.map((result) => result.amount)).toEqual([100, 50, 25]);
-    expect(state.bossHp).toBe(275); expect(state.results.every((result) => result.turn === 1)).toBe(true);
-    expect(state.members.map((member) => member.hp)).toEqual([150, 150, 150]);
+    expect(state.bossHp).toBe(1175); expect(state.results.every((result) => result.turn === 1)).toBe(true);
+    expect(state.members.map((member) => member.hp)).toEqual([157, 157, 157]);
     room.snapshot(); expect(draw).toHaveBeenCalledOnce();
   });
   it("accepts one command per person, deduplicates retries and rejects payload changes", () => {
@@ -48,27 +48,31 @@ describe("shared ten-second raid rounds", () => {
   it("skips non-submitted actions but applies one full-team counter, excluding mid-play joins", () => {
     const { room, roomId, send, advance } = setup(2); room.start(roomId); send(0, "scissors");
     advance(); room.join("late", "aqua-spirit", 135, "LATE");
-    expect(room.snapshot("p1").me?.lastResult).toMatchObject({ submitted: false, amount: 0, counterDamage: 20 });
+    expect(room.snapshot("p1").me?.lastResult).toMatchObject({ submitted: false, amount: 0, counterDamage: 12 });
     expect(room.snapshot("late").me).toMatchObject({ hp: 135, eligibleRound: 2, lastResult: null });
     room.finish(roomId, 1); advance();
-    expect(room.snapshot("late").me?.lastResult).toMatchObject({ turn: 2, submitted: false, counterDamage: 20 });
+    expect(room.snapshot("late").me?.lastResult).toMatchObject({ turn: 2, submitted: false, counterDamage: 13 });
   });
   it("caps self-healing then counters everyone once and preserves rejoin HP", () => {
     const { room, roomId, send, advance } = setup(2); room.start(roomId); send(0, "scissors"); advance(); room.finish(roomId, 1);
     send(0, "scissors", "heal"); advance();
-    expect(room.snapshot("p0").me?.lastResult).toMatchObject({ amount: 20, playerHpBefore: 150, playerHpAfter: 150 });
-    expect(room.snapshot("p1").me?.hp).toBe(130);
-    room.join("p0", "forest-golem", 170, "P0"); expect(room.snapshot("p0").me?.hp).toBe(150);
+    expect(room.snapshot("p0").me?.lastResult).toMatchObject({ amount: 12, playerHpBefore: 158, playerHpAfter: 158 });
+    expect(room.snapshot("p1").me?.hp).toBe(146);
+    room.join("p0", "forest-golem", 170, "P0"); expect(room.snapshot("p0").me?.hp).toBe(158);
     expect(() => room.join("p0", "aqua-spirit", 135, "P0")).toThrow("キャラクター変更");
   });
   it("apportions lethal damage across all attackers and cancels the counter on victory", () => {
     expect(allocateRaidDamage([100, 50, 25], 50)).toEqual([29, 14, 7]);
     const { room, roomId, send, advance } = setup(6); room.start(roomId);
+    for (let turn = 0; turn < 4; turn++) {
+      for (let i = 0; i < 6; i++) send(i, "scissors");
+      advance(); room.finish(roomId, turn + 1);
+    }
     for (let i = 0; i < 6; i++) send(i, "scissors");
     const state = advance();
-    expect(state.bossHp).toBe(0); expect(state.results.map((result) => result.amount)).toEqual(Array(6).fill(75));
-    expect(state.results.every((result) => result.counterDamage === 0)).toBe(true);
-    room.finish(roomId, 1); expect(room.snapshot().round.phase).toBe("finished");
+    expect(state.bossHp).toBe(0); expect(state.rounds.at(-1)!.results.map((result) => result.amount)).toEqual(Array(6).fill(50));
+    expect(state.rounds.at(-1)!.results.every((result) => result.counterDamage === 0)).toBe(true);
+    room.finish(roomId, 5); expect(room.snapshot().round.phase).toBe("finished");
   });
   it("resets every pending intent, rejects old room IDs and enforces the cap", () => {
     const { room, roomId, send } = setup(20); room.start(roomId); send(0, "rock");

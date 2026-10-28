@@ -40,7 +40,7 @@ test("shared WebGL round launches from every actor and counters the whole team o
   expect(room.snapshot().counterTurn).toBe(0);
   await drive("data-counter-impact", "true");
   await expect.poll(() => room.snapshot().counterTurn).toBe(1);
-  expect(room.snapshot().members.map((member) => member.hp)).toEqual([150, 150, 150]);
+  expect(room.snapshot().members.map((member) => member.hp)).toEqual([157, 157, 157]);
   await page.screenshot({ path: testInfo.outputPath("raid-shared-team-counter.png") });
   await page.clock.runFor(1800); await expect.poll(() => room.snapshot().round.number).toBe(2);
   room.reset(); for (let i = 0; i < 20; i++) room.join(`team-${i}`, ["forest-golem", "flame-dragon", "thunder-fox", "aqua-spirit"][i % 4], 170, `参加者${i + 1}`);

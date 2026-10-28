@@ -24,6 +24,7 @@ export type RaidScreenPresentation = {
   scene: RaidScreenScene; members: LocalRaidParticipant[]; bossName: string;
   local: boolean; status: string; title: string; message: string; pending: number;
   production?: boolean;
+  bossAttack?: number;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
   onImpact: (id: string, kind: "action" | "counter") => void;
 };
@@ -176,6 +177,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
         <div className={styles.health} role="progressbar" aria-label={screen ? "ボスHP" : "演出デモのボスHP"} aria-valuenow={hp} aria-valuemin={0} aria-valuemax={maxHp}>
           <span ref={delayedHealth} className={styles.delayedHealth} style={{ width: `${beforeHp / maxHp * 100}%` }}/><span ref={health} className={styles.currentHealth} style={{ width: `${beforeHp / maxHp * 100}%` }}/>
         </div>
+        {screen && <div className={styles.bossStats} aria-label="ボスの強さ"><span>HP {hp.toLocaleString()} / {maxHp.toLocaleString()}</span><span>全体攻撃 {screen.bossAttack ?? 20}</span></div>}
       </header>
       <section className={styles.arena} aria-label="ボスとエフェクト" data-renderer={renderer}>
         <div className={styles.floor}/>

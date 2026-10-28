@@ -234,3 +234,4 @@
 .controls:has(.feedback) { grid-template-rows:auto minmax(0,1fr) auto auto; }
 .feedback { color:#a41430; }
 .localResult>small,.result>span { color:var(--raid-ink); }
+.bossAttack { flex:none; padding:0 5px; border:1px solid #e6c8cf; border-radius:4px; background:#fff6f8; color:#870b20; font-size:12px; line-height:1.2; font-weight:800; white-space:nowrap; }

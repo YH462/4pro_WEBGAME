@@ -78,6 +78,7 @@
 
 
 /* Essential live labels stay readable at browser zoom and laptop sizes. */
+.bossStats { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; padding-top:8px; color:#fff; font-size:max(12px,.8cqw); font-weight:800; text-shadow:0 1px 3px #68112e; }
 .liveScreen .demoBadge { font-size:clamp(14px,.9cqw,24px); }
 .liveScreen .bossTitle h1 { font-size:max(20px,1.65cqw); }
 .liveScreen .bossTitle>strong { font-size:max(16px,1cqw); }

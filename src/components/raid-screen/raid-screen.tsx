@@ -70,7 +70,7 @@ export function RaidScreen({ local = false, production = false, canSync = false,
   const message = error || resetError || (finished ? "「次のバトルを準備」で参加受付に戻ります。" : live?.round.phase === "collecting" ? `${live.round.submitted} / ${live.round.eligible}人が送信済み。全員同じ「ぽん！」で勝負！` : last ? `ROUND ${last.turn}：全員共通のボスの手で、それぞれの勝敗を判定します。`
     : local ? "参加QRを読み取って、スマホから攻撃・回復を選ぼう。" : "開催前です。演出は右下の「演出確認ページ」から確認できます。");
   return <>
-    <RaidShowcase entryTargets={entryTargets} screen={{ scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? boss.name, failed,
+    <RaidShowcase entryTargets={entryTargets} screen={{ scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? boss.name, bossAttack: live?.bossAttack, failed,
       collection: live?.round.phase === "collecting" ? { round: live.round.number, seconds, submitted: live.round.submitted, eligible: live.round.eligible } : undefined,
       onComplete: complete, onReveal, onImpact, tools: <>{local && (finished ? <button type="button" data-primary disabled={resetting || Boolean(error)} onClick={resetBattle}><RotateCcw/>{resetting ? "準備中…" : "次のバトルを準備"}</button> : <button type="button" data-primary disabled={resetting || Boolean(error) || !live?.alive || live.round.phase !== "lobby"} onClick={async () => {
         if (!live) return;
@@ -84,7 +84,7 @@ export function RaidScreen({ local = false, production = false, canSync = false,
         {production && <a href="/admin/login?next=raid-screen">管理者ログイン</a>}
         {local && <><a href={production ? "/battle/raid" : "/battle/raid?sync=local"} target="_blank" rel="noreferrer">スマホ画面を開く ↗</a><button type="button" disabled={resetting || !live} onClick={resetBattle}>{resetting ? "リセット中…" : "同期をリセット"}</button></>}
       </div>
-      <p>{local ? "入力受付は全員共通で10秒、1人1回です。全員の行動の後、生存している参加者へ20の全体攻撃を行います。未入力の人は行動せず、途中参加は次のラウンドからです。反撃演出後に次の10秒受付が始まります。リセットで参加状況とHPを初期化します。" : "参加受付・正式な戦闘進行は準備中です。仮の参加者や行動を実際の戦闘として自動再生しません。"}</p>
+      <p>{local ? "入力受付は全員共通で10秒、1人1回です。ボスのHPと全体攻撃は参加人数に応じて強くなります。入力受付中の途中参加はそのラウンドから、演出中の途中参加は次の受付から反映します。未入力の人は行動せず、反撃は受けます。反撃演出後に次の受付が始まります。リセットで参加状況とHPを初期化します。" : "参加受付・正式な戦闘進行は準備中です。仮の参加者や行動を実際の戦闘として自動再生しません。"}</p>
       {resetError && <p role="alert">{resetError}</p>}
     </dialog>
   </>;

@@ -89,7 +89,7 @@ test("three phones share one countdown and hand, receive different outcomes, and
     }
     await contexts[3].request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem" } });
     expect((await snapshot(contexts[3].request, true)).me).toMatchObject({ hp: 170, eligibleRound: 2, lastResult: null });
-    for (const phone of phones) await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "150", { timeout: 8000 });
+    for (const phone of phones) await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "157", { timeout: 8000 });
     expect((await snapshot(contexts[3].request, true)).me?.hp).toBe(170);
     await expect.poll(async () => (await snapshot(request)).round.number, { timeout: 8000 }).toBe(2);
     for (const phone of phones) await expect(phone.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
@@ -102,9 +102,9 @@ test("three phones share one countdown and hand, receive different outcomes, and
     await expect.poll(async () => (await snapshot(request)).round.phase, { timeout: 15000, intervals: [200] }).toBe("playing");
     const heal = (await snapshot(contexts[0].request, true)).me!.lastResult!;
     await expect(phones[0].locator(".raid-rps-result")).toContainText(`自己回復 ${heal.amount}`, { timeout: 6000 });
-    await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(150 + heal.amount));
+    await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(157 + heal.amount));
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(130 + heal.amount), { timeout: 8000 });
-    expect((await snapshot(contexts[3].request, true)).me?.hp).toBe(150);
+    expect((await snapshot(contexts[3].request, true)).me?.hp).toBe(157);
     await request.post("/api/local-raid", { headers, data: { type: "reset" } });
     await expect(phones[0].getByRole("status").filter({ hasText: /^受付開始を待っています$/ })).toBeVisible();
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");

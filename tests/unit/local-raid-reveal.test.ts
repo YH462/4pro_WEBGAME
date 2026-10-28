@@ -12,21 +12,21 @@ function setup() {
 describe("round-wide presentation checkpoints", () => {
   it("reveals everyone's outcome together but waits for action and counter contacts for HP", () => {
     const { room, roomId, command, close } = setup(); command(); close();
-    expect(visibleLocalRaid(room.snapshot("a"))).toMatchObject({ bossHp: 450, me: { hp: 170, lastResult: null } });
+    expect(visibleLocalRaid(room.snapshot("a"))).toMatchObject({ bossHp: 900, me: { hp: 170, lastResult: null } });
     room.reveal(roomId, 1);
-    expect(visibleLocalRaid(room.snapshot("a"))).toMatchObject({ bossHp: 450, me: { hp: 170, lastResult: { label: "勝ち" } } });
-    room.impact(roomId, 1, "action"); expect(visibleLocalRaid(room.snapshot("a")).bossHp).toBe(350);
+    expect(visibleLocalRaid(room.snapshot("a"))).toMatchObject({ bossHp: 900, me: { hp: 170, lastResult: { label: "勝ち" } } });
+    room.impact(roomId, 1, "action"); expect(visibleLocalRaid(room.snapshot("a")).bossHp).toBe(800);
     expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(170);
     room.impact(roomId, 1, "counter");
-    expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(150);
-    expect(visibleLocalRaid(room.snapshot("b")).me?.hp).toBe(150);
+    expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(158);
+    expect(visibleLocalRaid(room.snapshot("b")).me?.hp).toBe(158);
   });
   it("shows healing before a simultaneous team counter", () => {
     const { room, roomId, command, close } = setup(); command(); close(); room.finish(roomId, 1);
     command("heal"); close(); room.reveal(roomId, 2);
-    expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(150);
+    expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(158);
     room.impact(roomId, 2, "action"); expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(170);
-    room.impact(roomId, 2, "counter"); expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(150);
+    room.impact(roomId, 2, "counter"); expect(visibleLocalRaid(room.snapshot("a")).me?.hp).toBe(158);
   });
   it("wakes long polls at each checkpoint, deduplicates acknowledgements and cancels on reset", async () => {
     const { room, roomId, command, close } = setup(); command(); close();

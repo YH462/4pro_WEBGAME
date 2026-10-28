@@ -54,6 +54,8 @@ export type LocalRaidSnapshot = {
   bossName: string;
   bossHp: number;
   bossMaxHp: number;
+  bossAttack: number;
+  difficultyPlayers: number;
   turn: number;
   participants: number;
   alive: number;

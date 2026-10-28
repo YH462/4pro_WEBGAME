@@ -39,7 +39,12 @@ export function raidPlaybackReducer(state: RaidScreenPlayback, action: { type: "
   }
   const snapshot = action.snapshot;
   const round = snapshot.round.phase === "playing" ? snapshot.rounds.at(-1) ?? null : null;
-  if (state.roomId === snapshot.roomId && (!round || round.turn <= state.lastTurn)) return state;
+  if (state.roomId === snapshot.roomId && (!round || round.turn <= state.lastTurn)) {
+    // Joining while waiting/collecting can increase capacity without starting
+    // another animation. Keep the idle HP bar in sync with the server.
+    if (!state.active && (state.hp !== snapshot.bossHp || state.maxHp !== snapshot.bossMaxHp)) return { ...state, hp: snapshot.bossHp, maxHp: snapshot.bossMaxHp };
+    return state;
+  }
   const requestedStep = !round || round.turn > snapshot.revealedTurn ? 0 : round.turn > snapshot.actionTurn ? 1 : 2;
   const step = round ? Math.min(requestedStep, steps(round).length - 1) : 0;
   return { ...emptyRaidPlayback, roomId: snapshot.roomId, lastTurn: round?.turn ?? 0, active: round, step,

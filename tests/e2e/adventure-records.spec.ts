@@ -88,9 +88,9 @@ test("completed production raids appear live, survive reset and retries, and rem
   await page.context().addCookies([{ name: "fourpro_guest", value: team[0].token, url: origin }]);
   await page.goto("/profile"); await page.getByRole("tab", { name: "冒険の記録", exact: true }).click();
   expect((await post(request, adminHeaders, { type: "start", roomId: snapshot.roomId })).status()).toBe(200);
-  for (let i = 0; i < 4 && snapshot.round.phase !== "finished"; i++) {
+  for (let i = 0; i < 9 && snapshot.round.phase !== "finished"; i++) {
     snapshot = await state(request);
-    for (const member of team) expect((await post(request, member.headers, { type: "command", roomId: snapshot.roomId, round: snapshot.round.number, requestId: randomUUID(), action: "attack", hand: "scissors" })).status()).toBe(200);
+    for (const [index, member] of team.entries()) expect((await post(request, member.headers, { type: "command", roomId: snapshot.roomId, round: snapshot.round.number, requestId: randomUUID(), action: "attack", hand: ["rock", "paper", "scissors"][index % 3] })).status()).toBe(200);
     snapshot = await closeRound(request);
   }
   expect(snapshot.round.phase).toBe("finished"); expect(snapshot.bossHp).toBe(0);
@@ -138,7 +138,7 @@ test("defeat is recorded while unfinished resets and trial characters do not add
   expect((await post(request, guest.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(200);
   snapshot = await state(request);
   expect((await post(request, adminHeaders, { type: "start", roomId: snapshot.roomId })).status()).toBe(200);
-  for (let i = 0; i < 9; i++) snapshot = await closeRound(request);
+  for (let i = 0; i < 15; i++) snapshot = await closeRound(request);
   expect(snapshot.round.phase).toBe("finished"); expect(snapshot.bossHp).toBe(450);
   expect(await records(request, guest.headers)).toMatchObject({ collected: 0, raidCount: 1, victories: 0, raids: [{ won: false }] });
   const failedAwards=(await records(request,guest.headers)).awards;

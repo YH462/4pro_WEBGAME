@@ -23,7 +23,7 @@ describe("persistent raid rules", () => {
     expect(replay.snapshot("player")).toEqual(afterDeadline);
     replay.reveal(roomId, 1); replay.impact(roomId, 1, "action"); replay.impact(roomId, 1, "counter"); replay.finish(roomId, 1);
     const resumed = LocalRaidRoom.restore(replay.save(), () => now);
-    expect(resumed.snapshot("player")).toMatchObject({ round: { number: 2, phase: "collecting" }, me: { hp: 150 } });
+    expect(resumed.snapshot("player")).toMatchObject({ round: { number: 2, phase: "collecting" }, me: { hp: 158 } });
     resumed.finish(roomId, 1);
     expect(resumed.snapshot().round.number).toBe(2);
     expect(original.save().revealedTurn).toBe(0);
@@ -40,8 +40,10 @@ describe("persistent raid rules", () => {
     for (let i = 0; i < 5; i++) room.join(`player-${i}`, "forest-golem", 170, `参加者${i}`);
     const roomId = room.snapshot().roomId;
     room.start(roomId);
-    for (let i = 0; i < 5; i++) room.command(`player-${i}`, { roomId, round: 1, requestId: `p${i}`, action: "attack", hand: "scissors" });
-    now = 10_000; room.snapshot(); room.finish(roomId, 1);
+    for (let turn = 1; turn <= 5; turn++) {
+      for (let i = 0; i < 5; i++) room.command(`player-${i}`, { roomId, round: turn, requestId: `${turn}-p${i}`, action: "attack", hand: "scissors" });
+      now += 10_000; room.snapshot(); room.finish(roomId, turn);
+    }
     expect(room.snapshot().round.phase).toBe("finished");
     expect(() => room.join("late", "forest-golem", 170, "後から参加")).toThrow("終了したレイド");
     expect(room.join("player-0", "four-pro", 300, "変更後").me?.characterId).toBe("forest-golem");

@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { battlePreview } from "./battle-preview";
 import { raidHands, resolveRaidRps, type RaidHand } from "./raid-rps";
+import { raidBalance, type RaidBalance } from "./raid-balance";
 import type { LocalRaidAction, LocalRaidMember, LocalRaidResult, LocalRaidRoundResult, LocalRaidSnapshot } from "./local-raid-types";
 
 type Member = LocalRaidMember & { screenId: string; characterName: string; nickname: string };
@@ -11,6 +12,8 @@ export type SavedRaidRoom = {
   revealedTurn: number; actionTurn: number; counterTurn: number; completedTurn: number;
   totalDamage: number; totalHealing: number; rounds: LocalRaidRoundResult[];
   members: [string, Member][]; receipts: [string, string][];
+  // Absent on old saves: those running fights keep their original 450/20 rules.
+  balance?: RaidBalance;
 };
 export const raidInputMs = 10_000;
 export class LocalRaidError extends Error {
@@ -34,6 +37,7 @@ export class LocalRaidRoom {
   private roomId = randomUUID();
   private revision = 0;
   private bossHp: number = battlePreview.bossHp;
+  private balance: RaidBalance | null = raidBalance(0);
   private turn = 0;
   private phase: LocalRaidSnapshot["round"]["phase"] = "lobby";
   private closesAt: number | null = null;
@@ -55,14 +59,15 @@ export class LocalRaidRoom {
     return structuredClone({ version: 1, roomId: this.roomId, revision: this.revision, bossHp: this.bossHp, turn: this.turn,
       phase: this.phase, closesAt: this.closesAt, revealedTurn: this.revealedTurn, actionTurn: this.actionTurn,
       counterTurn: this.counterTurn, completedTurn: this.completedTurn, totalDamage: this.totalDamage,
-      totalHealing: this.totalHealing, rounds: this.rounds, members: [...this.members], receipts: [...this.receipts] });
+      totalHealing: this.totalHealing, rounds: this.rounds, members: [...this.members], receipts: [...this.receipts], ...(this.balance ? { balance: this.balance } : {}) });
   }
 
   static restore(saved: SavedRaidRoom, now = () => Date.now()) {
     if (saved.version !== 1) throw new Error("Unsupported raid state version.");
     const room = new LocalRaidRoom(undefined, now);
-    const { version: _version, members, receipts, ...fields } = structuredClone(saved);
+    const { version: _version, members, receipts, balance, ...fields } = structuredClone(saved);
     Object.assign(room, fields);
+    room.balance = balance ?? null;
     room.members = new Map(members); room.receipts = new Map(receipts);
     room.results = room.rounds.flatMap((round) => round.results);
     return room;
@@ -71,6 +76,14 @@ export class LocalRaidRoom {
   private changed() { this.revision++; this.listeners.forEach((notify) => notify()); }
   private checkRoom(roomId: string) {
     if (roomId !== this.roomId) throw new LocalRaidError(409, "同期がリセットされました。最新の状態でやり直してください。");
+  }
+  private updateBalance() {
+    if (!this.balance && this.phase !== "lobby") return;
+    if (this.balance?.participants === this.members.size) return;
+    const next = raidBalance(this.members.size);
+    // Add only the extra capacity. Already-dealt damage is never discarded.
+    this.bossHp += next.maxHp - (this.balance?.maxHp ?? battlePreview.bossHp);
+    this.balance = next;
   }
   join(playerId: string, characterId: string, maxHp: number, nickname: string, characterName = characterId) {
     this.tick();
@@ -87,6 +100,9 @@ export class LocalRaidRoom {
       existing.hp = Math.floor(existing.hp / existing.maxHp * maxHp);
       Object.assign(existing, { characterId, characterName, maxHp, nickname });
     } else return this.snapshot(playerId);
+    // An actor arriving during playback joins the next round, so the current
+    // round's HP and counter stay immutable until its presentation completes.
+    if (this.phase !== "playing") this.updateBalance();
     this.changed();
     return this.snapshot(playerId);
   }
@@ -98,6 +114,7 @@ export class LocalRaidRoom {
     return this.snapshot();
   }
   private openRound() {
+    this.updateBalance();
     this.turn++; this.phase = "collecting"; this.closesAt = this.now() + raidInputMs;
     this.members.forEach((member) => { member.submission = null; });
     this.changed();
@@ -136,7 +153,7 @@ export class LocalRaidRoom {
       const playerHpBefore = member.hp;
       const amount = !submitted ? 0 : action === "attack" ? damage[i] : Math.min(battlePreview.baseSelfHeal * rps.multiplier, member.maxHp - member.hp);
       if (action === "heal") member.hp += amount;
-      const counterDamage = this.bossHp > 0 ? Math.min(20, member.hp) : 0;
+      const counterDamage = this.bossHp > 0 ? Math.min(this.balance?.attack ?? 20, member.hp) : 0;
       member.hp -= counterDamage;
       const result = { id: `${this.turn}:${member.screenId}`, submitted, participantId: member.screenId, characterId: member.characterId, characterName: member.characterName, bossHpBefore, bossHpAfter: this.bossHp, playerHpBefore, playerHpAfter: member.hp, turn: this.turn, nickname: member.nickname, action, hand, boss, ...rps, ...(submitted ? {} : { label: "未入力", multiplier: 0 }), amount, counterDamage, at: this.closesAt! };
       member.lastResult = result; return result;
@@ -181,6 +198,7 @@ export class LocalRaidRoom {
   }
   reset() {
     this.roomId = randomUUID(); this.bossHp = battlePreview.bossHp; this.turn = this.completedTurn = 0;
+    this.balance = raidBalance(0);
     this.phase = "lobby"; this.closesAt = null; this.revealedTurn = this.actionTurn = this.counterTurn = 0;
     this.totalDamage = this.totalHealing = 0; this.results = []; this.rounds = []; this.receipts.clear(); this.members.clear(); this.changed();
     return this.snapshot();
@@ -193,7 +211,8 @@ export class LocalRaidRoom {
       roomId: this.roomId, revision: this.revision, serverNow: this.now(), round: { number: this.turn, phase: this.phase, closesAt: this.closesAt, submitted: eligible.filter((member) => member.submission).length, eligible: eligible.length },
       rounds: this.rounds.map((round) => ({ ...round, results: round.results.map((result) => ({ ...result })) })),
       revealedTurn: this.revealedTurn, actionTurn: this.actionTurn, counterTurn: this.counterTurn,
-      bossName: battlePreview.bossName, bossHp: this.bossHp, bossMaxHp: battlePreview.bossHp, turn: Math.max(1, this.turn),
+      bossName: battlePreview.bossName, bossHp: this.bossHp, bossMaxHp: this.balance?.maxHp ?? battlePreview.bossHp,
+      bossAttack: this.balance?.attack ?? 20, difficultyPlayers: this.balance?.participants ?? 0, turn: Math.max(1, this.turn),
       participants: members.length, alive: members.filter((member) => member.hp > 0).length,
       attackCount: members.filter((member) => member.submission?.action === "attack").length, healCount: members.filter((member) => member.submission?.action === "heal").length,
       totalDamage: this.totalDamage, totalHealing: this.totalHealing, lastResult: this.results.at(-1) ? { ...this.results.at(-1)! } : null,

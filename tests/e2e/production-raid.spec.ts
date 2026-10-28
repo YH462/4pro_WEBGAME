@@ -99,8 +99,10 @@ test("a completed raid exposes the next battle action and retains results when r
   }
   const roomId = room.snapshot().roomId;
   room.start(roomId);
-  for (const guest of guests) room.command(guest.id, { roomId, round: 1, requestId: randomUUID(), action: "attack", hand: "scissors" });
-  now += 10_000; room.snapshot(); room.finish(roomId, 1);
+  for (let turn = 1; turn <= 5; turn++) {
+    for (const guest of guests) room.command(guest.id, { roomId, round: turn, requestId: randomUUID(), action: "attack", hand: "scissors" });
+    now += 10_000; room.snapshot(); room.finish(roomId, turn);
+  }
   expect(room.snapshot().round.phase).toBe("finished");
   await db.raidRoom.create({ data: { eventId, state: JSON.parse(JSON.stringify(room.save())) } });
   await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
@@ -242,15 +244,81 @@ test("twenty concurrent phones keep all inputs, deduplicate retries and share on
   } finally { await secondConnection.$disconnect(); }
   await expect.poll(async () => (await snapshot(request)).round.phase, { timeout: 15_000 }).toBe("playing");
   const resolved = await snapshot(request); expect(resolved.results).toHaveLength(20); expect(new Set(resolved.results.map((entry) => entry.boss)).size).toBe(1);
-  expect(resolved.bossHp).toBe(0); expect(resolved.totalDamage).toBe(450);
+  expect(resolved).toMatchObject({ bossMaxHp: 9000, bossAttack: 17, difficultyPlayers: 20 });
+  expect(resolved.bossHp).toBeGreaterThan(0); expect(resolved.totalDamage).toBeLessThanOrEqual(2000);
   const finishes = await Promise.all(Array.from({ length: 4 }, () => post(request, adminHeaders, { type: "finish", roomId: state.roomId, turn: 1 })));
   expect(finishes.map((response) => response.status())).toEqual(Array(4).fill(200));
-  expect((await snapshot(request)).round.phase).toBe("finished");
+  let ongoing = await snapshot(request);
+  expect(ongoing.round.phase).toBe("collecting");
+  while (ongoing.round.phase === "collecting" && ongoing.round.number <= 9) {
+    const round = ongoing.round.number;
+    const inputs = await Promise.all(guests.map((guest, i) => post(request, guest.headers, { type: "command", roomId: state.roomId, round, requestId: randomUUID(), action: "attack", hand: ["rock", "paper", "scissors"][i % 3] })));
+    expect(inputs.every(response => response.status() === 200)).toBe(true);
+    const row = await db.raidRoom.findUniqueOrThrow({ where: { eventId } });
+    await db.raidRoom.update({ where: { eventId }, data: { state: { ...row.state as object, closesAt: Date.now() - 1 } } });
+    await snapshot(request);
+    expect((await post(request, adminHeaders, { type: "finish", roomId: state.roomId, turn: round })).status()).toBe(200);
+    ongoing = await snapshot(request);
+  }
+  expect(ongoing.round.phase).toBe("finished"); expect(ongoing.totalDamage).toBe(9000);
   expect(await db.raidReward.count({where:{playerId:{in:guests.map(guest=>guest.id)}}})).toBe(20);
   expect((await db.raidReward.aggregate({where:{playerId:{in:guests.map(guest=>guest.id)}},_sum:{points:true}}))._sum.points).toBe(2000);
   expect((await post(request, adminHeaders, { type: "reset", roomId: state.roomId })).status()).toBe(200);
   expect((await post(request, adminHeaders, { type: "reset", roomId: state.roomId })).status()).toBe(409);
   expect((await post(request, guests[0].headers, commands[0])).status()).toBe(409);
+});
+
+test("ten-player strength stays synchronized on screen and phone as new players join", async ({ page, browser, request }, testInfo) => {
+  const guests = [];
+  for (let i = 0; i < 2; i++) {
+    const guest = await player(); guests.push(guest);
+    expect((await post(request, guest.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(200);
+  }
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...args: unknown[]) {
+      if (kind.includes("webgl")) return null;
+      return original.apply(this, [kind, ...args] as never);
+    } as typeof original;
+  });
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  await page.setViewportSize({ width: 1292, height: 724 }); await page.goto("/raid/screen");
+  await expect(page.getByRole("progressbar", { name: "ボスHP", exact: true })).toHaveAttribute("aria-valuemax", "900");
+  const phoneContext = await browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  try {
+    await phoneContext.addCookies([{ name: "fourpro_guest", value: guests[0].token, url: origin }]);
+    await phoneContext.addInitScript(() => { HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext; });
+    const phone = await phoneContext.newPage(); await phone.goto("/battle/raid");
+    await expect(phone.getByRole("progressbar", { name: "ボスHP（同期）" })).toHaveAttribute("aria-valuemax", "900");
+    for (let i = 2; i < 10; i++) {
+      const guest = await player(); guests.push(guest);
+      expect((await post(request, guest.headers, { type: "join", characterId: "forest-golem" })).status()).toBe(200);
+    }
+    await expect(page.getByRole("progressbar", { name: "ボスHP", exact: true })).toHaveAttribute("aria-valuemax", "4500");
+    await expect(page.getByLabel("ボスの強さ", { exact: true })).toContainText("全体攻撃 14");
+    await expect(phone.getByRole("progressbar", { name: "ボスHP（同期）" })).toHaveAttribute("aria-valuemax", "4500");
+    await expect(phone.getByLabel("ボスの全体攻撃", { exact: true })).toHaveText("全体攻撃 14");
+    const stored = await db.raidRoom.findUniqueOrThrow({ where: { eventId } });
+    expect(stored.state).toMatchObject({ balance: { participants: 10, maxHp: 4500, attack: 14 } });
+    await page.reload();
+    await expect(page.getByRole("progressbar", { name: "ボスHP", exact: true })).toHaveAttribute("aria-valuenow", "4500");
+    await page.screenshot({ path: testInfo.outputPath("ten-player-scaled-screen.png") });
+    for (const [width, height] of [[375, 667], [390, 844], [430, 932], [844, 390]]) {
+      await phone.setViewportSize({ width, height });
+      const layout = await phone.evaluate(() => {
+        const heading = document.querySelector('section[aria-label="ボスの状況"] h2')!;
+        const badge = document.querySelector('[aria-label="ボスの全体攻撃"]')!;
+        const title = heading.getBoundingClientRect(), box = badge.getBoundingClientRect();
+        const panel = badge.closest('section')!.getBoundingClientRect();
+        return { lines: title.height / parseFloat(getComputedStyle(heading).lineHeight), font: parseFloat(getComputedStyle(badge).fontSize), clipped: box.bottom > panel.bottom || box.top < panel.top || box.left < panel.left || box.right > panel.right, overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(layout.lines, `${width} title`).toBeLessThan(1.1);
+      expect(layout.font).toBeGreaterThanOrEqual(12);
+      expect(layout.clipped, `${width} badge`).toBe(false); expect(layout.overflow).toBe(false);
+      expect((await collectSmallText(phone)).filter(item => item.size <= 10)).toEqual([]);
+      await phone.screenshot({ path: testInfo.outputPath(`ten-player-scaled-phone-${width}.png`) });
+    }
+  } finally { await phoneContext.close(); }
 });
 
 test("a real screen and two phones complete a round and reconnect after reload", async ({ page, browser, request }, testInfo) => {
@@ -275,7 +343,7 @@ test("a real screen and two phones complete a round and reconnect after reload",
     await phones[0].reload(); await expect(phones[0].getByRole("group", { name: "送信した行動とじゃんけんの手" })).toContainText("攻撃 / チョキ");
     await page.reload();
     await expect.poll(async () => (await snapshot(request)).round.number, { timeout: 30_000 }).toBe(2);
-    for (const phone of phones) { await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "150"); await expect(phone.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled(); }
+    for (const phone of phones) { await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "158"); await expect(phone.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled(); }
     await page.screenshot({ path: testInfo.outputPath("production-raid-screen.png") });
     await phones[0].screenshot({ path: testInfo.outputPath("production-raid-phone.png") });
     const stored = await db.raidRoom.findUniqueOrThrow({ where: { eventId } }); expect(JSON.stringify(stored.state)).toContain('"completedTurn":1');
