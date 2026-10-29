@@ -1,0 +1,336 @@
+{
+  "version": 1,
+  "inputs": 46,
+  "unique": 30,
+  "duplicates": 16,
+  "files": [
+    {
+      "path": "aqua-spirit/attack.blend",
+      "characterId": "aqua-spirit",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "7deb452e8dd7fd9df6e18edf431ff58febd4d7ac66dc4141e39694fc659c7fc8",
+      "bytes": 1706823,
+      "origins": [
+        "3Dmodels/モーションファイル/学科モデルC科_ポンタス.blend 攻撃.blend",
+        "3Dmodels/モーションファイル2/学科モデルC科_ポンタス.blend 攻撃.blend"
+      ]
+    },
+    {
+      "path": "aqua-spirit/heal.blend",
+      "characterId": "aqua-spirit",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "972620f70dc08d07d5954483f5e51bcc206c10a96aa949feb3e2ee3462876cdb",
+      "bytes": 1707888,
+      "origins": [
+        "3Dmodels/モーションファイル/学科モデルC科_ポンタス.blend 回復.blend",
+        "3Dmodels/モーションファイル2/学科モデルC科_ポンタス.blend 回復.blend"
+      ]
+    },
+    {
+      "path": "des-dragoon/attack.blend",
+      "characterId": "des-dragoon",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "2e167578d18241e419cfeb1f049a4faa0773128680a1bf64d3824de8cfede52b",
+      "bytes": 308813,
+      "origins": [
+        "3Dmodels/モーションファイル/敵キャラ_デスドラグーン（赤）攻撃.blend",
+        "3Dmodels/モーションファイル2/敵キャラ_デスドラグーン（赤）攻撃.blend"
+      ]
+    },
+    {
+      "path": "flame-dragon/attack.glb",
+      "characterId": "flame-dragon",
+      "action": "attack",
+      "status": "helper-only-reference",
+      "sha256": "3de2e19ec6405ee1f3b0c38efb4cb6ecb6c231ef0dd1d4757234b839ca13ebe5",
+      "bytes": 1349340,
+      "origins": [
+        "3Dmodels/モーションファイル2/S科ポケモン_リセンコ (1)kougeki.glb"
+      ]
+    },
+    {
+      "path": "flame-dragon/heal.glb",
+      "characterId": "flame-dragon",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "e3da6f6bf7d5cd0472eb610567a44210c84f21efa7fca09d16586c785c0cf291",
+      "bytes": 44156440,
+      "origins": [
+        "3Dmodels/モーションファイル2/S科ポケモン_リセンコ回復.glb"
+      ]
+    },
+    {
+      "path": "forest-golem/attack.glb",
+      "characterId": "forest-golem",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "7b4afc52d80fe6cf9e0934163a2668a1663b2ba075ff27687f1cf201c28e1447",
+      "bytes": 7756980,
+      "origins": [
+        "3Dmodels/モーションファイル2/Mモン攻撃.glb"
+      ]
+    },
+    {
+      "path": "forest-golem/heal.glb",
+      "characterId": "forest-golem",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "21f3f3c3b5d9e8a51199a548118204dde007ef4f9166dbe978df8b2dd8fff61b",
+      "bytes": 581988,
+      "origins": [
+        "3Dmodels/モーションファイル2/Mモン回復.glb"
+      ]
+    },
+    {
+      "path": "references/aqua-spirit/attack.glb",
+      "status": "reference",
+      "sha256": "4fb52e62aa7cae1d9281daaf039acc1f1d755b0587ccc38a677148dd0cd81ad1",
+      "bytes": 2545688,
+      "origins": [
+        "3Dmodels/モーションファイル2/学科モデルC科_ポンタス.blend 攻撃.glb"
+      ]
+    },
+    {
+      "path": "references/aqua-spirit/heal.glb",
+      "status": "reference",
+      "sha256": "868b7c7caff20aa694447ddf00791b600688fc38435263f3e1738d4abc83ac69",
+      "bytes": 2549828,
+      "origins": [
+        "3Dmodels/モーションファイル2/学科モデルC科_ポンタス.blend 回復.glb"
+      ]
+    },
+    {
+      "path": "references/des-dragoon/entry.blend",
+      "status": "reference",
+      "sha256": "35afeb040160f005555d650910260b293a545eef290733dcc52b3b3e473dd816",
+      "bytes": 309193,
+      "origins": [
+        "3Dmodels/モーションファイル/敵キャラ_デスドラグーン（赤）対戦開始.blend",
+        "3Dmodels/モーションファイル2/敵キャラ_デスドラグーン（赤）対戦開始.blend"
+      ]
+    },
+    {
+      "path": "references/des-dragoon/hit.blend",
+      "status": "reference",
+      "sha256": "2161a1e4e6b17782f9907aa16250647b08498112d7d0c9e5723cd244a6fe0786",
+      "bytes": 308866,
+      "origins": [
+        "3Dmodels/モーションファイル/敵キャラ_デスドラグーン（赤）被攻撃.blend",
+        "3Dmodels/モーションファイル2/敵キャラ_デスドラグーン（赤）被攻撃.blend"
+      ]
+    },
+    {
+      "path": "references/temp-08/attack.glb",
+      "status": "reference",
+      "sha256": "d20394c0464c5ea9f61a11c8357bf96a2541efea8a8d767aa957cb462f89486e",
+      "bytes": 1463892,
+      "origins": [
+        "3Dmodels/モーションファイル2/コートロン (1).blend 攻撃.glb"
+      ]
+    },
+    {
+      "path": "references/temp-08/heal.glb",
+      "status": "reference",
+      "sha256": "e8692be7f6b710cb2b2bbe1a98c59640185839f62934de7f7042e9a1aab1bd2f",
+      "bytes": 1464244,
+      "origins": [
+        "3Dmodels/モーションファイル2/コートロン (1).blend 回復.glb"
+      ]
+    },
+    {
+      "path": "references/temp-09/attack.glb",
+      "status": "reference",
+      "sha256": "cef7225e1da33379ae409906182cbd0706ebe0aadf64c73b95fc33c4ffe15235",
+      "bytes": 437788,
+      "origins": [
+        "3Dmodels/モーションファイル2/デンラコ (1).blend 攻撃.glb"
+      ]
+    },
+    {
+      "path": "references/temp-09/heal.glb",
+      "status": "reference",
+      "sha256": "9343eed40adaac8bcb7d5ecd2b5222cd5f16c1fddf4d5787476a11a3fec5922f",
+      "bytes": 440252,
+      "origins": [
+        "3Dmodels/モーションファイル2/デンラコ (1).blend 回復.glb"
+      ]
+    },
+    {
+      "path": "references/temp-11/unspecified.glb",
+      "status": "reference",
+      "sha256": "9df63f1ca72aa364b3c8a45591b6ab1aad12eb20c18d6cf8e5820f515ad3bc87",
+      "bytes": 1399108,
+      "origins": [
+        "3Dmodels/モーションファイル/ブシラッコ.glb",
+        "3Dmodels/モーションファイル2/ブシラッコ.glb"
+      ]
+    },
+    {
+      "path": "temp-06/attack.glb",
+      "characterId": "temp-06",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "a2f912446f7af3aab0388dd444650b627eecd74101602a308b0091fe6ae5ebeb",
+      "bytes": 16130728,
+      "origins": [
+        "3Dmodels/モーションファイル/Morinokami _攻撃.glb",
+        "3Dmodels/モーションファイル2/Morinokami _攻撃.glb"
+      ]
+    },
+    {
+      "path": "temp-06/heal.glb",
+      "characterId": "temp-06",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "601e6c66cba71d2d5a886bcff6e7165d78b733b8e93a063adb2ac5644c77df06",
+      "bytes": 16125760,
+      "origins": [
+        "3Dmodels/モーションファイル/Morinokami _回復.glb",
+        "3Dmodels/モーションファイル2/Morinokami _回復.glb"
+      ]
+    },
+    {
+      "path": "temp-07/attack.glb",
+      "characterId": "temp-07",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "8f4e50e9ff47428af0e10e996b4b1dc97b24996cb72b5b21e7213260502cdf5f",
+      "bytes": 317260,
+      "origins": [
+        "3Dmodels/モーションファイル2/パソコンモン攻撃.glb"
+      ]
+    },
+    {
+      "path": "temp-07/heal.glb",
+      "characterId": "temp-07",
+      "action": "heal",
+      "status": "single-frame-reference",
+      "sha256": "25b41cb1aaa1d932058cbea433401482e58d8eb0601d5872a9ac5924bd5e74cb",
+      "bytes": 273732,
+      "origins": [
+        "3Dmodels/モーションファイル2/パソコンモン回復.glb"
+      ]
+    },
+    {
+      "path": "temp-08/attack.blend",
+      "characterId": "temp-08",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "27804215e82f9a8f490fe9a15408e906e42a04f785356bb55854f99fa1bdfcc5",
+      "bytes": 287350,
+      "origins": [
+        "3Dmodels/モーションファイル/コートロン.blend 攻撃",
+        "3Dmodels/モーションファイル2/コートロン.blend 攻撃"
+      ]
+    },
+    {
+      "path": "temp-08/heal.blend",
+      "characterId": "temp-08",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "e439321b07b85af3a4ad6763d4c73ad47f102663b897ada08d5caa459b05bc09",
+      "bytes": 287364,
+      "origins": [
+        "3Dmodels/モーションファイル/コートロン.blend 回復",
+        "3Dmodels/モーションファイル2/コートロン.blend 回復"
+      ]
+    },
+    {
+      "path": "temp-09/attack.blend",
+      "characterId": "temp-09",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "4e31bb9a7d5519a217a03cb22cae0c9d8522bfaf4577fe4c59aedf3c330c178e",
+      "bytes": 1733899,
+      "origins": [
+        "3Dmodels/モーションファイル/デンラコ.blend 攻撃",
+        "3Dmodels/モーションファイル2/デンラコ.blend 攻撃"
+      ]
+    },
+    {
+      "path": "temp-09/heal.blend",
+      "characterId": "temp-09",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "87e44476535cfccf070cf9d801e51247620cff338dd7b2f4502ffb2056da80f3",
+      "bytes": 1736091,
+      "origins": [
+        "3Dmodels/モーションファイル/デンラコ.blend 回復",
+        "3Dmodels/モーションファイル2/デンラコ.blend 回復"
+      ]
+    },
+    {
+      "path": "temp-10/attack.glb",
+      "characterId": "temp-10",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "f491bf831a3836bdf1e961348b2d98e9e3527ed0703a28e70b3745d57d42b140",
+      "bytes": 26975156,
+      "origins": [
+        "3Dmodels/モーションファイル2/トショカン (1)攻撃.glb"
+      ]
+    },
+    {
+      "path": "temp-10/heal.glb",
+      "characterId": "temp-10",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "0139168ea9a3ccbead9ee20c342a438c212d3e3ec35fcc8ad06e509b07056215",
+      "bytes": 27181196,
+      "origins": [
+        "3Dmodels/モーションファイル2/トショカン (1)回復.glb"
+      ]
+    },
+    {
+      "path": "temp-11/attack.glb",
+      "characterId": "temp-11",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "feb958f957c09c04e3c3f8c0d7eb2b1a65789e909ec37903dc124d612065ab07",
+      "bytes": 2758768,
+      "origins": [
+        "3Dmodels/モーションファイル/ブシラッコ _攻撃.glb",
+        "3Dmodels/モーションファイル2/ブシラッコ _攻撃.glb"
+      ]
+    },
+    {
+      "path": "temp-11/heal.glb",
+      "characterId": "temp-11",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "77895ffb981a6556782fe98c76b07719008e3c7996f8ab333f5ab07d19197318",
+      "bytes": 2758712,
+      "origins": [
+        "3Dmodels/モーションファイル/ブシラッコ _回復.glb",
+        "3Dmodels/モーションファイル2/ブシラッコ _回復.glb"
+      ]
+    },
+    {
+      "path": "thunder-fox/attack.glb",
+      "characterId": "thunder-fox",
+      "action": "attack",
+      "status": "selected",
+      "sha256": "39b1041dc049f423e3e69a281482bf42421d3c631797e44db1cfe33af47ae99f",
+      "bytes": 5914240,
+      "origins": [
+        "3Dmodels/モーションファイル/E科ポケモン修正版 _攻撃.glb",
+        "3Dmodels/モーションファイル2/E科ポケモン修正版 _攻撃.glb"
+      ]
+    },
+    {
+      "path": "thunder-fox/heal.glb",
+      "characterId": "thunder-fox",
+      "action": "heal",
+      "status": "selected",
+      "sha256": "ac1af5396dbd6b54762cc8d2a1cd1a882099bfa6db8fd89142a5ab215b1598fc",
+      "bytes": 5915052,
+      "origins": [
+        "3Dmodels/モーションファイル/E科ポケモン修正版 _回復.glb",
+        "3Dmodels/モーションファイル2/E科ポケモン修正版 _回復.glb"
+      ]
+    }
+  ]
+}

@@ -42,6 +42,11 @@ export function createCharacterModelLibrary() {
           const root = new THREE.Group();
           const facing = new THREE.Group(); facing.rotation.y = asset.yaw;
           facing.add(gltf.scene); root.add(facing);
+          const bodies: THREE.Object3D[] = [];
+          if (animated) root.traverse(object => { if (object.userData.raidMotionBody === true) bodies.push(object); });
+          const frameBounds = () => bodies.length
+            ? bodies.reduce((bounds, body) => bounds.union(new THREE.Box3().setFromObject(body)), new THREE.Box3())
+            : new THREE.Box3().setFromObject(root);
           let pose: THREE.AnimationMixer | undefined;
           if (animated) {
             try {
@@ -53,7 +58,7 @@ export function createCharacterModelLibrary() {
               root.animations = [clip];
             } catch (error) { disposeModel(root); throw error; }
           }
-          const bounds = new THREE.Box3().setFromObject(root);
+          const bounds = frameBounds();
           const size = bounds.getSize(new THREE.Vector3());
           if (disposed || bounds.isEmpty() || !Number.isFinite(size.length()) || size.y <= 0) {
             disposeModel(root);
@@ -73,7 +78,15 @@ export function createCharacterModelLibrary() {
               action.reset().play(); pose.setTime(clip.duration * step / 12);
               root.updateMatrixWorld(true);
               root.traverse(object=>{if(object instanceof THREE.SkinnedMesh)object.computeBoundingBox();});
-              envelope.union(new THREE.Box3().setFromObject(root));
+              envelope.union(frameBounds());
+            }
+            if (bodies.length && envelope.min.y < -.001) {
+              // Keep an authored jump/drop above the arena floor. Framing from
+              // its airborne first pose must not bury the final pose below Y=0.
+              const lift = -envelope.min.y;
+              facing.position.y += lift / root.scale.y;
+              envelope.translate(new THREE.Vector3(0, lift, 0));
+              root.updateMatrixWorld(true);
             }
             envelope.expandByScalar(.15);
             root.userData.motionBounds = { min: envelope.min.toArray(), max: envelope.max.toArray() };

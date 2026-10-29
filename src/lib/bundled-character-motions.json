@@ -1,4 +1,18 @@
 {
+  "forest-golem": {
+    "baseSha256": "8b1bb181a462478c646ccd4e4e14f2240392a6d91305347d32113627c030688b",
+    "baseYaw": -90,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/m-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/m-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
   "thunder-fox": {
     "baseSha256": "b01541601c27e92d5649152dfb6406bb2015e541587f78f0959e8135b4c4f767",
     "baseYaw": 180,
@@ -9,6 +23,16 @@
       },
       "heal": {
         "url": "/models/motions/e-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
+  "flame-dragon": {
+    "baseSha256": "a5fbb0a1cdc3c98f5bdaff4cf6e97dec638921cebd2872c972a21e2ad049671e",
+    "baseYaw": -90,
+    "motions": {
+      "heal": {
+        "url": "/models/motions/s-heal.glb",
         "yaw": 0
       }
     }
@@ -41,6 +65,16 @@
       }
     }
   },
+  "temp-07": {
+    "baseSha256": "77291d6b92adcd3efa2e2d2ad5e54e6d1896d82a73987d480bd83c98de335cf5",
+    "baseYaw": -90,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/pasocon-mon-attack.glb",
+        "yaw": 0
+      }
+    }
+  },
   "temp-08": {
     "baseSha256": "6407df4610904f924acf16fdde9115d8b8fe44f0ba674f0575b4df6ed08a5545",
     "baseYaw": 0,
@@ -65,6 +99,20 @@
       },
       "heal": {
         "url": "/models/motions/denrako-heal.glb",
+        "yaw": 0
+      }
+    }
+  },
+  "temp-10": {
+    "baseSha256": "88e30d9d9143ee272dfb15ab43e6fd1b94920bf2888460719e8f37972fb8b92e",
+    "baseYaw": 0,
+    "motions": {
+      "attack": {
+        "url": "/models/motions/toshokan-attack.glb",
+        "yaw": 0
+      },
+      "heal": {
+        "url": "/models/motions/toshokan-heal.glb",
         "yaw": 0
       }
     }

@@ -9,6 +9,16 @@ import { validateCharacterModel } from "../../src/lib/character-model-validation
 import manifest from "../../src/lib/bundled-character-motions.json";
 
 describe("raid character motions", () => {
+  it("bakes the M attack's different source facing into the asset instead of changing the DB model yaw", async () => {
+    const rotations = [];
+    for (const action of ["attack", "heal"]) {
+      const {doc}=inspectCharacterGLB(await readFile(`public/models/motions/m-${action}.glb`));
+      rotations.push(doc.nodes.find((node:{name?:string})=>node.name==="RaidMotionOrientation").rotation??[0,0,0,1]);
+    }
+    expect(rotations[0]).toEqual([0,0,0,1]);
+    expect(rotations[1][1]).toBeCloseTo(-Math.SQRT1_2);
+    expect(manifest["forest-golem"].baseYaw).toBe(-90);
+  });
   it("combines object actions and removes leading empty time without editing shared clips", () => {
     const body = new THREE.VectorKeyframeTrack("body.position", [5, 6], [0, 0, 0, 1, 0, 0]);
     const arm = new THREE.VectorKeyframeTrack("arm.position", [5, 5.5, 6], [0, 0, 0, 0, 1, 0, 0, 0, 0]);
@@ -97,6 +107,7 @@ describe("raid character motions", () => {
       const { doc } = inspectCharacterGLB(bytes);
       expect(bytes.length).toBeLessThan(7 * 1024 * 1024);
       expect(doc.nodes.some((node: {name?:string}) => node.name === "RaidMotionOrientation")).toBe(true);
+      if(["forest-golem","flame-dragon","temp-10"].includes(id))expect(doc.nodes.some((node:{extras?:{raidMotionBody?:boolean}})=>node.extras?.raidMotionBody===true)).toBe(true);
       expect(doc.animations.length).toBeGreaterThan(0);
       expect(doc.animations.some((clip: {samplers:{input:number}[]}) => clip.samplers.some(s=>doc.accessors[s.input].count>1))).toBe(true);
     });

@@ -1,9 +1,178 @@
 [
-  {"id":"thunder-fox","file":"e","yaw":180,"visibilitySource":"E科ポケモン修正版.blend","attack":"E科ポケモン修正版 _攻撃.glb","heal":"E科ポケモン修正版 _回復.glb"},
-  {"id":"aqua-spirit","file":"c","yaw":0,"attack":"学科モデルC科_ポンタス.blend 攻撃.blend","heal":"学科モデルC科_ポンタス.blend 回復.blend"},
-  {"id":"temp-06","file":"morinokami","yaw":0,"attack":"Morinokami _攻撃.glb","heal":"Morinokami _回復.glb"},
-  {"id":"temp-08","file":"coatoron","yaw":0,"attack":"コートロン.blend 攻撃","heal":"コートロン.blend 回復"},
-  {"id":"temp-09","file":"denrako","yaw":-90,"flip":true,"attack":"デンラコ.blend 攻撃","heal":"デンラコ.blend 回復"},
-  {"id":"temp-11","file":"bushirakko","yaw":-90,"attack":"ブシラッコ _攻撃.glb","heal":"ブシラッコ _回復.glb"},
-  {"id":"des-dragoon","file":"des-dragoon-red","yaw":0,"attack":"敵キャラ_デスドラグーン（赤）攻撃.blend"}
+  {
+    "id": "forest-golem",
+    "file": "m",
+    "yaw": -90,
+    "maxTextureSize": 1024,
+    "attack": "forest-golem/attack.glb",
+    "heal": "forest-golem/heal.glb",
+    "import": {
+      "attack": "Mモン攻撃.glb",
+      "heal": "Mモン回復.glb"
+    },
+    "bodyPrefixes": {
+      "attack": [
+        "アーマチュア"
+      ],
+      "heal": [
+        "立方体"
+      ]
+    },
+    "excludeObjects": {
+      "heal": [
+        "平面",
+        "エンプティ"
+      ]
+    },
+    "actionYaw": {
+      "attack": 0
+    }
+  },
+  {
+    "id": "thunder-fox",
+    "file": "e",
+    "yaw": 180,
+    "visibilitySource": "E科ポケモン修正版.blend",
+    "attack": "thunder-fox/attack.glb",
+    "heal": "thunder-fox/heal.glb",
+    "import": {
+      "attack": "E科ポケモン修正版 _攻撃.glb",
+      "heal": "E科ポケモン修正版 _回復.glb"
+    }
+  },
+  {
+    "id": "flame-dragon",
+    "file": "s",
+    "yaw": -90,
+    "attack": "flame-dragon/attack.glb",
+    "heal": "flame-dragon/heal.glb",
+    "import": {
+      "attack": "S科ポケモン_リセンコ (1)kougeki.glb",
+      "heal": "S科ポケモン_リセンコ回復.glb"
+    },
+    "inactiveActions": {
+      "attack": "helper-only-reference"
+    },
+    "bodyPrefixes": {
+      "heal": [
+        "body_upper"
+      ]
+    },
+    "excludeObjects": {
+      "heal": [
+        "平面",
+        "エンプティ"
+      ]
+    }
+  },
+  {
+    "id": "aqua-spirit",
+    "file": "c",
+    "yaw": 0,
+    "attack": "aqua-spirit/attack.blend",
+    "heal": "aqua-spirit/heal.blend",
+    "import": {
+      "attack": "学科モデルC科_ポンタス.blend 攻撃.blend",
+      "heal": "学科モデルC科_ポンタス.blend 回復.blend"
+    }
+  },
+  {
+    "id": "temp-06",
+    "file": "morinokami",
+    "yaw": 0,
+    "attack": "temp-06/attack.glb",
+    "heal": "temp-06/heal.glb",
+    "import": {
+      "attack": "Morinokami _攻撃.glb",
+      "heal": "Morinokami _回復.glb"
+    }
+  },
+  {
+    "id": "temp-07",
+    "file": "pasocon-mon",
+    "yaw": -90,
+    "attack": "temp-07/attack.glb",
+    "heal": "temp-07/heal.glb",
+    "import": {
+      "attack": "パソコンモン攻撃.glb",
+      "heal": "パソコンモン回復.glb"
+    },
+    "inactiveActions": {
+      "heal": "single-frame-reference"
+    },
+    "bodyPrefixes": {
+      "attack": [
+        "Torus",
+        "PC-mon"
+      ]
+    }
+  },
+  {
+    "id": "temp-08",
+    "file": "coatoron",
+    "yaw": 0,
+    "attack": "temp-08/attack.blend",
+    "heal": "temp-08/heal.blend",
+    "import": {
+      "attack": "コートロン.blend 攻撃",
+      "heal": "コートロン.blend 回復"
+    }
+  },
+  {
+    "id": "temp-09",
+    "file": "denrako",
+    "yaw": -90,
+    "flip": true,
+    "attack": "temp-09/attack.blend",
+    "heal": "temp-09/heal.blend",
+    "import": {
+      "attack": "デンラコ.blend 攻撃",
+      "heal": "デンラコ.blend 回復"
+    }
+  },
+  {
+    "id": "temp-10",
+    "file": "toshokan",
+    "yaw": 0,
+    "attack": "temp-10/attack.glb",
+    "heal": "temp-10/heal.glb",
+    "import": {
+      "attack": "トショカン (1)攻撃.glb",
+      "heal": "トショカン (1)回復.glb"
+    },
+    "bodyPrefixes": {
+      "attack": [
+        "Cube"
+      ],
+      "heal": [
+        "Cube"
+      ]
+    },
+    "excludeObjects": {
+      "heal": [
+        "平面",
+        "エンプティ"
+      ]
+    }
+  },
+  {
+    "id": "temp-11",
+    "file": "bushirakko",
+    "yaw": -90,
+    "attack": "temp-11/attack.glb",
+    "heal": "temp-11/heal.glb",
+    "import": {
+      "attack": "ブシラッコ _攻撃.glb",
+      "heal": "ブシラッコ _回復.glb"
+    }
+  },
+  {
+    "id": "des-dragoon",
+    "file": "des-dragoon-red",
+    "yaw": 0,
+    "attack": "des-dragoon/attack.blend",
+    "import": {
+      "attack": "敵キャラ_デスドラグーン（赤）攻撃.blend"
+    }
+  }
 ]

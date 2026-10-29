@@ -18,6 +18,39 @@ function fixture() {
 beforeEach(() => { loadAsync.mockReset(); });
 
 describe("Blender character models", () => {
+  it("grounds a tagged body's lowest pose without editing its authored descent", async () => {
+    const source = fixture(); source.mesh.name = "body"; source.mesh.userData.raidMotionBody = true;
+    loadAsync.mockResolvedValue({ scene: source.scene, animations: [new THREE.AnimationClip("drop", 1, [
+      new THREE.VectorKeyframeTrack("body.position", [0, 1], [7, -3, 5, 7, -7, 5]),
+    ])] });
+    const library = createCharacterModelLibrary();
+    const model = await library.load("motion", { url: "/drop.glb", yaw: 0 }, true);
+    const mixer = new THREE.AnimationMixer(model), action = mixer.clipAction(model.animations[0]).setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true; action.play(); mixer.setTime(1); model.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(model.getObjectByName("body")!);
+    expect(bounds.min.y).toBeCloseTo(0); expect(bounds.max.y).toBeCloseTo(2);
+    expect(model.userData.motionBounds.min[1]).toBeCloseTo(-.15);
+    expect(model.animations[0].tracks[0].values[4]).toBe(-7);
+    mixer.stopAllAction(); mixer.uncacheRoot(model); library.dispose();
+  });
+  it("frames tagged character bodies without shrinking them around distant projectiles", async () => {
+    const source = fixture(); source.mesh.name = "body"; source.mesh.userData.raidMotionBody = true;
+    const projectile = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    projectile.name = "projectile"; projectile.position.x = 1000; source.scene.add(projectile);
+    loadAsync.mockResolvedValue({ scene: source.scene, animations: [new THREE.AnimationClip("authored", 1, [
+      new THREE.VectorKeyframeTrack("body.position", [0, 1], [7, -3, 5, 7, -2, 5]),
+      new THREE.VectorKeyframeTrack("projectile.position", [0, 1], [1000, 0, 0, 2000, 0, 0]),
+    ])] });
+    const library = createCharacterModelLibrary();
+    const model = await library.load("motion", { url: "/motion.glb", yaw: 0 }, true);
+    const body = model.getObjectByName("body")!;
+    expect(new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3()).y).toBeCloseTo(2);
+    expect(model.userData.motionBounds.max[0]).toBeLessThan(5);
+    expect(model.userData.motionBounds.max[1]).toBeLessThan(3);
+    expect(model.getObjectByName("projectile")).toBeDefined();
+    expect(new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()).x).toBeGreaterThan(400);
+    library.dispose();
+  });
   it("maps the S and C sources to control and civil independently of the character's element", async () => {
     loadAsync.mockImplementation(async () => ({ scene: fixture().scene }));
     const library = createCharacterModelLibrary();
