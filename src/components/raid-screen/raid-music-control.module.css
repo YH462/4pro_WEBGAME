@@ -1,4 +1,6 @@
 .button.button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 14px; border:1px solid #d9c8d1; border-radius:6px; background:#fff; color:#50323e; font-size:14px; font-weight:750; line-height:1.4; white-space:nowrap; cursor:pointer; }
 .button.button[aria-pressed="true"] { background:#fff0f3; border-color:#c91d3b; color:#a91431; }
 .button.button svg { width:20px; height:20px; }
+.selection { display:inline-flex; align-items:center; flex-wrap:wrap; gap:8px; color:#50323e; font-size:14px; font-weight:750; }
+.selection select { min-height:44px; max-width:100%; padding:8px 10px; border:1px solid #d9c8d1; border-radius:6px; background:#fff; color:#50323e; font-size:14px; font-weight:750; cursor:pointer; }
 .error { flex-basis:100%; color:#a91431; background:#fff; padding:6px 10px; font-size:14px; line-height:1.5; }
