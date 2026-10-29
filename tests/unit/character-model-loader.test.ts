@@ -56,7 +56,8 @@ describe("Blender character models", () => {
     const library = createCharacterModelLibrary();
     await library.load("flame-dragon"); await library.load("aqua-spirit");
     expect(loadAsync.mock.calls.map(([url]) => url)).toEqual(["/models/characters/s.glb", "/models/characters/c.glb"]);
-    expect(characterModel("four-pro")).toBeUndefined();
+    expect(characterModel("four-pro")?.url).toBe("/models/characters/keidentera.glb");
+    expect(characterModel("temp-12")).toBeUndefined();
     expect(characterModel("toString")).toBeUndefined();
     library.dispose();
   });

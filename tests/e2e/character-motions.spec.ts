@@ -1,5 +1,34 @@
 import { test, expect } from "@playwright/test";
 import sharp from "sharp";
+import { readFile } from "node:fs/promises";
+
+test("Keidentera loads as the legendary character and retains generic raid effects",async({page},testInfo)=>{
+  test.setTimeout(90_000);
+  const errors:string[]=[],mutations:string[]=[];
+  page.on("pageerror",error=>errors.push(error.message));
+  page.on("request",request=>{if(/\/api\/(local-raid|raid)$/.test(new URL(request.url()).pathname)&&request.method()!=="GET")mutations.push(request.method());});
+  const {models}=await(await page.request.get("/api/character-models")).json();
+  expect(models["four-pro"].yaw).toBe(0);
+  expect(models["four-pro"].motions).toBeUndefined();
+  const download=await page.request.get(models["four-pro"].url);
+  expect(await download.body()).toEqual(await readFile("public/models/characters/keidentera.glb"));
+  await page.goto("/models?character=four-pro");
+  await expect(page.locator('[data-character-id="four-pro"]')).toHaveAttribute("data-model-state","ready",{timeout:30_000});
+  await page.screenshot({path:testInfo.outputPath("keidentera-model.png"),fullPage:true});
+  await page.goto("/raid/screen?demo=effects&character=four-pro");
+  const canvas=page.getByRole("region",{name:"ボスとエフェクト"}).locator("canvas");
+  await expect(page.getByRole("combobox",{name:"確認するキャラ"})).toHaveValue("four-pro");
+  const attack=page.getByRole("button",{name:"通常攻撃",exact:true});
+  await expect(attack).toBeEnabled({timeout:45_000});
+  await expect(canvas).toHaveAttribute("data-character-models","four-pro");
+  await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+200)));
+  await attack.click();await page.clock.runFor(800);
+  await expect(canvas).toHaveAttribute("data-character-motions","");
+  await canvas.screenshot({path:testInfo.outputPath("keidentera-raid-attack.png")});
+  await page.getByRole("button",{name:"自己回復",exact:true}).click();await page.clock.runFor(800);
+  await expect(canvas).toHaveAttribute("data-character-models","four-pro");
+  expect(errors).toEqual([]);expect(mutations).toEqual([]);
+});
 
 for (const id of ["forest-golem", "thunder-fox", "flame-dragon", "aqua-spirit", "temp-06", "temp-07", "temp-08", "temp-09", "temp-10", "temp-11"]) {
   test(`${id} previews its usable actions once and returns to its original model`, async ({page},testInfo)=>{

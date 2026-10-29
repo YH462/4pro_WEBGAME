@@ -37,7 +37,7 @@
 
 オブジェクトモードで必要なパーツを選択し、「ファイル → エクスポート → glTF 2.0」を開きます。「glTF Binary (.glb)」「選択したオブジェクト」を指定し、マテリアル・UV・モディファイアを含めて書き出してください。そのGLBを管理画面から登録します。
 
-学科4体と学科なし6体の一括書き出しも利用できます。対応は `src/lib/bundled-character-models.json` で管理します。
+学科4体・レジェンド1体・学科なし6体の一括書き出しも利用できます。対応は `src/lib/bundled-character-models.json` で管理します。
 
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --disable-autoexec --python-exit-code 1 --python scripts/export-character-models.py
@@ -51,6 +51,7 @@
 | E：電気情報 | `E科ポケモン修正版.blend` | `e.glb` | `thunder-fox` | 180 |
 | S：電子制御 | `S科ポケモン_リセンコ.blend` | `s.glb` | `flame-dragon` | −90 |
 | C：建設システム | `C科ポケモン_ポンタス.blend` | `c.glb` | `aqua-spirit` | 0 |
+| レジェンド：4プロ | `ケイデンテラ.blend`（原本のファイル名は濁点が分離したUnicode表記） | `keidentera.glb` | `four-pro` | 0 |
 | 学科なし | `Morinokami.blend` | `morinokami.glb` | `temp-06` | 0 |
 | 学科なし | `PasoconMon.blend` | `pasocon-mon.glb` | `temp-07` | −90 |
 | 学科なし | `コートロン.blend` | `coatoron.glb` | `temp-08` | 0 |
@@ -63,6 +64,22 @@
 追加分だけを書き出す場合はコマンド末尾に `-- --additional`、1体だけなら `-- --id=temp-10` を付けます。USBケーブルなどのカーブは書き出し時にメッシュへ変換します。重いモデルは表示用に頂点数を削減し、トショカンの重複頂点は結合します。いずれも元のBlenderデータには保存しません。
 
 書き出し後、開発サーバーを起動して `npx tsx scripts/generate-character-thumbnails.ts --bundled --additional` で追加6体の同梱画像を生成できます。このモードはDBを変更しません。
+
+### 4プロの専用モデル：ケイデンテラ（2026-10-30）
+
+ケイデンテラは `four-pro` のモデルとして登録します。表示名は既存DBの「4プロ」を維持し、全4学科コンプリートによる解放・能力値・所持・NFCタグは変更しません。`temp-12` とは別です。
+
+BlenderのGeometry Nodesを評価し、都市・頭・スラスター3個・輪・ソーラーパネル2枚・胴体の9パーツを含めて書き出します。原本の正面はGLBの−Z側になるため、マニフェストの `exportYaw:180` を書き出し時に頂点へ反映します。出力GLBは上が+Y・正面が+Z、DB角度は0度です。原本は保存し直しません。専用モーションは含まれていないため、レイドでは従来の汎用攻撃・回復演出を使用します。
+
+```powershell
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --disable-autoexec --python-exit-code 1 --python scripts/export-character-models.py -- --id=four-pro
+# 開発サーバーを起動してから同梱画像を再生成（DBは変更しない）
+npx tsx scripts/generate-character-thumbnails.ts --bundled --id=four-pro
+# 対象DBの4プロだけへ初期モデル・画像を登録
+npx tsx scripts/import-character-models.ts --id=four-pro
+```
+
+登録済み・管理画面で削除済み（`modelConfigured=true`）の場合は取り込みをスキップし、スタッフの設定を保護します。その場合は管理画面から `public/models/characters/keidentera.glb` を角度0度で登録してください。Gitの更新だけでは既存DBへモデルは登録されません。
 
 ### デンラコ・ブシラッコの上下修正（2026-10-27）
 

@@ -3,6 +3,7 @@
   {"id":"thunder-fox","code":"E","department":"電気情報","source":"E科ポケモン修正版.blend","file":"e.glb","yaw":180},
   {"id":"flame-dragon","code":"S","department":"電子制御","source":"S科ポケモン_リセンコ.blend","file":"s.glb","yaw":-90},
   {"id":"aqua-spirit","code":"C","department":"建設システム","source":"C科ポケモン_ポンタス.blend","file":"c.glb","yaw":0},
+  {"id":"four-pro","code":"4PRO","department":null,"source":"ケイデンテラ.blend","file":"keidentera.glb","yaw":0,"exportYaw":180},
   {"id":"temp-06","code":"06","department":null,"source":"Morinokami.blend","file":"morinokami.glb","yaw":0,"displayName":"Morinokami"},
   {"id":"temp-07","code":"07","department":null,"source":"PasoconMon.blend","file":"pasocon-mon.glb","yaw":-90,"displayName":"PasoconMon"},
   {"id":"temp-08","code":"08","department":null,"source":"コートロン.blend","file":"coatoron.glb","yaw":0,"displayName":"コートロン"},

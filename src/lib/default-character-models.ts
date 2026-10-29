@@ -5,8 +5,10 @@ import { characterModels } from "./character-models";
 import { validateCharacterModel } from "./character-model-validation";
 
 /** Import the bundled models once. Staff edits and removals survive seed reruns. */
-export async function importDefaultCharacterModels(db: PrismaClient) {
+export async function importDefaultCharacterModels(db: PrismaClient, onlyId?: string) {
+  if(onlyId&&!Object.hasOwn(characterModels,onlyId))throw new Error(`Unknown bundled character: ${onlyId}`);
   for (const [id, asset] of Object.entries(characterModels)) {
+    if(onlyId&&id!==onlyId)continue;
     const character=await db.character.findUnique({where:{id},select:{modelConfigured:true}});
     if(!character||character.modelConfigured)continue;
     const data=await validateCharacterModel(await readFile(resolve("public",asset.url.slice(1))));

@@ -5,6 +5,7 @@ Exports visible character meshes and rigs without saving changes to the .blend s
 import bpy
 import json
 import sys
+from math import radians
 from pathlib import Path
 from mathutils import Matrix
 
@@ -95,7 +96,7 @@ for asset in manifest:
                         modifier.ratio = 120000 / welded_count
                         modifier.use_collapse_triangulate = True
                     print(f'EXPORT_WELD {source.name}: {obj.name}, triangles={remaining} -> {welded_count}', flush=True)
-    if bpy.context.scene.get('webgame_orientation') == 'upright-front-v1':
+    if bpy.context.scene.get('webgame_orientation') == 'upright-front-v1' or 'exportYaw' in asset:
         if any(obj.type == 'ARMATURE' for obj in selected):
             raise RuntimeError('World-space export is only supported for these static characters')
         # Evaluate all meshes before modifying any: Mirror can reference another
@@ -105,7 +106,9 @@ for asset in manifest:
         evaluated = [(obj, bpy.data.meshes.new_from_object(
             obj.evaluated_get(graph), preserve_all_data_layers=True, depsgraph=graph
         ), obj.matrix_world.copy()) for obj in selected if obj.type == 'MESH']
+        orientation = Matrix.Rotation(radians(asset.get('exportYaw', 0)), 4, 'Z')
         for obj, mesh, matrix in evaluated:
+            matrix = orientation @ matrix
             mesh.transform(matrix)
             if matrix.determinant() < 0:
                 mesh.flip_normals()
