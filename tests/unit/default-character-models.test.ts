@@ -24,4 +24,12 @@ describe("default model import",()=>{
     expect(createModel.mock.calls[0][0].data.fileName).toBe("keidentera.glb");
     expect(createImage.mock.calls[0][0].data.contentType).toBe("image/webp");
   });
+  it("registers Kanreki in slot 12 without replacing stats or player data",async()=>{
+    const update=vi.fn(),createModel=vi.fn().mockResolvedValue({id:"kanreki-model"}),createImage=vi.fn().mockResolvedValue({id:"kanreki-image"});
+    const tx={$queryRaw:vi.fn(),character:{findUniqueOrThrow:vi.fn().mockResolvedValue({modelConfigured:false,name:"仮キャラ 12",description:"CPU対戦を試すための仮キャラクターです。",departmentId:null,isLegendary:false,imageId:null}),update},characterModel:{create:createModel},characterImage:{create:createImage}};
+    const db={character:{findUnique:vi.fn().mockResolvedValue({modelConfigured:false})},$transaction:vi.fn(async(fn:(tx:unknown)=>Promise<void>)=>fn(tx))};
+    await importDefaultCharacterModels(db as unknown as PrismaClient,"temp-12");
+    expect(update).toHaveBeenCalledExactlyOnceWith({where:{id:"temp-12"},data:{name:"還暦",isDraft:false,description:"紹介文は作成者に確認後、管理画面で設定します。",modelId:"kanreki-model",imageId:"kanreki-image",modelYaw:0,modelConfigured:true,revision:{increment:1}}});
+    expect(createModel.mock.calls[0][0].data.fileName).toBe("kanreki.glb");
+  });
 });

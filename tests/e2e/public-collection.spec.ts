@@ -36,7 +36,7 @@ test("home character links and direct detail URLs remain public while personal A
   await expect(page).toHaveURL(/\/collection\/four-pro$/);
   await expect(page.getByRole("heading", { name: "4プロ", exact: true })).toBeVisible();
   await page.goto("/collection/temp-12");
-  await expect(page.getByRole("heading", { name: "仮キャラ 12", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "還暦", exact: true })).toBeVisible();
   const missing = await page.goto("/collection/missing-public-character");
   expect(missing?.status()).toBe(404);
   expect((await page.request.get("/api/characters")).status()).toBe(401);

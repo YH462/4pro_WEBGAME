@@ -9,5 +9,6 @@
   {"id":"temp-08","code":"08","department":null,"source":"コートロン.blend","file":"coatoron.glb","yaw":0,"displayName":"コートロン"},
   {"id":"temp-09","code":"09","department":null,"source":"デンラコ.blend","file":"denrako.glb","yaw":0,"displayName":"デンラコ"},
   {"id":"temp-10","code":"10","department":null,"source":"トショカン.blend","file":"toshokan.glb","yaw":0,"displayName":"トショカン"},
-  {"id":"temp-11","code":"11","department":null,"source":"ブシラッコ.blend","file":"bushirakko.glb","yaw":0,"displayName":"ブシラッコ"}
+  {"id":"temp-11","code":"11","department":null,"source":"ブシラッコ.blend","file":"bushirakko.glb","yaw":0,"displayName":"ブシラッコ"},
+  {"id":"temp-12","code":"12","department":null,"source":"だるま.blend","file":"kanreki.glb","yaw":0,"exportYaw":-90,"displayName":"還暦"}
 ]

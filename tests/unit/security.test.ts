@@ -43,7 +43,7 @@ describe("initial master data", () => {
     const drafts = characters.filter((character) => character.id.startsWith("temp-"));
     expect(drafts).toHaveLength(7);
     expect(drafts.every((character) => character.departmentId === null && character.baseHp > 0)).toBe(true);
-    expect(drafts.filter(character=>"isDraft" in character&&character.isDraft).map(character=>character.id)).toEqual(["temp-12"]);
+    expect(drafts.filter(character=>"isDraft" in character&&character.isDraft).map(character=>character.id)).toEqual([]);
   });
   it("maps four normal characters one-to-one to departments", () => {
     const normal = characters.filter((character) => !character.isLegendary && character.departmentId);

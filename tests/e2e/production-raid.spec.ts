@@ -524,7 +524,10 @@ test("production raid protects staff controls, event boundaries and character ow
   for (const data of [{ type: "start", roomId: state.roomId }, { type: "reset", roomId: state.roomId }, { type: "reveal", roomId: state.roomId, turn: 1 }, { type: "impact", roomId: state.roomId, turn: 1, kind: "action" }, { type: "finish", roomId: state.roomId, turn: 1 }]) expect((await post(request, guest.headers, data)).status()).toBe(401);
   expect((await post(request, { ...guest.headers, origin: "https://evil.example" }, { type: "join", characterId: "forest-golem" })).status()).toBe(403);
   expect((await post(request, guest.headers, { type: "join", characterId: "four-pro" })).status()).toBe(403);
-  expect((await post(request, guest.headers, { type: "join", characterId: "temp-12" })).status()).toBe(403);
+  const previousDraft=await db.character.findUniqueOrThrow({where:{id:"temp-12"},select:{isDraft:true}});
+  await db.character.update({where:{id:"temp-12"},data:{isDraft:true}});
+  try { expect((await post(request, guest.headers, { type: "join", characterId: "temp-12" })).status()).toBe(403); }
+  finally { await db.character.update({where:{id:"temp-12"},data:{isDraft:previousDraft.isDraft}}); }
   expect((await post(request, guest.headers, { type: "join", characterId: "forest-golem", maxHp: 99999 })).status()).toBe(400);
   await db.playerCharacter.create({ data: { playerId: guest.id, characterId: "forest-golem", hpGrowth: 8 } });
   expect((await post(request, guest.headers, { type: "join", characterId: "aqua-spirit" })).status()).toBe(403);
@@ -538,6 +541,14 @@ test("production raid protects staff controls, event boundaries and character ow
   await db.event.update({ where: { id: eventId }, data: { status: "ENDED", endedAt: new Date(), purgeAt: new Date(Date.now() + 3600_000) } });
   expect((await post(request, adminHeaders, { type: "start", roomId: state.roomId })).status()).toBe(409);
   expect((await request.get("/api/raid?personal=1", { headers: guest.headers })).status()).toBe(409);
+});
+
+test("Kanreki reuses slot 12 as a non-legendary trial character without granting ownership",async({request})=>{
+  const guest=await player();
+  expect((await post(request,guest.headers,{type:"join",characterId:"temp-12"})).status()).toBe(200);
+  const state=await snapshot(request,guest.headers,true);
+  expect(state.me).toMatchObject({characterId:"temp-12",maxHp:160});
+  expect(await db.playerCharacter.count({where:{playerId:guest.id}})).toBe(0);
 });
 
 test("twenty concurrent phones keep all inputs, deduplicate retries and share one persisted outcome", async ({ request }) => {

@@ -308,7 +308,7 @@ try {
       await page.locator('[class*="adminPage"]').evaluate((el, y) => { el.scrollTop = y; }, offset);
       await snap(`57-admin-list-scroll-${offset}`, `管理画面／キャラ一覧・スクロール${offset}`, '10 管理画面', '管理画面内部をスクロール');
     }
-    await page.getByRole('heading', { name: '仮キャラ 12', exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole('heading', { name: '還暦', exact: true }).scrollIntoViewIfNeeded();
     await snap('57-admin-list-bottom', '管理画面／キャラ一覧・下部', '10 管理画面', 'スクロール後');
     await go('/admin');
     await page.getByLabel('分類', { exact: true }).selectOption('extra');

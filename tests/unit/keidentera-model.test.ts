@@ -6,11 +6,11 @@ import { validateCharacterModel } from "../../src/lib/character-model-validation
 import { characters } from "../../src/lib/master-data";
 
 describe("Keidentera legendary model", () => {
-  it("keeps the legendary identity and the remaining placeholder independent", () => {
+  it("keeps the legendary identity independent of the new Kanreki character", () => {
     expect(characterModels["four-pro"]).toMatchObject({url:"/models/characters/keidentera.glb",yaw:0});
     expect(characterModels["four-pro"].displayName).toBeUndefined();
     expect(characters.find(c=>c.id==="four-pro")).toMatchObject({name:"4プロ",isLegendary:true,baseHp:155});
-    expect(characters.find(c=>c.id==="temp-12")).toMatchObject({name:"仮キャラ 12",isDraft:true});
+    expect(characters.find(c=>c.id==="temp-12")).toMatchObject({name:"還暦",isDraft:false,isLegendary:false});
   });
 
   it("bakes a complete, upright +Z-facing model with no viewer rotation", async () => {

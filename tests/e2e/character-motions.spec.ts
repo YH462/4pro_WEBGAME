@@ -2,6 +2,36 @@ import { test, expect } from "@playwright/test";
 import sharp from "sharp";
 import { readFile } from "node:fs/promises";
 
+test("Kanreki loads from slot 12 with its portrait and generic attack and heal effects",async({page},testInfo)=>{
+  test.setTimeout(90_000);
+  const errors:string[]=[],mutations:string[]=[];
+  page.on("pageerror",error=>errors.push(error.message));
+  page.on("request",request=>{if(/\/api\/(local-raid|raid)$/.test(new URL(request.url()).pathname)&&request.method()!=="GET")mutations.push(request.method());});
+  const {models}=await(await page.request.get("/api/character-models")).json();
+  expect(models["temp-12"].yaw).toBe(0);
+  expect(models["temp-12"].motions).toBeUndefined();
+  expect(await(await page.request.get(models["temp-12"].url)).body()).toEqual(await readFile("public/models/characters/kanreki.glb"));
+  await page.goto("/collection/temp-12");
+  await expect(page.getByRole("heading",{name:"還暦",exact:true})).toBeVisible();
+  await page.goto("/models?character=temp-12");
+  await expect(page.locator('[data-character-id="temp-12"]')).toHaveAttribute("data-model-state","ready",{timeout:30_000});
+  await page.screenshot({path:testInfo.outputPath("kanreki-model.png"),fullPage:true});
+  await page.goto("/raid/screen?demo=effects&character=temp-12");
+  const canvas=page.getByRole("region",{name:"ボスとエフェクト"}).locator("canvas");
+  await expect(page.getByRole("combobox",{name:"確認するキャラ"})).toHaveValue("temp-12");
+  await expect(page.getByRole("combobox",{name:"確認するキャラ"}).locator('option[value="temp-12"]')).toContainText("還暦");
+  await expect(page.getByRole("button",{name:"通常攻撃",exact:true})).toBeEnabled({timeout:45_000});
+  await expect(canvas).toHaveAttribute("data-character-models","temp-12");
+  await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+200)));
+  for(const label of ["通常攻撃","自己回復"]){
+    await page.getByRole("button",{name:label,exact:true}).click();await page.clock.runFor(800);
+    await expect(canvas).toHaveAttribute("data-character-models","temp-12");
+    await expect(canvas).toHaveAttribute("data-character-motions","");
+  }
+  await canvas.screenshot({path:testInfo.outputPath("kanreki-raid-heal.png")});
+  expect(errors).toEqual([]);expect(mutations).toEqual([]);
+});
+
 test("Keidentera loads as the legendary character and retains generic raid effects",async({page},testInfo)=>{
   test.setTimeout(90_000);
   const errors:string[]=[],mutations:string[]=[];
