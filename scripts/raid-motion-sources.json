@@ -5,10 +5,10 @@
     "yaw": -90,
     "maxTextureSize": 1024,
     "attack": "forest-golem/attack.glb",
-    "heal": "forest-golem/heal.glb",
+    "heal": "forest-golem/heal-test.glb",
     "import": {
       "attack": "Mモン攻撃.glb",
-      "heal": "Mモン回復.glb"
+      "heal": "Mモン回復_test.glb"
     },
     "bodyPrefixes": {
       "attack": [
@@ -18,14 +18,11 @@
         "立方体"
       ]
     },
-    "excludeObjects": {
-      "heal": [
-        "平面",
-        "エンプティ"
-      ]
-    },
     "actionYaw": {
       "attack": 0
+    },
+    "excludeObjects": {
+      "heal": ["平面", "平面.001"]
     }
   },
   {
@@ -45,23 +42,20 @@
     "file": "s",
     "yaw": -90,
     "attack": "flame-dragon/attack.glb",
-    "heal": "flame-dragon/heal.glb",
+    "heal": "flame-dragon/heal-test.glb",
     "import": {
       "attack": "S科ポケモン_リセンコ (1)kougeki.glb",
-      "heal": "S科ポケモン_リセンコ回復.glb"
+      "heal": "S科ポケモン_リセンコ_回復_test.glb"
     },
     "inactiveActions": {
       "attack": "helper-only-reference"
     },
+    "actionYaw": {
+      "heal": 0
+    },
     "bodyPrefixes": {
       "heal": [
-        "body_upper"
-      ]
-    },
-    "excludeObjects": {
-      "heal": [
-        "平面",
-        "エンプティ"
+        "body"
       ]
     }
   },

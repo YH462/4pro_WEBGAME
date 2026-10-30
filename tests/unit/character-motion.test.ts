@@ -18,6 +18,9 @@ describe("raid character motions", () => {
     expect(rotations[0]).toEqual([0,0,0,1]);
     expect(rotations[1][1]).toBeCloseTo(-Math.SQRT1_2);
     expect(manifest["forest-golem"].baseYaw).toBe(-90);
+    const {doc}=inspectCharacterGLB(await readFile("public/models/motions/s-heal.glb"));
+    expect(doc.nodes.find((node:{name?:string})=>node.name==="RaidMotionOrientation").rotation??[0,0,0,1]).toEqual([0,0,0,1]);
+    expect(manifest["flame-dragon"].baseYaw).toBe(-90);
   });
   it("combines object actions and removes leading empty time without editing shared clips", () => {
     const body = new THREE.VectorKeyframeTrack("body.position", [5, 6], [0, 0, 0, 1, 0, 0]);

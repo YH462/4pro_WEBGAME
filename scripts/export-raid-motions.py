@@ -19,6 +19,9 @@ destination.mkdir(parents=True, exist_ok=True)
 scratch.mkdir(parents=True, exist_ok=True)
 only_id = next((a.split('=', 1)[1] for a in sys.argv if a.startswith('--id=')), None)
 only_ids = set(only_id.split(',')) if only_id else None
+only_action = next((a.split('=', 1)[1] for a in sys.argv if a.startswith('--action=')), None)
+if only_action and only_action not in {'attack', 'heal'}:
+    raise RuntimeError(f'Unknown motion action: {only_action}')
 sources = json.loads((root / 'scripts/raid-motion-sources.json').read_text(encoding='utf-8'))
 if only_ids and not only_ids.issubset({asset['id'] for asset in sources}):
     raise RuntimeError(f'Unknown motion character: {only_id}')
@@ -33,6 +36,8 @@ for asset in sources:
         bpy.ops.wm.open_mainfile(filepath=str(root / '3Dmodels' / asset['visibilitySource']), load_ui=False, use_scripts=False)
         excluded = {obj.name for obj in bpy.context.scene.objects if not obj.visible_get()}
     for action in ['attack', 'heal']:
+        if only_action and action != only_action:
+            continue
         if not asset.get(action):
             continue
         if action in asset.get('inactiveActions', {}):

@@ -8,8 +8,8 @@ describe("consolidated motion sources", () => {
   it("stores each unique original once, with verified provenance and no missing selected sources", async () => {
     const root = "3Dmodels/モーション統合/";
     const inventory = JSON.parse(await readFile(root + "inventory.json", "utf8"));
-    expect(inventory.inputs).toBe(46); expect(inventory.unique).toBe(30); expect(inventory.duplicates).toBe(16);
-    expect(new Set(inventory.files.map((file: {sha256:string})=>file.sha256)).size).toBe(30);
+    expect(inventory.inputs).toBe(48); expect(inventory.unique).toBe(32); expect(inventory.duplicates).toBe(16);
+    expect(new Set(inventory.files.map((file: {sha256:string})=>file.sha256)).size).toBe(32);
     for (const file of inventory.files) {
       expect(file.path).not.toContain("..");
       const bytes = await readFile(root + file.path);
@@ -19,6 +19,21 @@ describe("consolidated motion sources", () => {
     for (const source of sources) for (const action of ["attack", "heal"] as const) {
       const sourcePath = (source as {attack?:string;heal?:string})[action];
       if (sourcePath) expect(inventory.files.some((file:{path:string})=>file.path===sourcePath)).toBe(true);
+    }
+  });
+
+  it("selects the requested test healing sources while preserving distinct previous originals", async () => {
+    const hashes:Record<string,string>={
+      "forest-golem":"7b359d3f5d615e44d3b0f657fb0f64c467564e8b005c931957fa1af1aefd6611",
+      "flame-dragon":"b1330833b608032d0d61773a33ee33edbb25c4c07378211b859d26ad17abac18",
+    };
+    for (const id of ["forest-golem", "flame-dragon"]) {
+      const source=sources.find(source=>source.id===id)!;
+      expect(source.heal).toBe(`${id}/heal-test.glb`);
+      const selected=await readFile(`3Dmodels/モーション統合/${source.heal}`);
+      const previous=await readFile(`3Dmodels/モーション統合/${id}/heal.glb`);
+      expect(createHash("sha256").update(selected).digest("hex")).toBe(hashes[id]);
+      expect(selected.equals(previous)).toBe(false);
     }
   });
 

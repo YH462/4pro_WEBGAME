@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "inputs": 46,
-  "unique": 30,
+  "inputs": 48,
+  "unique": 32,
   "duplicates": 16,
   "files": [
     {
@@ -52,10 +52,19 @@
       ]
     },
     {
-      "path": "flame-dragon/heal.glb",
+      "path": "flame-dragon/heal-test.glb",
       "characterId": "flame-dragon",
       "action": "heal",
       "status": "selected",
+      "sha256": "b1330833b608032d0d61773a33ee33edbb25c4c07378211b859d26ad17abac18",
+      "bytes": 914636,
+      "origins": [
+        "3Dmodels/モーションファイル3/S科ポケモン_リセンコ_回復_test.glb"
+      ]
+    },
+    {
+      "path": "flame-dragon/heal.glb",
+      "status": "reference",
       "sha256": "e3da6f6bf7d5cd0472eb610567a44210c84f21efa7fca09d16586c785c0cf291",
       "bytes": 44156440,
       "origins": [
@@ -74,10 +83,19 @@
       ]
     },
     {
-      "path": "forest-golem/heal.glb",
+      "path": "forest-golem/heal-test.glb",
       "characterId": "forest-golem",
       "action": "heal",
       "status": "selected",
+      "sha256": "7b359d3f5d615e44d3b0f657fb0f64c467564e8b005c931957fa1af1aefd6611",
+      "bytes": 609264,
+      "origins": [
+        "3Dmodels/モーションファイル3/Mモン回復_test.glb"
+      ]
+    },
+    {
+      "path": "forest-golem/heal.glb",
+      "status": "reference",
       "sha256": "21f3f3c3b5d9e8a51199a548118204dde007ef4f9166dbe978df8b2dd8fff61b",
       "bytes": 581988,
       "origins": [

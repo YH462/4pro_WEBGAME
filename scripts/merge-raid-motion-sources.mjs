@@ -1,18 +1,20 @@
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
-import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { appendFile, copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const destination = path.join(root, '3Dmodels/モーション統合');
-const folders = ['3Dmodels/モーションファイル', '3Dmodels/モーションファイル2'];
+const folders = ['3Dmodels/モーションファイル', '3Dmodels/モーションファイル2', '3Dmodels/モーションファイル3'];
 const sources = JSON.parse(await readFile(path.join(root, 'scripts/raid-motion-sources.json'), 'utf8'));
 const selections = new Map(sources.flatMap(source => Object.entries(source.import).map(([action, name]) => [name, {
   path: source[action], characterId: source.id, action,
   status: source.inactiveActions?.[action] ?? 'selected',
 }])));
 const references = {
+  'Mモン回復.glb': 'forest-golem/heal.glb',
+  'S科ポケモン_リセンコ回復.glb': 'flame-dragon/heal.glb',
   'ブシラッコ.glb': 'references/temp-11/unspecified.glb',
   '敵キャラ_デスドラグーン（赤）対戦開始.blend': 'references/des-dragoon/entry.blend',
   '敵キャラ_デスドラグーン（赤）被攻撃.blend': 'references/des-dragoon/hit.blend',
@@ -47,4 +49,5 @@ for (const source of sources) for (const action of Object.keys(source.import)) {
 }
 await writeFile(path.join(destination, 'inventory.json'), JSON.stringify({ version: 1, inputs, unique: files.length, duplicates: inputs - files.length, files }, null, 2) + '\n');
 await writeFile(path.join(destination, 'README.md'), `# モーションの統合管理\n\nゲームへの再出力はこのフォルダを参照します。アップロード元は削除・変更しません。\n\n- 入力 ${inputs} 件 → 内容が異なる ${files.length} 件（完全重複 ${inputs - files.length} 件を統合）。\n- キャラID別の attack / heal が採用原本です。拡張子が特殊だったBlender原本は、内容を変えず .blend 名へ統一しています。\n- references/ は別形式の書き出し・行動不明GLB・未使用のボス演出です。既存の確認済みBlender原本を採用し、別形式GLBは上書きせず保管しています。\n- temp-07/heal.glb は1フレームの静止ポーズだけなので、実行用モーションには登録しません。ゲームの既存回復演出を維持します。\n- flame-dragon/attack.glb は動く対象が表示されない補助オブジェクトだけなので、実行用モーションに登録せず既存の攻撃演出を維持します。\n- inventory.json に各ファイルのSHA-256・元の場所・採用状態を記録しています。\n\n追加取り込み: node scripts/merge-raid-motion-sources.mjs\n再出力: scripts/export-raid-motions.py（Blender）→ node scripts/build-raid-motion-manifest.mjs\n\n採用対象を変えるときは scripts/raid-motion-sources.json を更新します。異なる内容で既存の採用原本を自動上書きすることはありません。詳しくは ../../docs/raid-character-motions.md を参照してください。\n`);
+await appendFile(path.join(destination, 'README.md'), `\n## モーションファイル3の回復テスト素材\n\n入力は「モーションファイル」「モーションファイル2」「モーションファイル3」の3フォルダです。Mモンとリセンコはユーザー指定により heal-test.glb を採用します。以前の heal.glb は原本を維持し、参照用として残します。\n\n- forest-golem/heal-test.glb: Mモン回復_test.glb。本体と球は動きますが、開始時の大きな球が本体を隠す既知の見た目を保持します。離れた制作参照平面だけは配信用から除外します。\n- flame-dragon/heal-test.glb: S科ポケモン_リセンコ_回復_test.glb。動く対象は表示されない「ビーム先端」の補助ノードだけです。本体とビームは静止したままですが、このテスト素材を回復時に使用します。\n- 攻撃の素材・ゲームの回復量・2.2秒の演出枠・DBは変更しません。\n- 回復だけの再出力: Blender ... --python scripts/export-raid-motions.py -- --id=forest-golem,flame-dragon --action=heal\n`);
 console.log(JSON.stringify({ destination: path.relative(root, destination), inputs, unique: files.length, duplicates: inputs - files.length }));
