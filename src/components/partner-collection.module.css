@@ -5,11 +5,12 @@
 .innerFill { position:absolute; inset:3.5px; z-index:-1; background:radial-gradient(ellipse at 50% 40%,#fff,#fff9 75%); border:1px solid color-mix(in srgb,var(--tile-accent) 16%,transparent); clip-path:inherit; }
 .forest { --tile-accent:#129553; }.thunder { --tile-accent:#e7b319; }.flame { --tile-accent:#f51c3d; }.aqua { --tile-accent:#20a2de; }
 .mechanical { --tile-accent:#f51c3d; }.electrical { --tile-accent:#e5b800; }.control { --tile-accent:#2687fb; }.civil { --tile-accent:#16a45a; }.legendary { --tile-accent:#a05bf4; }
-.content { position:absolute; inset:6% 14%; display:grid; grid-template-rows:auto minmax(0,1fr) auto auto; justify-items:center; align-items:center; row-gap:3px; min-width:0; min-height:0; text-align:center; }
+.content { position:absolute; inset:6% 14%; display:grid; grid-template-rows:auto minmax(0,1fr) auto auto auto; justify-items:center; align-items:center; row-gap:3px; min-width:0; min-height:0; text-align:center; }
 .number { color:#5e5960; font-size:0; font-weight:600; letter-spacing:.5px; line-height:1.5; }
 .art { display:block; width:100%; height:100%; min-height:0; max-height:135px; }
 .keidenteraArt[data-character-image="custom"] image { transform:scale(1.25); transform-box:fill-box; transform-origin:center; }
 .content strong { max-width:100%; color:#171418; font-size:15px; font-weight:800; line-height:1.5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.content .characterName { width:86%; font-size:14px; line-height:1.3; white-space:normal; overflow:visible; word-break:break-all; text-wrap:balance; }
 .status { display:flex; align-items:center; justify-content:center; gap:3px; color:#e71132; font-size:11px; font-weight:750; line-height:1.5; min-height:16px; }.status>svg { flex-shrink:0; stroke-width:2.8; }
 .owned { --tile-fill:#fff; }
 .hexagon.locked { --tile-accent:#929292; --tile-fill:#e9e9e9; color:#777; }.locked .innerFill { background:linear-gradient(125deg,#ffffff1f,#bcbcbc0a); border-color:#ffffffb3; }.locked strong { color:#7d7d7d; }.locked .status { color:#929292; }
@@ -19,6 +20,7 @@ a.hexagon:hover::before { background:#fff0f5; }.hexagon.locked:hover::before { b
 a.hexagon:focus-visible { outline:0; background:#19121b; }a.hexagon:focus-visible::before { inset:3px; }
 @media (max-width:760px) {
   .grid { grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(4,minmax(0,1fr)); gap:8px 5px; max-width:460px; }
+  .content .characterName { font-size:12px; }
   .content { inset:6% 14%; row-gap:2px; }.number { font-size:0; }.content strong { font-size:11px; }.status { font-size:0; min-height:13px; gap:2px; }.status>svg { width:11px; height:11px; }.art { max-height:105px; }
   .placeholderIcon { width:19px; max-height:30px; }.placeholderLabel { font-size:0; }
 }

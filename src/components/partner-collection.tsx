@@ -33,7 +33,8 @@ export function PartnerCollection({ partners, collectionHref = "/collection" }: 
             <div className={styles.content}>
               <span className={styles.number}>{String(partner.number).padStart(3, "0")}</span>
               <CharacterArt element={partner.element} imageUrl={partner.imageUrl} locked={!partner.owned} portrait className={`${styles.art} ${partner.id === "four-pro" ? styles.keidenteraArt : ""}`}/>
-              <strong>{partner.departmentId || partner.isLegendary ? partner.department : partner.name}</strong>
+              <strong>{partner.departmentId || partner.isLegendary ? partner.department : ""}</strong>
+              <strong className={styles.characterName}>{partner.name}</strong>
               <span className={styles.status} title={partner.owned ? "獲得済み" : "未獲得"}>
                 {partner.owned ? <><Check size={12} aria-hidden="true"/>獲得済み</> : <LockKeyhole size={12} aria-hidden="true"/>}
               </span>
