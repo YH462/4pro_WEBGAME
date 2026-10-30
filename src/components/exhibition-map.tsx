@@ -21,9 +21,10 @@ const areas = [
   { id: "civil", name: "建設システム", number: "04", position: styles.bottomRight },
 ];
 
-export function ExhibitionMap({ partners, legend }: {
+export function ExhibitionMap({ partners, legend, collectionHref = "/collection" }: {
   partners: MapPartner[];
   legend?: MapPartner;
+  collectionHref?: string;
 }) {
   return (
     <section className={styles.map} aria-label="4学科の展示マップ">
@@ -33,7 +34,7 @@ export function ExhibitionMap({ partners, legend }: {
         return (
           <Link
             key={area.id}
-            href={partner ? `/collection/${partner.id}` : "/collection"}
+            href={partner ? `${collectionHref}/${partner.id}` : collectionHref}
             className={`${styles.area} ${area.position} ${partner?.owned ? "" : styles.locked}`}
             aria-label={`${name}：${partner?.owned ? `${partner.name}（獲得済み）` : "未獲得"}`}
           >
@@ -50,12 +51,12 @@ export function ExhibitionMap({ partners, legend }: {
       })}
 
       <Link
-        href="/collection/four-pro"
+        href={`${collectionHref}/four-pro`}
         className={`${styles.hub} ${legend?.owned ? "" : styles.locked}`}
-        aria-label={`4プロ：${legend?.owned ? "獲得済み" : "全学科コンプリートで解放"}`}
+        aria-label={`4学科合同：${legend?.owned ? "獲得済み" : "全学科コンプリートで解放"}`}
       >
         <div className={styles.legendArt}><CharacterArt element={legend?.element ?? "LEGEND"} imageUrl={characterImageUrl(legend?.imageId)} locked={!legend?.owned}/></div>
-        <h2>{legend?.name ?? "4プロ"}</h2>
+        <h2>4学科合同<ChevronRight size={16} aria-hidden="true"/></h2>
         <span className={styles.hubStatus}>
           {legend?.owned ? <><Check size={12}/>獲得済み</> : <><LockKeyhole size={12}/>4学科を集めて解放</>}
         </span>

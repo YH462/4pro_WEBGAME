@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BarChart3, BookOpen, CalendarDays, Clock3, Crown, Download, Flag, Hexagon, LockKeyhole, Maximize2, RefreshCw, Swords, Target, Trophy, Users } from "lucide-react";
 import type { EventStatistics, RankingMetric } from "@/lib/event-statistics";
 import styles from "./statistics-dashboard.module.css";
+import { AdminMenu } from "./admin-menu";
 
 const number=(n:number)=>n.toLocaleString("ja-JP",{maximumFractionDigits:1});
 const percent=(n:number|null)=>n===null?"—":`${number(n*100)}%`;
@@ -89,6 +90,7 @@ export function StatisticsDashboard(){
     <header className={styles.header}>
       <div className={styles.identity}><Link href="/admin" className={styles.brand} aria-label="4PRO キャラクター管理"><Hexagon fill="currentColor"/>4<span>PRO</span></Link><h1>統計ダッシュボード</h1><span className={styles.private}><LockKeyhole size={17}/>管理者限定</span></div>
       <div className={styles.actions}>
+        <AdminMenu/>
         <button type="button" onClick={()=>void refresh()} disabled={busy||expired} aria-busy={busy}><RefreshCw size={19} className={busy?styles.spin:undefined}/>今すぐ更新</button>
         <details className={styles.export}><summary><Download size={20}/>{exporting?"出力中…":"CSV出力"}</summary><div className={styles.exportMenu}>{exports.map(item=><button key={item.id} type="button" disabled={exporting||!data||expired} onClick={event=>{event.currentTarget.closest("details")?.removeAttribute("open");void save(item.id);}}>{item.label}{item.id!=="all"&&<span>CSV</span>}</button>)}</div></details>
         <button type="button" aria-label="全画面で表示" onClick={()=>void fullscreen()}><Maximize2 size={20}/></button>

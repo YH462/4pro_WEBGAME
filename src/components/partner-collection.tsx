@@ -17,7 +17,7 @@ const elementStyles: Record<string, string> = {
   AQUA: styles.aqua,
 };
 
-export function PartnerCollection({ partners }: { partners: PartnerView[] }) {
+export function PartnerCollection({ partners, collectionHref = "/collection" }: { partners: PartnerView[]; collectionHref?: string }) {
   const emptySlots = Array.from({ length: Math.max(0, 12 - partners.length) });
 
   return (
@@ -25,14 +25,14 @@ export function PartnerCollection({ partners }: { partners: PartnerView[] }) {
       {partners.map((partner) => (
         <li key={partner.id} className={styles.slot}>
           <Link
-            href={`/collection/${partner.id}`}
+            href={`${collectionHref}/${partner.id}`}
             className={`collection-card ${styles.hexagon} ${elementStyles[partner.element] ?? ""} ${departmentStyles[partner.departmentId ?? ""] ?? ""} ${partner.isLegendary ? styles.legendary : ""} ${partner.owned ? styles.owned : styles.locked}`}
             aria-label={`${partner.name}の詳細を見る${partner.owned ? "（獲得済み）" : "（未獲得）"}`}
           >
             <span className={styles.innerFill} aria-hidden="true"/>
             <div className={styles.content}>
               <span className={styles.number}>{String(partner.number).padStart(3, "0")}</span>
-              <CharacterArt element={partner.element} imageUrl={partner.imageUrl} locked={!partner.owned} portrait className={styles.art}/>
+              <CharacterArt element={partner.element} imageUrl={partner.imageUrl} locked={!partner.owned} portrait className={`${styles.art} ${partner.id === "four-pro" ? styles.keidenteraArt : ""}`}/>
               <strong>{partner.departmentId || partner.isLegendary ? partner.department : partner.name}</strong>
               <span className={styles.status} title={partner.owned ? "獲得済み" : "未獲得"}>
                 {partner.owned ? <><Check size={12} aria-hidden="true"/>獲得済み</> : <LockKeyhole size={12} aria-hidden="true"/>}

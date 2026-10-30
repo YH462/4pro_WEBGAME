@@ -32,7 +32,7 @@ test("home character links and direct detail URLs remain public while personal A
   await page.getByRole("link", { name: "機械科：未獲得", exact: true }).click();
   await expect(page).toHaveURL(/\/collection\/forest-golem$/);
   await page.goto("/");
-  await page.getByRole("link", { name: "4プロ：全学科コンプリートで解放", exact: true }).click();
+  await page.getByRole("link", { name: "4学科合同：全学科コンプリートで解放", exact: true }).click();
   await expect(page).toHaveURL(/\/collection\/four-pro$/);
   await expect(page.getByRole("heading", { name: "4プロ", exact: true })).toBeVisible();
   await page.goto("/collection/temp-12");

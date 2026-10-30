@@ -17,7 +17,7 @@ const statColors = [styles.hp, styles.attack, styles.defense, styles.charge];
 type AdjacentCharacter = { id: string; name: string; sortOrder: number };
 type SwipeStart = { pointerId: number; x: number; y: number; at: number };
 
-export function PartnerPanel({ partner, previous, next }: { partner: PartnerView; previous: AdjacentCharacter | null; next: AdjacentCharacter | null }) {
+export function PartnerPanel({ partner, previous, next, collectionHref = "/collection" }: { partner: PartnerView; previous: AdjacentCharacter | null; next: AdjacentCharacter | null; collectionHref?: string }) {
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
   const swipe = useRef<SwipeStart | null>(null);
@@ -46,7 +46,7 @@ export function PartnerPanel({ partner, previous, next }: { partner: PartnerView
     const threshold = Math.max(48, Math.min(80, event.currentTarget.clientWidth * 0.15));
     if (Math.abs(dx) < threshold || Math.abs(dx) <= Math.abs(dy) * 1.5 || event.timeStamp - start.at > 1200) return;
     const target = dx < 0 ? next : previous;
-    if (target) startNavigation(() => router.push(`/collection/${target.id}`, { scroll: false }));
+    if (target) startNavigation(() => router.push(`${collectionHref}/${target.id}`, { scroll: false }));
   }
 
   return (

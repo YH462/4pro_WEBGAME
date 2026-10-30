@@ -8,6 +8,7 @@
 .content { position:absolute; inset:6% 14%; display:grid; grid-template-rows:auto minmax(0,1fr) auto auto; justify-items:center; align-items:center; row-gap:3px; min-width:0; min-height:0; text-align:center; }
 .number { color:#5e5960; font-size:0; font-weight:600; letter-spacing:.5px; line-height:1.5; }
 .art { display:block; width:100%; height:100%; min-height:0; max-height:135px; }
+.keidenteraArt[data-character-image="custom"] image { transform:scale(1.25); transform-box:fill-box; transform-origin:center; }
 .content strong { max-width:100%; color:#171418; font-size:15px; font-weight:800; line-height:1.5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .status { display:flex; align-items:center; justify-content:center; gap:3px; color:#e71132; font-size:11px; font-weight:750; line-height:1.5; min-height:16px; }.status>svg { flex-shrink:0; stroke-width:2.8; }
 .owned { --tile-fill:#fff; }

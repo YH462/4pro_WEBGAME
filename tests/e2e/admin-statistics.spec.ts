@@ -110,7 +110,8 @@ test("refreshes live, retains the last good data on failure, pauses while hidden
   await page.evaluate(()=>{Object.defineProperty(document,"hidden",{configurable:true,value:false});document.dispatchEvent(new Event("visibilitychange"));});
   await expect.poll(()=>requests).toBeGreaterThan(count);
   await page.route("**/api/admin/statistics",route=>route.fulfill({status:401,json:{error:"login required"}}));
-  await page.clock.runFor(5100);await expect(page.getByRole("link",{name:"管理者ログインへ",exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"今すぐ更新",exact:true})).toBeEnabled();
+  await page.getByRole("button",{name:"今すぐ更新",exact:true}).click();await expect(page.getByRole("link",{name:"管理者ログインへ",exact:true})).toBeVisible();
   await expect(page.getByRole("rowheader",{name:"統計・サクラ",exact:true})).toHaveCount(0);
   await expect(page.getByRole("button",{name:"今すぐ更新",exact:true})).toBeDisabled();
 });

@@ -16,6 +16,7 @@ import { useCharacterModels } from "../battle/use-character-models";
 import { boss } from "@/lib/boss";
 import type { RaidMusicTrack } from "@/lib/raid-music";
 import { RaidMusicControl } from "./raid-music-control";
+import { AdminMenu } from "../admin/admin-menu";
 import { RaidAttackSoundControl, type RaidAttackSoundHandle } from "./raid-attack-sound-control";
 
 const icons = { idle: Users, rps: HandFist, attack: Swords, critical: Sparkles, heal: Heart, counter: Waves, weaken: Waves, victory: Trophy };
@@ -261,7 +262,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
     </footer>}
     {screen && <footer className={styles.operatorBar} aria-label="レイドの進行操作">
       <div className={styles.liveFooter} role="status"><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</div>
-      <div className={styles.operatorActions}>{screen.tools}<RaidMusicControl track={screen.musicTrack}/><RaidAttackSoundControl ref={attackSound}/><a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+      <div className={styles.operatorActions}>{screen.tools}<RaidMusicControl track={screen.musicTrack}/><RaidAttackSoundControl ref={attackSound}/>{screen.production&&<AdminMenu compact up/>}<a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
     </footer>}
   </div>;
 }

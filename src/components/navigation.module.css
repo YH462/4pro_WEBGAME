@@ -1,4 +1,6 @@
 .footer { display: flex; align-items: center; justify-content: center; min-height: 0; }
+.previewLabel { padding:7px 10px; border:1px solid #efc96b; border-radius:6px; background:#fff1bc; color:#594310; font-size:14px; font-weight:800; white-space:nowrap; }
+.previewLink { display:flex; align-items:center; gap:12px; height:100%; min-height:44px; padding:8px 16px; border:1px solid #efb6c2; border-radius:8px; background:#fff; color:#a91b36; font-size:14px; font-weight:800; }.previewLink span { flex:1; }.previewLink svg { width:21px; height:21px; }
 .navigation { display: flex; align-items: center; justify-content: center; gap: 14px; height: 100%; }
 
 .hexagon {
