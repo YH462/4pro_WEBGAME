@@ -84,7 +84,7 @@ describe("raid character motions", () => {
   });
 
   it("retains both mirrored halves and the skin in the boss attack",async()=>{
-    const bytes=await readFile("public/models/motions/des-dragoon-red-attack.glb");
+    const bytes=await readFile("public/models/motions/des-dragoon-blue-attack.glb");
     await validateCharacterModel(bytes);
     const {doc}=inspectCharacterGLB(bytes);
     const body=doc.nodes.find((node:{name?:string})=>node.name==="Cube");

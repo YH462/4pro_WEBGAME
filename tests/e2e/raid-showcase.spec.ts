@@ -10,7 +10,7 @@ test("PC effects demo renders attacks with different strengths and keeps the sha
   const stage = page.getByRole("region", { name: "ボスとエフェクト" });
   await expect(stage).toHaveAttribute("data-renderer", "webgl", { timeout: 30_000 });
   await expect(stage.locator("canvas")).toHaveAttribute("data-boss-model", "ready");
-  await expect(stage.locator("canvas")).toHaveAttribute("data-boss-model-url", "/models/bosses/des-dragoon-red.glb");
+  await expect(stage.locator("canvas")).toHaveAttribute("data-boss-model-url", "/models/bosses/des-dragoon-blue.glb");
   await expect(page.getByRole("heading", { name: "デスドラグーン", exact: true })).toBeVisible();
   const hp = page.getByRole("progressbar", { name: "演出デモのボスHP" });
   await expect(hp).toHaveAttribute("aria-valuenow", "450");
@@ -194,7 +194,7 @@ test("the visual demo remains controllable without WebGL and with reduced motion
   await page.goto("/raid/screen?demo=effects");
   await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toHaveAttribute("data-renderer", "fallback");
   await expect(page.locator(".enemy-fallback-art")).toBeVisible();
-  await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-red.webp");
+  await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-blue.webp");
   await expect(page.getByRole("button", { name: "連続デモ", exact: true })).toHaveAttribute("aria-pressed", "false");
   await page.getByRole("button", { name: "自己回復", exact: true }).click();
   await expect(page.getByRole("region", { name: "ボスとエフェクト" })).toContainText("+60");
@@ -205,12 +205,12 @@ test("the visual demo remains controllable without WebGL and with reduced motion
 });
 
 test("boss model download failure falls back to its portrait and keeps effects usable", async ({ page }) => {
-  await page.route("**/models/bosses/des-dragoon-red.glb", route => route.abort());
+  await page.route("**/models/bosses/des-dragoon-blue.glb", route => route.abort());
   await page.goto("/raid/screen?demo=effects");
   const stage = page.getByRole("region", { name: "ボスとエフェクト" });
   await expect(stage).toHaveAttribute("data-renderer", "fallback");
   await expect(page.locator(".enemy-fallback-art")).toBeVisible();
-  await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-red.webp");
+  await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-blue.webp");
   await page.getByRole("button", { name: "討伐成功", exact: true }).click();
   await expect(page.getByRole("progressbar", { name: "演出デモのボスHP" })).toHaveAttribute("aria-valuenow", "0");
   await expect(stage).toContainText("討伐成功");

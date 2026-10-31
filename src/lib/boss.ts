@@ -7,8 +7,8 @@ export const bossVariants = {
 
 export const boss = {
   name: "デスドラグーン",
-  modelUrl: bossVariants.red,
-  imageUrl: "/models/bosses/des-dragoon-red.webp",
+  modelUrl: bossVariants.blue,
+  imageUrl: "/models/bosses/des-dragoon-blue.webp",
   yaw: 0,
-  motions: { attack: { url: "/models/motions/des-dragoon-red-attack.glb", yaw: 0 } },
+  motions: { attack: { url: "/models/motions/des-dragoon-blue-attack.glb", yaw: 0 } },
 } as const;

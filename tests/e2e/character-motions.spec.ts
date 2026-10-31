@@ -103,12 +103,14 @@ test("the boss counter plays the uploaded attack and returns to the complete sta
   await page.goto("/raid/screen?demo=effects");
   const canvas=page.getByRole("region",{name:"ボスとエフェクト"}).locator("canvas");
   await expect(canvas).toHaveAttribute("data-boss-motions-ready","true",{timeout:30_000});
+  await expect(canvas).toHaveAttribute("data-boss-model-url","/models/bosses/des-dragoon-blue.glb");
+  await canvas.screenshot({path:testInfo.outputPath("boss-blue-idle.png")});
   await page.clock.install(); await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+200)));
   await page.getByRole("button",{name:"ボスの反撃",exact:true}).click(); await page.clock.runFor(800);
   await expect(canvas).toHaveAttribute("data-boss-motion","attack");
   await canvas.screenshot({path:testInfo.outputPath("boss-authored-attack.png")});
   await page.clock.runFor(1700); await expect(canvas).toHaveAttribute("data-boss-motion","idle");
-  await expect(canvas).toHaveAttribute("data-boss-model-url","/models/bosses/des-dragoon-red.glb");
+  await expect(canvas).toHaveAttribute("data-boss-model-url","/models/bosses/des-dragoon-blue.glb");
 });
 
 test("effects demo selects DB characters and plays their attack/heal without entering a live raid",async({page},testInfo)=>{

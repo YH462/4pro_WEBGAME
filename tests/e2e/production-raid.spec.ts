@@ -749,7 +749,7 @@ test("staff login returns to the live screen and the cleaned header retains its 
   await page.getByLabel("パスワード", { exact: true }).fill(adminPassword);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(`${origin}/raid/screen`);
-  await expect(page.locator("canvas[data-boss-model='ready']")).toHaveAttribute("data-boss-model-url", "/models/bosses/des-dragoon-red.glb");
+  await expect(page.locator("canvas[data-boss-model='ready']")).toHaveAttribute("data-boss-model-url", "/models/bosses/des-dragoon-blue.glb");
   await expect(page.getByRole("heading", { name: "デスドラグーン", exact: true })).toBeVisible();
   expect((await page.request.get("/api/raid")).status()).toBe(200);
   await page.goto("/admin");
@@ -794,7 +794,7 @@ test("NFC acquisition, profile data and model delivery survive UI integration", 
     await page.goto("/battle");
     await expect(page.getByRole("heading", { name: "同期レイド", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "QRでレイドに参加", exact: true })).toBeVisible();
-    await expect(page.getByRole("img", { name: "デスドラグーン", exact: true })).toHaveAttribute("src", "/models/bosses/des-dragoon-red.webp");
+    await expect(page.getByRole("img", { name: "デスドラグーン", exact: true })).toHaveAttribute("src", "/models/bosses/des-dragoon-blue.webp");
     await expect(page.getByText("CPU対戦", { exact: true })).toHaveCount(0);
     expect((await collectSmallText(page)).filter(item=>item.size<=10)).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath("raid-entry-mobile.png") });
@@ -956,7 +956,7 @@ test("a real screen and two phones complete a round and reconnect after reload",
     const registered = await phoneContexts[0].request.get("/api/me"); playerIds.push((await registered.json()).player.id);
     const second = await player(); await phoneContexts[1].addCookies([{ name: "fourpro_guest", value: second.token, url: origin }]); await phones[1].goto(entryUrl); await phones[1].getByRole("button", { name: "このレイドに参加", exact: true }).click();
     await page.goto("/raid/screen");
-    await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-red.webp");
+    await expect(page.locator(".enemy-fallback-art image")).toHaveAttribute("href", "/models/bosses/des-dragoon-blue.webp");
     await expect(page.getByRole("heading", { name: "デスドラグーン", exact: true })).toBeVisible();
     await expect.poll(async () => (await snapshot(request)).participants).toBe(2);
     await expect(page.getByRole("link", { name: `参加URL ${entryUrl}`, exact: true })).toHaveAttribute("href", entryUrl);
