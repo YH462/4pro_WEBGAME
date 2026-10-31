@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { allocateRaidDamage, LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { allocateRaidDamage, LocalRaidRoom, raidTutorialMs } from "../../src/lib/local-raid-room";
 import { privateIpv4 } from "../../src/lib/local-network";
 
 function setup(count = 3) {
@@ -13,7 +13,7 @@ function setup(count = 3) {
 describe("shared ten-second raid rounds", () => {
   it("waits for the common deadline then draws once for different personal outcomes", () => {
     const { room, roomId, draw, send, advance } = setup();
-    expect(room.snapshot().round.phase).toBe("lobby"); room.start(roomId);
+    expect(room.snapshot().round.phase).toBe("lobby"); room.start(roomId); advance(raidTutorialMs);
     send(0, "scissors"); send(1, "paper"); send(2, "rock");
     expect(draw).not.toHaveBeenCalled();
     expect(advance(9999)).toMatchObject({ bossHp: 1350, results: [], round: { phase: "collecting", submitted: 3 } });
@@ -27,7 +27,7 @@ describe("shared ten-second raid rounds", () => {
     room.snapshot(); expect(draw).toHaveBeenCalledOnce();
   });
   it("accepts one command per person, deduplicates retries and rejects payload changes", () => {
-    const { room, roomId, send, advance } = setup(); room.start(roomId);
+    const { room, roomId, send, advance } = setup(); room.start(roomId); advance(raidTutorialMs);
     send(0, "rock", "attack", "same"); send(0, "rock", "attack", "same");
     expect(room.snapshot().round.submitted).toBe(1);
     expect(() => send(0, "paper", "attack", "same")).toThrow("同じ送信ID");
@@ -37,7 +37,7 @@ describe("shared ten-second raid rounds", () => {
     expect(() => send(2, "rock")).toThrow("受付は終了");
   });
   it("rejects a command arriving exactly at the deadline and rejects stale rounds", () => {
-    const { room, roomId, send, advance } = setup(); room.start(roomId); advance();
+    const { room, roomId, send, advance } = setup(); room.start(roomId); advance(raidTutorialMs); advance();
     expect(() => send(0, "scissors")).toThrow("受付は終了");
     room.finish(roomId, 1);
     expect(room.snapshot().round).toMatchObject({ number: 2, phase: "collecting" });
@@ -45,17 +45,17 @@ describe("shared ten-second raid rounds", () => {
     const deadline = room.snapshot().round.closesAt;
     room.finish(roomId, 1); expect(room.snapshot().round.closesAt).toBe(deadline);
   });
-  it("skips non-submitted actions, counters once and refuses mid-battle visitors", () => {
-    const { room, roomId, send, advance } = setup(2); room.start(roomId); send(0, "scissors");
-    advance(); expect(() => room.join("late", "aqua-spirit", 135, "LATE")).toThrow("バトル開始後");
+  it("skips non-submitted actions and closes admission thirty seconds into battle", () => {
+    const { room, roomId, send, advance } = setup(2); room.start(roomId); advance(raidTutorialMs); send(0, "scissors");
+    advance(30_000); expect(() => room.join("late", "aqua-spirit", 135, "LATE")).toThrow("受付は終了");
     expect(room.snapshot("p1").me?.lastResult).toMatchObject({ submitted: false, amount: 0, counterDamage: 12 });
     expect(room.snapshot("late").me).toBeNull();
     room.finish(roomId, 1); advance();
-    expect(() => room.join("late", "aqua-spirit", 135, "LATE")).toThrow("バトル開始後");
+    expect(() => room.join("late", "aqua-spirit", 135, "LATE")).toThrow("受付は終了");
     expect(room.snapshot("p1").me?.lastResult).toMatchObject({ turn: 2, submitted: false, counterDamage: 12 });
   });
   it("caps self-healing then counters everyone once and preserves rejoin HP", () => {
-    const { room, roomId, send, advance } = setup(2); room.start(roomId); send(0, "scissors"); advance(); room.finish(roomId, 1);
+    const { room, roomId, send, advance } = setup(2); room.start(roomId); advance(raidTutorialMs); send(0, "scissors"); advance(); room.finish(roomId, 1);
     send(0, "scissors", "heal"); advance();
     expect(room.snapshot("p0").me?.lastResult).toMatchObject({ amount: 12, playerHpBefore: 158, playerHpAfter: 158 });
     expect(room.snapshot("p1").me?.hp).toBe(146);
@@ -64,7 +64,7 @@ describe("shared ten-second raid rounds", () => {
   });
   it("apportions lethal damage across all attackers and cancels the counter on victory", () => {
     expect(allocateRaidDamage([100, 50, 25], 50)).toEqual([29, 14, 7]);
-    const { room, roomId, send, advance } = setup(6); room.start(roomId);
+    const { room, roomId, send, advance } = setup(6); room.start(roomId); advance(raidTutorialMs);
     for (let turn = 0; turn < 4; turn++) {
       for (let i = 0; i < 6; i++) send(i, "scissors");
       advance(); room.finish(roomId, turn + 1);
@@ -76,9 +76,9 @@ describe("shared ten-second raid rounds", () => {
     room.finish(roomId, 5); expect(room.snapshot().round.phase).toBe("finished");
   });
   it("resets every pending intent, rejects old room IDs and enforces the cap", () => {
-    const { room, roomId, send } = setup(20);
+    const { room, roomId, send, advance } = setup(20);
     expect(() => room.join("overflow", "forest-golem", 170, "OVER")).toThrow("20人");
-    room.start(roomId); send(0, "rock");
+    room.start(roomId); advance(raidTutorialMs); send(0, "rock");
     expect(() => room.join("bad", "a", NaN, "bad")).toThrow();
     const state = room.reset(); expect(state).toMatchObject({ participants: 0, rounds: [], results: [], round: { number: 0, phase: "lobby" } });
     expect(() => room.start(roomId)).toThrow("リセット");
@@ -88,14 +88,14 @@ describe("shared ten-second raid rounds", () => {
     const roomId = room.snapshot().roomId;
     expect(() => room.start(roomId)).toThrow("参加者");
     room.join("a", "forest-golem", 10, "A"); room.start(roomId);
-    now = 10000;
+    now = raidTutorialMs + 10000;
     expect(room.snapshot("a").me?.lastResult).toMatchObject({ submitted: false, counterDamage: 10, playerHpAfter: 0 });
     room.finish(roomId, 1);
     expect(room.snapshot()).toMatchObject({ alive: 0, round: { phase: "finished", closesAt: null } });
     expect(() => room.command("a", { roomId, round: 2, requestId: "after-wipe", action: "attack", hand: "rock" })).toThrow("受付は終了");
   });
   it("returns detached intents, results and batches", () => {
-    const { room, roomId, send, advance } = setup(1); room.start(roomId); send(0, "scissors");
+    const { room, roomId, send, advance } = setup(1); room.start(roomId); advance(raidTutorialMs); send(0, "scissors");
     room.snapshot("p0").me!.submission!.hand = "rock";
     advance(); const state = room.snapshot("p0"); state.rounds[0].results[0].amount = 999; state.results[0].amount = 999;
     expect(room.snapshot().results[0].amount).toBe(100);

@@ -5,12 +5,13 @@ import { Volume2, VolumeX } from "lucide-react";
 import { RaidMusic, raidBattleMusic, type RaidBattleMusic, type RaidMusicTrack } from "@/lib/raid-music";
 import styles from "./raid-music-control.module.css";
 
-export function RaidMusicControl({ track }: { track: RaidMusicTrack }) {
+export function RaidMusicControl({ track, ducked = false }: { track: RaidMusicTrack; ducked?: boolean }) {
   const music = useRef<RaidMusic | null>(null);
   const attempt = useRef(0);
   const [status, setStatus] = useState<"off" | "loading" | "on">("off");
   const [error, setError] = useState("");
   const [battleMusic, setBattleMusic] = useState<RaidBattleMusic>("BattleBGM1");
+  useEffect(() => { music.current?.setDucked(ducked); }, [ducked]);
   useEffect(() => {
     let active = true;
     void music.current?.setTrack(track, battleMusic).catch(() => {
@@ -27,6 +28,7 @@ export function RaidMusicControl({ track }: { track: RaidMusicTrack }) {
     setError(""); setStatus(enable ? "loading" : "off");
     try {
       if (!music.current) music.current = new RaidMusic(track, battleMusic);
+      music.current.setDucked(ducked);
       const playing = await music.current.setEnabled(enable);
       if (current === attempt.current) setStatus(playing ? "on" : "off");
     } catch {

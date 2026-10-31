@@ -110,3 +110,4 @@
 .collection p { font-size:max(14px,1.1cqw); font-weight:750; }
 .collection i { height:max(3px,.3cqw); display:block; margin-top:.7cqw; background:#ee3454; align-self:flex-start; transition:width .2s; }
 @media (max-width:1100px) { .operatorBar { gap:8px; padding:10px 12px; }.operatorActions { flex:1; }.liveFooter { flex-basis:100%; }.liveFooter>strong { font-size:16px; } }
+.admissionCountdown { padding:8px; margin-bottom:8px; border-radius:6px; background:#c91d3b; color:white; text-align:center; font-size:max(14px,1cqw); font-weight:850; }

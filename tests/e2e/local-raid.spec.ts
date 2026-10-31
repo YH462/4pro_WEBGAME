@@ -18,6 +18,7 @@ test.afterEach(async ({ request }) => {
 test.afterAll(async () => { await db.$disconnect(); });
 
 test("round API validates sessions, origin and one locked submission, without early outcomes", async ({ request }) => {
+  test.setTimeout(80_000);
   await request.post("/api/local-raid", { headers, data: { type: "reset" } });
   const room = await snapshot(request);
   const input = { type: "command", roomId: room.roomId, round: 1, requestId: randomUUID(), action: "attack", hand: "scissors" };
@@ -28,6 +29,7 @@ test("round API validates sessions, origin and one locked submission, without ea
   expect((await request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem", maxHp: 9999 } })).status()).toBe(400);
   await request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem" } });
   await request.post("/api/local-raid", { headers, data: { type: "start", roomId: room.roomId } });
+  await expect.poll(async () => (await snapshot(request)).round.phase, { timeout: 55_000 }).toBe("collecting");
   expect((await request.post("/api/local-raid", { headers, data: { ...input, damage: 9999 } })).status()).toBe(400);
   for (let i = 0; i < 2; i++) expect((await request.post("/api/local-raid", { headers, data: input })).ok()).toBeTruthy();
   const accepted = await snapshot(request, true);
@@ -38,7 +40,7 @@ test("round API validates sessions, origin and one locked submission, without ea
 });
 
 test("three phones share one countdown and hand, receive different outcomes, and take one team counter", async ({ browser, page, request }, testInfo) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   await request.post("/api/local-raid", { headers, data: { type: "reset" } });
   const contexts = await Promise.all(Array.from({ length: 4 }, () => browser.newContext({ baseURL: origin, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })));
   try {
@@ -61,7 +63,9 @@ test("three phones share one countdown and hand, receive different outcomes, and
       await expect(phone.getByRole("button", { name: "攻撃を選択", exact: true })).toBeDisabled();
     }
     await page.goto("/raid/screen?sync=local");
-    await page.getByRole("button", { name: "10秒の入力受付を開始", exact: true }).click();
+    await page.getByRole("button", { name: "ルール説明を開始（49秒）", exact: true }).click();
+    await expect(page.getByRole("region", { name: "バトル前のルール説明" })).toBeVisible();
+    await expect.poll(async () => (await snapshot(request)).round.phase, { timeout: 55_000 }).toBe("collecting");
     const initial = await snapshot(request);
     expect(initial.round.closesAt! - initial.serverNow).toBeGreaterThan(8000);
     for (const phone of phones) await expect(phone.getByRole("timer", { name: "入力締め切りまで" })).toContainText(/あと\d+秒/);
@@ -87,10 +91,10 @@ test("three phones share one countdown and hand, receive different outcomes, and
       await expect(phones[i].locator(".raid-rps-result")).toContainText(`${result.label} ×${result.multiplier}`);
       await expect(phones[i].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");
     }
-    expect((await contexts[3].request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem" } })).status()).toBe(409);
-    expect((await snapshot(contexts[3].request, true)).me).toBeNull();
+    expect((await contexts[3].request.post("/api/local-raid", { headers, data: { type: "join", characterId: "forest-golem" } })).status()).toBe(200);
+    expect((await snapshot(contexts[3].request, true)).me).toMatchObject({ hp: 170, eligibleRound: 2 });
     for (const phone of phones) await expect(phone.getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "157", { timeout: 8000 });
-    expect((await snapshot(contexts[3].request, true)).me).toBeNull();
+    expect((await snapshot(contexts[3].request, true)).me).not.toBeNull();
     await expect.poll(async () => (await snapshot(request)).round.number, { timeout: 8000 }).toBe(2);
     for (const phone of phones) await expect(phone.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
     await phones[0].screenshot({ path: testInfo.outputPath("raid-mobile-shared-countdown.png") });
@@ -104,9 +108,9 @@ test("three phones share one countdown and hand, receive different outcomes, and
     await expect(phones[0].locator(".raid-rps-result")).toContainText(`自己回復 ${heal.amount}`, { timeout: 6000 });
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(157 + heal.amount));
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", String(144 + heal.amount), { timeout: 8000 });
-    expect((await snapshot(contexts[3].request, true)).me).toBeNull();
+    expect((await snapshot(contexts[3].request, true)).me).not.toBeNull();
     await request.post("/api/local-raid", { headers, data: { type: "reset" } });
-    await expect(phones[0].getByRole("status").filter({ hasText: /^受付開始を待っています$/ })).toBeVisible();
+    await expect(phones[0].getByRole("status", { name: "レイド参加状況" }).filter({ hasText: "ルール説明の開始を待っています" })).toBeVisible();
     await expect(phones[0].getByRole("progressbar", { name: "自分のHP（同期）" })).toHaveAttribute("aria-valuenow", "170");
   } finally { for (const context of contexts) await context.close(); }
 });

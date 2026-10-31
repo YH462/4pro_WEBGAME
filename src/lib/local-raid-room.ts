@@ -2,6 +2,8 @@ import { randomInt, randomUUID } from "node:crypto";
 import { battlePreview } from "./battle-preview";
 import { raidHands, resolveRaidRps, type RaidHand } from "./raid-rps";
 import { raidBalance, type RaidBalance } from "./raid-balance";
+import { raidAdmissionOpen } from "./raid-admission";
+import { raidTutorialSeconds } from "./raid-tutorial-timing";
 import type { LocalRaidAction, LocalRaidMember, LocalRaidResult, LocalRaidRoundResult, LocalRaidSnapshot } from "./local-raid-types";
 
 type Member = LocalRaidMember & { screenId: string; characterName: string; nickname: string };
@@ -15,8 +17,11 @@ export type SavedRaidRoom = {
   // Absent on old saves: those running fights keep their original 450/20 rules.
   balance?: RaidBalance;
   removed?: string[];
+  admissionClosesAt?: number | null;
 };
 export const raidInputMs = 10_000;
+export const raidTutorialMs = raidTutorialSeconds * 1000;
+export const raidLateJoinMs = 30_000;
 export class LocalRaidError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -42,6 +47,7 @@ export class LocalRaidRoom {
   private turn = 0;
   private phase: LocalRaidSnapshot["round"]["phase"] = "lobby";
   private closesAt: number | null = null;
+  private admissionClosesAt: number | null = null;
   private revealedTurn = 0;
   private actionTurn = 0;
   private counterTurn = 0;
@@ -59,7 +65,7 @@ export class LocalRaidRoom {
 
   save(): SavedRaidRoom {
     return structuredClone({ version: 1, roomId: this.roomId, revision: this.revision, bossHp: this.bossHp, turn: this.turn,
-      phase: this.phase, closesAt: this.closesAt, revealedTurn: this.revealedTurn, actionTurn: this.actionTurn,
+      phase: this.phase, closesAt: this.closesAt, admissionClosesAt: this.admissionClosesAt, revealedTurn: this.revealedTurn, actionTurn: this.actionTurn,
       counterTurn: this.counterTurn, completedTurn: this.completedTurn, totalDamage: this.totalDamage,
       totalHealing: this.totalHealing, rounds: this.rounds, members: [...this.members], receipts: [...this.receipts], removed: [...this.removed], ...(this.balance ? { balance: this.balance } : {}) });
   }
@@ -92,11 +98,11 @@ export class LocalRaidRoom {
     this.tick();
     const existing = this.members.get(playerId);
     if (this.removed.has(playerId)) throw new LocalRaidError(409, "運営側で参加が解除されています。スタッフに確認してください。");
-    if (!existing && this.phase !== "lobby" && this.phase !== "finished") throw new LocalRaidError(409, "バトル開始後は参加できません。次の受付をお待ちください。");
     if (this.phase === "finished") {
       if (!existing) throw new LocalRaidError(409, "終了したレイドです。次の受付をお待ちください。");
       return this.snapshot(playerId);
     }
+    if (!existing && !raidAdmissionOpen(this.snapshot())) throw new LocalRaidError(409, "途中参加の受付は終了しました。次の受付をお待ちください。");
     if (!existing && this.members.size >= 20) throw new LocalRaidError(409, "参加上限は20人です。");
     if (!Number.isSafeInteger(maxHp) || maxHp <= 0) throw new LocalRaidError(400, "キャラクターのHPを確認してください。");
     if (!existing) this.members.set(playerId, { screenId: randomUUID(), characterId, characterName, maxHp, hp: maxHp, nickname, lastResult: null, submission: null, eligibleRound: this.phase === "playing" ? this.turn + 1 : Math.max(1, this.turn) });
@@ -115,7 +121,11 @@ export class LocalRaidRoom {
     this.checkRoom(roomId);
     if (this.phase !== "lobby") return this.snapshot();
     if (![...this.members.values()].some((member) => member.hp > 0)) throw new LocalRaidError(409, "参加者が入ってから開始してください。");
-    this.openRound();
+    this.updateBalance();
+    this.phase = "tutorial";
+    this.closesAt = this.now() + raidTutorialMs;
+    this.admissionClosesAt = this.closesAt + raidLateJoinMs;
+    this.changed();
     return this.snapshot();
   }
   private removeWaitingPlayer(playerId: string) {
@@ -134,9 +144,9 @@ export class LocalRaidRoom {
     if (playerId) { this.removeWaitingPlayer(playerId); this.removed.add(playerId); }
     return this.snapshot();
   }
-  private openRound() {
+  private openRound(startedAt = this.now()) {
     this.updateBalance();
-    this.turn++; this.phase = "collecting"; this.closesAt = this.now() + raidInputMs;
+    this.turn++; this.phase = "collecting"; this.closesAt = startedAt + raidInputMs;
     this.members.forEach((member) => { member.submission = null; });
     this.changed();
   }
@@ -153,12 +163,14 @@ export class LocalRaidRoom {
     }
     if (this.phase !== "collecting" || input.round !== this.turn) throw new LocalRaidError(409, "このラウンドの受付は終了しました。次の受付をお待ちください。");
     if (member.hp <= 0) throw new LocalRaidError(409, "戦闘不能です。");
+    if (member.eligibleRound > this.turn) throw new LocalRaidError(409, "次の入力受付から参加できます。");
     if (member.submission) throw new LocalRaidError(409, "このラウンドは送信済みです。");
     member.submission = { round: this.turn, action: input.action, hand: input.hand };
     this.receipts.set(key, fingerprint); this.changed();
     return { state: this.snapshot(playerId) };
   }
   private tick() {
+    if (this.phase === "tutorial" && this.closesAt !== null && this.now() >= this.closesAt) this.openRound(this.closesAt);
     if (this.phase !== "collecting" || this.closesAt === null || this.now() < this.closesAt) return;
     const eligible = [...this.members.values()].filter((member) => member.hp > 0 && member.eligibleRound <= this.turn);
     const boss = this.drawHand(); // One draw per round, after every player's input is locked.
@@ -221,6 +233,7 @@ export class LocalRaidRoom {
     this.roomId = randomUUID(); this.bossHp = battlePreview.bossHp; this.turn = this.completedTurn = 0;
     this.balance = raidBalance(0);
     this.phase = "lobby"; this.closesAt = null; this.revealedTurn = this.actionTurn = this.counterTurn = 0;
+    this.admissionClosesAt = null;
     this.totalDamage = this.totalHealing = 0; this.results = []; this.rounds = []; this.receipts.clear(); this.members.clear(); this.removed.clear(); this.changed();
     return this.snapshot();
   }
@@ -229,7 +242,7 @@ export class LocalRaidRoom {
     const members = [...this.members.values()], me = playerId ? this.members.get(playerId) : undefined;
     const eligible = members.filter((member) => member.eligibleRound <= this.turn && (member.hp > 0 || member.lastResult?.turn === this.turn));
     return {
-      roomId: this.roomId, revision: this.revision, serverNow: this.now(), round: { number: this.turn, phase: this.phase, closesAt: this.closesAt, submitted: eligible.filter((member) => member.submission).length, eligible: eligible.length },
+      roomId: this.roomId, revision: this.revision, serverNow: this.now(), admissionClosesAt: this.admissionClosesAt, round: { number: this.turn, phase: this.phase, closesAt: this.closesAt, submitted: eligible.filter((member) => member.submission).length, eligible: eligible.length },
       rounds: this.rounds.map((round) => ({ ...round, results: round.results.map((result) => ({ ...result })) })),
       revealedTurn: this.revealedTurn, actionTurn: this.actionTurn, counterTurn: this.counterTurn,
       bossName: battlePreview.bossName, bossHp: this.bossHp, bossMaxHp: this.balance?.maxHp ?? battlePreview.bossHp,

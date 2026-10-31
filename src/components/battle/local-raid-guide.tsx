@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 import { ArrowRight, Hand, HandFist, Scissors, X } from "lucide-react";
 import { raidRpsRules } from "@/lib/raid-rps";
+import { raidTutorialSeconds } from "@/lib/raid-tutorial-timing";
 import styles from "./local-raid-guide.module.css";
 
 const outcomes = [
@@ -36,6 +37,7 @@ export function LocalRaidGuide({ dialogRef, screenHref = "/raid/screen?sync=loca
           <ol>
             <li><span aria-hidden="true">1</span><p>受付は全員共通で<strong>10秒</strong>・1人1回。</p></li>
             <li><span aria-hidden="true">2</span><p>締め切り後は同じボスの手で勝敗を判定します。</p></li>
+            <li><span aria-hidden="true">3</span><p>最初に<strong>{raidTutorialSeconds}秒のルール説明</strong>があります。説明中とバトル開始後30秒まで参加できます。</p></li>
           </ol>
 
         </section>

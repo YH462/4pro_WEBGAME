@@ -44,7 +44,8 @@ export type LocalRaidMember = {
 
 export type LocalRaidSnapshot = {
   serverNow: number;
-  round: { number: number; phase: "lobby" | "collecting" | "playing" | "finished"; closesAt: number | null; submitted: number; eligible: number };
+  round: { number: number; phase: "lobby" | "tutorial" | "collecting" | "playing" | "finished"; closesAt: number | null; submitted: number; eligible: number };
+  admissionClosesAt?: number | null;
   rounds: LocalRaidRoundResult[];
   roomId: string;
   revision: number;

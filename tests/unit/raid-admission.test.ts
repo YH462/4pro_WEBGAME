@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { LocalRaidRoom, raidTutorialMs, raidLateJoinMs } from "../../src/lib/local-raid-room";
 import { raidAdmissionUrl } from "../../src/lib/raid-admission";
 import { startDestination } from "../../src/lib/acquisition-links";
 import { raidQrDestination } from "../../src/lib/raid-qr";
@@ -25,13 +25,16 @@ describe("reception membership", () => {
     expect(room.snapshot("p")).toMatchObject({ participants: 0, me: null, removedFromLobby: false });
     room.join("p", "forest-golem", 170, "P"); expect(room.snapshot().participants).toBe(1);
   });
-  it("keeps the admitted roster fixed after start but accepts an existing member reconnect", () => {
-    const room = new LocalRaidRoom(); room.join("p", "forest-golem", 170, "P");
+  it("accepts arrivals during explanation, keeps staff removal locked and accepts reconnects after the deadline", () => {
+    let now = 0;
+    const room = new LocalRaidRoom(undefined, () => now); room.join("p", "forest-golem", 170, "P");
     const state = room.snapshot(); room.start(state.roomId);
-    expect(() => room.join("late", "forest-golem", 170, "LATE")).toThrow("開始後");
+    expect(room.join("late", "forest-golem", 170, "LATE").participants).toBe(2);
     expect(() => room.remove(state.roomId, state.members[0].id)).toThrow("開始前");
     expect(() => room.leave(state.roomId, "p")).toThrow("開始前");
-    expect(room.join("p", "forest-golem", 170, "P").participants).toBe(1);
+    now = raidTutorialMs + raidLateJoinMs;
+    expect(() => room.join("too-late", "forest-golem", 170, "LATE")).toThrow("受付は終了");
+    expect(room.join("p", "forest-golem", 170, "P").participants).toBe(2);
   });
   it("rotates reception URLs on reset, preserves room-scoped return paths and leaves character QR helpers separate", () => {
     const room = new LocalRaidRoom(); const before = room.snapshot().roomId;

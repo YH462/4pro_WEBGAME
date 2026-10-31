@@ -15,6 +15,7 @@ export class RaidMusic {
   private suspendTimer?: ReturnType<typeof setTimeout>;
   private enabled = false;
   private disposed = false;
+  private ducked = false;
 
   constructor(private track: RaidMusicTrack, private battleMusic: RaidBattleMusic = "BattleBGM1") {
     // Constructed and resumed by the operator's click, never during hydration.
@@ -86,6 +87,11 @@ export class RaidMusic {
     if (this.enabled) { this.prefetchBattle(); await this.playCurrent(); }
   }
 
+  setDucked(ducked: boolean) {
+    this.ducked = ducked;
+    if (this.enabled && !this.disposed) this.ramp(this.master.gain, ducked ? .12 : .4, .15);
+  }
+
   async setEnabled(enabled: boolean) {
     if (this.disposed) return false;
     this.enabled = enabled; clearTimeout(this.suspendTimer);
@@ -100,7 +106,7 @@ export class RaidMusic {
     await Promise.all([this.context.resume(), this.playCurrent()]);
     if (!this.enabled || this.disposed) return false;
     if (this.context.state !== "running") throw new Error("BGMをオンにし直してください。");
-    this.ramp(this.master.gain, .4, .12);
+    this.ramp(this.master.gain, this.ducked ? .12 : .4, .12);
     this.prefetchBattle();
     return true;
   }

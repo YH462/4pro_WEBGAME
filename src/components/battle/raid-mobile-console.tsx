@@ -6,6 +6,7 @@ import { ArrowUpRight, Check, ChevronLeft, ChevronRight, ChevronsRight, CircleHe
 import type { PartnerView } from "@/lib/character-presentation";
 import type { LocalRaidAction, LocalRaidResult } from "@/lib/local-raid-types";
 import { visibleLocalRaid } from "@/lib/local-raid-presentation";
+import { raidAdmissionOpen } from "@/lib/raid-admission";
 import { battlePreview } from "@/lib/battle-preview";
 import { raidHands, raidRpsRules, resolveRaidRps, type RaidHand } from "@/lib/raid-rps";
 import { localRequestId, useLocalRaid } from "./use-local-raid";
@@ -50,12 +51,15 @@ export function RaidMobileConsole({ partners, local = false, production = false,
   const help = useRef<HTMLDialogElement>(null);
   const partner = partners.find((item) => item.id === partnerId) ?? partners[0];
   const seconds = useRaidCountdown(raw?.round.closesAt, raw?.serverNow);
+  const admissionSeconds = useRaidCountdown(raw?.admissionClosesAt, raw?.serverNow);
+  const receptionOpen = Boolean(raw && raidAdmissionOpen(raw) && (raw.round.phase === "lobby" || admissionSeconds > 0));
+  const tutorial = local && raw?.round.phase === "tutorial";
   const submitted = raw?.me?.submission?.round === raw?.round.number && Boolean(raw?.me?.submission);
   const sentCommand = local && submitted ? raw?.me?.submission : null;
   const pendingCommand = sentCommand ?? (local && sending ? attempt : null);
   const SentHandIcon = pendingCommand ? handIcons[pendingCommand.hand] : null;
   const accepting = !local || Boolean(matchingReception && raw?.round.phase === "collecting" && seconds > 0 && raw.me && raw.me.eligibleRound <= raw.round.number);
-  const waiting = previewWaiting || Boolean(local && (raw?.round.phase === "playing" || (raw?.round.phase === "collecting" && submitted)));
+  const waiting = previewWaiting || Boolean(local && raw?.me && (raw.round.phase === "playing" || (raw.round.phase === "collecting" && submitted)));
   const phase = result ? "result" : waiting ? "waiting" : sending ? "sending" : "select";
   const busy = phase !== "select";
 
@@ -156,11 +160,11 @@ export function RaidMobileConsole({ partners, local = false, production = false,
   const ended = local && (bossHp === 0 || hp <= 0);
   const ready = interactive && matchingReception && (!local || Boolean(state?.me && state.me.characterId === partnerId && !joining && !connectionError));
   const frozen = busy || joining || Boolean(attempt) || ended || !accepting;
-  const characterFrozen = !interactive || !matchingReception || busy || joining || Boolean(attempt) || ended || Boolean(local && raw?.round.phase !== "lobby" && !accepting);
+  const characterFrozen = !interactive || !matchingReception || busy || joining || Boolean(attempt) || ended || Boolean(local && raw?.round.phase !== "lobby" && !tutorial && !accepting && !(!raw?.me && receptionOpen));
   const unsettled = Boolean(raw?.me?.lastResult && raw.me.lastResult.turn > raw.counterTurn);
   const feedback = local ? impact?.kind === "heal" ? "heal" : result?.submitted === false ? "idle" : result?.outcome ?? "idle" : result ? result.action === "heal" ? "heal" : result.outcome : "idle";
   const status = connectionError || error || (joining ? "レイドへ参加しています…" : local && !raw ? "会場に接続しています…"
-    : local && !state?.me ? "参加して、仲間と一緒に戦おう" : local && raw?.round.phase === "lobby" ? "会場スクリーンで受付を開始すると参加できます"
+    : local && !state?.me ? "参加して、仲間と一緒に戦おう" : tutorial ? `参加完了！ ルール説明中・バトル開始まであと${seconds}秒` : local && raw?.round.phase === "lobby" ? "参加完了！ 会場でルール説明が始まるまでお待ちください"
       : result ? result.submitted === false ? "今回は未入力でした。次の受付で参加しよう" : `${result.label} ×${result.multiplier}：${result.action === "attack" ? "攻撃" : "自己回復"} ${result.amount} ／ ボスの全体攻撃 ${result.counterDamage}`
       : waiting ? local ? submitted && raw?.round.phase === "collecting" ? "送信済み。締め切りまでスクリーンに注目！" : "みんなの行動をスクリーンで見届けよう！" : "ボスとじゃんけん中…"
       : sending ? "選んだ手を送信しています…"
@@ -193,13 +197,15 @@ export function RaidMobileConsole({ partners, local = false, production = false,
 
   const victory = local && bossHp === 0 && (!production || Boolean(raw?.me && matchingReception));
   const needsAdmission = production && (!raw?.me || !matchingReception);
-  const canJoin = Boolean(interactive && entryRoomId && matchingReception && raw?.round.phase === "lobby" && !raw.removedFromLobby && !connectionError);
-  const admissionTitle = !raw ? "会場に接続しています…" : !matchingReception ? "次の受付QRを読み取ってください" : raw.removedFromLobby ? "参加が解除されています" : raw.round.phase !== "lobby" ? "このレイドの参加受付は終了しました" : !entryRoomId ? "会場の受付QRを読み取ってください" : "参加受付中";
+  const canJoin = Boolean(interactive && entryRoomId && matchingReception && receptionOpen && !raw?.removedFromLobby && !connectionError);
+  const admissionTitle = !raw ? "会場に接続しています…" : !matchingReception ? "次の受付QRを読み取ってください" : raw.removedFromLobby ? "参加が解除されています" : !receptionOpen ? "このレイドの参加受付は終了しました" : !entryRoomId ? "会場の受付QRを読み取ってください" : raw.round.phase === "lobby" || tutorial ? "参加受付中" : `途中参加受付中・あと${admissionSeconds}秒`;
   const summary = result ?? (state?.me?.lastResult?.turn === raw?.round.number ? state?.me?.lastResult : null);
   const element = elements[partner.element as keyof typeof elements] ?? elements.LEGEND;
   const retry = local && Boolean(attempt && error) && !busy && !ended && accepting;
   const rejoin = local && interactive && Boolean(raw) && !joining && !busy && !ended && raw?.me?.characterId !== partnerId;
-  const localStatus = ended ? "戦闘不能" : sending ? "送信中…" : waiting || result ? "次の受付まで待機" : joining ? "参加中…" : !accepting ? "受付開始を待っています" : !action ? "① 攻撃か回復を選ぼう" : "② 手をタップして決定";
+  const localStatus = ended ? "戦闘不能" : tutorial ? `ルール説明中・開始まであと${seconds}秒` : sending ? "送信中…" : waiting || result ? "次の受付まで待機" : joining ? "参加中…" : !accepting ? "受付開始を待っています" : !action ? "① 攻撃か回復を選ぼう" : "② 手をタップして決定";
+  const admitted = Boolean(local && raw?.me && matchingReception);
+  const participationMessage = tutorial ? localStatus : raw?.round.phase === "lobby" ? "ルール説明の開始を待っています" : raw?.me && raw.me.eligibleRound > raw.round.number ? "次の入力受付から操作できます" : localStatus;
   function selectPartner(id: string) { if(characterFrozen || unsettled) return; setPartnerId(id); setMotionCue(null); setHand(null); setError(""); }
   function cyclePartner(direction: number) { selectPartner(partners[(partners.findIndex((item)=>item.id===partner.id)+direction+partners.length)%partners.length].id); }
 
@@ -228,7 +234,7 @@ export function RaidMobileConsole({ partners, local = false, production = false,
 
     {needsAdmission ? <section className={`${styles.controls} ${styles.admissionPanel}`} aria-label="レイド参加受付">
       <h2>{admissionTitle}</h2>
-      <p>{raw?.removedFromLobby ? "運営スタッフに確認してください。" : canJoin ? "パートナーを選んで、このレイドへの参加を確定してください。" : "待機中のスクリーンに表示される最新のQRから参加できます。"}</p>
+      <p>{raw?.removedFromLobby ? "運営スタッフに確認してください。" : canJoin ? "まだ参加は完了していません。パートナーを選び、下のボタンを押して参加を確定してください。" : "参加受付中のスクリーンに表示される最新のQRから参加できます。"}</p>
       {canJoin ? <button type="button" className={styles.confirm} disabled={joining} onClick={() => void join()}>{joining ? "参加しています…" : "このレイドに参加"}</button> : <Link className={styles.confirm} href="/battle">受付QRを読み取る</Link>}
       {(error || connectionError) && <p className={styles.feedback} role="alert">{error || connectionError}</p>}
     </section> : victory ? <section className={`${styles.controls} ${styles.victory}`} aria-label="討伐成功の結果">
@@ -255,7 +261,7 @@ export function RaidMobileConsole({ partners, local = false, production = false,
         </div>}
       </div>
       <p className={`${connectionError || error ? styles.feedback : "sr-only"} raid-feedback`} role="status" aria-live="polite">{status}</p>
-      {local ? retry || rejoin ? <button type="button" className={styles.confirm} disabled={retry && (!ready || !accepting)} onClick={()=>{ if (rejoin) void join(); else void submit(); }}>{rejoin ? "同期に参加する" : "同じ行動を再送する"}</button> : <div className={`${styles.confirm} ${styles.commandStatus}`} role="status">{(sending || waiting || result) && !ended && <LoaderCircle className={styles.spinner} size={18} aria-hidden="true"/>}<span>{localStatus}</span>{production && raw?.me && raw.round.phase === "lobby" && <button type="button" className={styles.waitingLeave} disabled={joining} onClick={async () => {
+      {local ? retry || rejoin ? <button type="button" className={styles.confirm} disabled={retry && (!ready || !accepting)} onClick={()=>{ if (rejoin) void join(); else void submit(); }}>{rejoin ? "同期に参加する" : "同じ行動を再送する"}</button> : <div className={`${styles.confirm} ${styles.commandStatus}`} role="status" aria-label={admitted ? "レイド参加状況" : undefined}>{(sending || waiting || result) && !ended && <LoaderCircle className={styles.spinner} size={18} aria-hidden="true"/>}<span className={admitted ? styles.participationText : undefined}>{admitted && <strong>参加完了！</strong>}<span>{admitted ? participationMessage : localStatus}</span></span>{production && raw?.me && raw.round.phase === "lobby" && <button type="button" className={styles.waitingLeave} disabled={joining} onClick={async () => {
         setJoining(true); setError(""); try { await send({ type: "leave", roomId: raw.roomId }); }
         catch (reason) { setError(reason instanceof Error ? reason.message : "参加を取り消せませんでした。"); }
         finally { setJoining(false); }

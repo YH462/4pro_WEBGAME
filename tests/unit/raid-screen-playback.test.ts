@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { LocalRaidRoom, raidTutorialMs } from "../../src/lib/local-raid-room";
 import { emptyRaidPlayback, raidMemberPosition, raidPlaybackReducer, raidScreenIsLast, raidScreenScene } from "../../src/lib/raid-screen-playback";
 function setup() {
   let now = 0; const room = new LocalRaidRoom(() => "paper", () => now);
   room.join("a", "forest-golem", 170, "A"); room.join("b", "forest-golem", 170, "B");
-  const roomId = room.snapshot().roomId; room.start(roomId);
+  const roomId = room.snapshot().roomId; room.start(roomId); now += raidTutorialMs; room.snapshot();
   for (const [player, hand] of [["a", "paper"], ["b", "scissors"]] as const) room.command(player, { roomId, round: 1, requestId: player, action: "attack", hand });
   now += 10000; room.snapshot(); return { room, roomId };
 }

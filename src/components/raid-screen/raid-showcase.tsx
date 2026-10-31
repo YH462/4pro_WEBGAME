@@ -11,6 +11,8 @@ import type { LocalRaidParticipant } from "@/lib/local-raid-types";
 import { characterColors, type RaidArenaContext, type RaidScreenScene } from "@/lib/raid-screen-playback";
 import { EnemyArt } from "../battle/enemy-art";
 import { RaidJoinCard } from "./raid-join-card";
+import { RaidTutorial } from "./raid-tutorial";
+import { RaidNarrationControl } from "./raid-narration-control";
 import styles from "./raid-showcase.module.css";
 import { useCharacterModels } from "../battle/use-character-models";
 import { boss } from "@/lib/boss";
@@ -30,6 +32,8 @@ export type RaidScreenPresentation = {
   production?: boolean;
   bossAttack?: number;
   admissionOpen?: boolean;
+  admissionSeconds?: number;
+  tutorial?: { roomId: string; seconds: number };
   musicTrack: RaidMusicTrack;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
   onImpact: (id: string, kind: "action" | "counter") => void;
@@ -37,6 +41,7 @@ export type RaidScreenPresentation = {
 
 type DemoCharacter = { id:string; name:string; sortOrder:number };
 export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initialDemoCharacterId }: { entryTargets: RaidEntryTarget[]; screen?: RaidScreenPresentation; demoCharacters?:DemoCharacter[]; initialDemoCharacterId?:string }) {
+  const [narrating, setNarrating] = useState(false);
   const models=useCharacterModels();
   const [demoCharacterId,setDemoCharacterId]=useState(()=>demoCharacters.some(c=>c.id===initialDemoCharacterId)?initialDemoCharacterId!:"");
   const [demoReadiness,setDemoReadiness]=useState({id:"",ready:false});
@@ -198,6 +203,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
       <section className={styles.arena} aria-label="ボスとエフェクト" data-renderer={renderer}>
         <div className={styles.floor}/>
         {screen?.collection && <div className={styles.collection} role="timer" aria-label="全員共通の入力受付"><span>ROUND {String(screen.collection.round).padStart(2, "0")} / INPUT TIME</span><strong>{screen.collection.seconds}<small>秒</small></strong><p>{screen.collection.submitted} / {screen.collection.eligible}人 送信済み</p><i style={{ width: `${screen.collection.seconds * 10}%` }}/></div>}
+        {screen?.tutorial && <RaidTutorial seconds={screen.tutorial.seconds}/>}
         {renderer !== "webgl" && <div className={styles.fallback}><EnemyArt/></div>}
         <canvas ref={canvas} aria-label={`${boss.name}と攻撃エフェクト`} role="img"/>
         <div ref={effects} key={key} className={styles.effects} style={{ "--impact-delay": `${showcaseImpactMs}ms`, "--counter-impact-delay": `${counterImpactMs}ms`, "--rps-reveal-delay": `${rpsRevealMs}ms` } as CSSProperties} aria-hidden="true">
@@ -227,7 +233,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
         {renderer === "fallback" && <p className={styles.rendererNote} role="status">簡易表示 · 3D表示にはWebGL対応ブラウザを使用してください</p>}
       </section>
       <div className={styles.members}><Users/><strong>{screen ? screen.members.length : demoCharacter?1:4}<small>人</small></strong><span>{screen ? `生存 ${screen.members.filter((member) => member.hp > 0).length} 人` : "DEMO TEAM"}</span></div>
-      {(!screen || screen.admissionOpen) && <div className={styles.qr}><RaidJoinCard targets={entryTargets} local={screen?.local ?? false} production={screen?.production} compact={!screen}/></div>}
+      {(!screen || screen.admissionOpen) && <div className={styles.qr}>{screen?.admissionSeconds !== undefined && <p className={styles.admissionCountdown} role="timer" aria-label="途中参加の締め切りまで">途中参加 あと{screen.admissionSeconds}秒</p>}<RaidJoinCard targets={entryTargets} local={screen?.local ?? false} production={screen?.production} compact={!screen}/></div>}
       {screen && <ul className={styles.liveMembers} aria-label="参加者とキャラクター">{screen.members.map((member, i) => <li key={member.id} data-participant-id={member.id} data-character-id={member.characterId} data-active={screen.scene.actions.some((action) => action.participantId === member.id)} style={{ "--member-color": `#${(characterColors[member.characterId] ?? 0xb18aff).toString(16).padStart(6, "0")}` } as CSSProperties}><b>{String(i + 1).padStart(2, "0")}</b><span>{member.nickname}<small>{member.characterName}</small></span><strong>{member.hp}<small> / {member.maxHp}</small></strong></li>)}</ul>}
       {!screen && <div className={styles.controls} aria-label="演出デモの操作">
         {demoCharacters.length>0&&<div className={styles.characterPicker}>
@@ -262,7 +268,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
     </footer>}
     {screen && <footer className={styles.operatorBar} aria-label="レイドの進行操作">
       <div className={styles.liveFooter} role="status"><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</div>
-      <div className={styles.operatorActions}>{screen.tools}<RaidMusicControl track={screen.musicTrack}/><RaidAttackSoundControl ref={attackSound}/>{screen.production&&<AdminMenu compact up/>}<a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+      <div className={styles.operatorActions}>{screen.tools}<RaidNarrationControl roomId={screen.tutorial?.roomId} seconds={screen.tutorial?.seconds} onPlaying={setNarrating}/><RaidMusicControl track={screen.musicTrack} ducked={narrating}/><RaidAttackSoundControl ref={attackSound}/>{screen.production&&<AdminMenu compact up/>}<a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
     </footer>}
   </div>;
 }

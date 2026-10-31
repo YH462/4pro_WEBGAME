@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { LocalRaidRoom, raidTutorialMs } from "../../src/lib/local-raid-room";
 
 test("shared WebGL round launches from every actor and counters the whole team once", async ({ page }, testInfo) => {
   test.setTimeout(120000);
@@ -20,7 +20,7 @@ test("shared WebGL round launches from every actor and counters the whole team o
   const main = page.getByRole("main", { name: "会場レイドスクリーン" }), arena = page.getByRole("region", { name: "ボスとエフェクト" });
   await expect(arena).toHaveAttribute("data-renderer", "webgl");
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
-  room.start(roomId);
+  room.start(roomId); now += raidTutorialMs; room.snapshot();
   await page.clock.runFor(600);
   const countdown = page.getByRole("timer", { name: "全員共通の入力受付" });
   await expect(countdown).toContainText("10秒");
@@ -44,7 +44,7 @@ test("shared WebGL round launches from every actor and counters the whole team o
   await page.screenshot({ path: testInfo.outputPath("raid-shared-team-counter.png") });
   await page.clock.runFor(1800); await expect.poll(() => room.snapshot().round.number).toBe(2);
   room.reset(); for (let i = 0; i < 20; i++) room.join(`team-${i}`, ["forest-golem", "flame-dragon", "thunder-fox", "aqua-spirit"][i % 4], 170, `参加者${i + 1}`);
-  const nextRoom = room.snapshot().roomId; room.start(nextRoom);
+  const nextRoom = room.snapshot().roomId; room.start(nextRoom); now += raidTutorialMs; room.snapshot();
   for (let i = 0; i < 20; i++) room.command(`team-${i}`, { roomId: nextRoom, round: 1, requestId: `t${i}`, action: i % 3 === 0 ? "heal" : "attack", hand: i % 2 ? "scissors" : "paper" });
   now += 10000; await drive("data-cue", "critical"); await page.clock.runFor(200);
   await expect(page.getByRole("list", { name: "参加者とキャラクター" }).getByRole("listitem")).toHaveCount(20);

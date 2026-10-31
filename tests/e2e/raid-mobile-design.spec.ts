@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
-import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { LocalRaidRoom, raidTutorialMs } from "../../src/lib/local-raid-room";
 
 const db = new PrismaClient();
 test("a lethal shared attack shows a persistent victory panel only after screen impact", async ({ page }, testInfo) => {
@@ -10,7 +10,7 @@ test("a lethal shared attack shows a persistent victory panel only after screen 
   const room = new LocalRaidRoom(() => "paper", () => now);
   for (let i = 0; i < 6; i++) room.join(`p${i}`, "forest-golem", 170, `参加者${i + 1}`);
   const roomId = room.snapshot().roomId;
-  room.start(roomId);
+  room.start(roomId); now += raidTutorialMs; room.snapshot();
   for (let i = 0; i < 6; i++) room.command(`p${i}`, { roomId, round: 1, requestId: `p${i}`, action: "attack", hand: "scissors" });
   now += 10000;
   await page.route("**/api/local-raid*", (route) => route.fulfill({ json: { state: room.snapshot("p0") } }));
@@ -51,10 +51,10 @@ test("a lethal shared attack shows a persistent victory panel only after screen 
 test("an automatic submission with a lost response retries the same command ID", async ({ page }) => {
   const response = await page.request.post("/api/guest", { headers: { origin: "http://localhost:3000" }, data: { nickname: "再送確認" } });
   const { player } = await response.json();
-  const now = Date.now();
+  let now = Date.now();
   const room = new LocalRaidRoom(() => "paper", () => now);
   room.join(player.id, "forest-golem", 170, "再送確認");
-  room.start(room.snapshot().roomId);
+  room.start(room.snapshot().roomId); now += raidTutorialMs; room.snapshot();
   const before = room.snapshot(player.id), commands: unknown[] = [];
   let stale = true;
   await page.route("**/api/local-raid*", async route => {
@@ -95,7 +95,7 @@ test("synced hands submit the chosen action once and reset at the next shared ro
   const room = new LocalRaidRoom(() => "paper", () => now);
   room.join(player.id, "forest-golem", 170, "自動送信確認");
   const roomId = room.snapshot().roomId;
-  room.start(roomId);
+  room.start(roomId); now += raidTutorialMs; room.snapshot();
   const commands: { action: string; hand: string }[] = [];
   await page.route("**/api/local-raid*", async route => {
     if (route.request().method() === "POST") {
@@ -131,7 +131,7 @@ test("synced hands submit the chosen action once and reset at the next shared ro
       now += 10000; room.snapshot(); room.reveal(roomId, i + 1);
       await expect(page.locator("[data-phase]")).toHaveAttribute("data-phase", "result");
       if (i === 0) { await page.waitForTimeout(2200); await expect(page.locator(".raid-rps-result")).toContainText("負け ×0.5"); }
-      await expect(page.getByRole("status").filter({ hasText: /^次の受付まで待機$/ })).toBeVisible();
+      await expect(page.getByRole("status", { name: "レイド参加状況" }).filter({ hasText: "次の受付まで待機" })).toBeVisible();
       room.finish(roomId, i + 1);
       await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toBeEnabled();
       await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toHaveAttribute("aria-pressed", "false");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { LocalRaidRoom, raidTutorialMs } from "../../src/lib/local-raid-room";
 import { startDestination } from "../../src/lib/acquisition-links";
 
 describe("persistent raid rules", () => {
@@ -8,7 +8,7 @@ describe("persistent raid rules", () => {
     const original = new LocalRaidRoom(() => "paper", () => now);
     original.join("player", "forest-golem", 170, "参加者");
     const roomId = original.snapshot().roomId;
-    original.start(roomId);
+    original.start(roomId); now += raidTutorialMs; original.snapshot();
     const command = { roomId, round: 1, requestId: "same", action: "attack" as const, hand: "scissors" as const };
     original.command("player", command);
     const saved = JSON.parse(JSON.stringify(original.save()));
@@ -16,7 +16,7 @@ describe("persistent raid rules", () => {
     expect(restored.snapshot("player")).toEqual(original.snapshot("player"));
     expect(restored.command("player", command).state.round.submitted).toBe(1);
     expect(() => restored.command("player", { ...command, hand: "rock" })).toThrow("同じ送信ID");
-    now = 10_000;
+    now = raidTutorialMs + 10_000;
     const afterDeadline = restored.snapshot("player");
     expect(afterDeadline.round.phase).toBe("playing");
     const replay = LocalRaidRoom.restore(JSON.parse(JSON.stringify(restored.save())), () => now);
@@ -39,7 +39,7 @@ describe("persistent raid rules", () => {
     const room = new LocalRaidRoom(() => "paper", () => now);
     for (let i = 0; i < 5; i++) room.join(`player-${i}`, "forest-golem", 170, `参加者${i}`);
     const roomId = room.snapshot().roomId;
-    room.start(roomId);
+    room.start(roomId); now += raidTutorialMs; room.snapshot();
     for (let turn = 1; turn <= 5; turn++) {
       for (let i = 0; i < 5; i++) room.command(`player-${i}`, { roomId, round: turn, requestId: `${turn}-p${i}`, action: "attack", hand: "scissors" });
       now += 10_000; room.snapshot(); room.finish(roomId, turn);

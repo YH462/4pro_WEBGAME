@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { raidBalance } from "../../src/lib/raid-balance";
-import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { LocalRaidRoom, raidTutorialMs } from "../../src/lib/local-raid-room";
 
 function team(count: number, hp = 170) {
   let now = 0;
   const room = new LocalRaidRoom(() => "paper", () => now);
   for (let i = 0; i < count; i++) room.join(`p${i}`, "forest-golem", hp, `P${i}`);
   const roomId = room.snapshot().roomId;
-  return { room, roomId, close: () => { now += 10_000; return room.snapshot(); } };
+  return { room, roomId, start: () => { room.start(roomId); now += raidTutorialMs; room.snapshot(); }, close: () => { now += 10_000; return room.snapshot(); } };
 }
 function attack(room: LocalRaidRoom, roomId: string, count: number) {
   const round = room.snapshot().round.number;
@@ -26,7 +26,7 @@ describe("participant-scaled raid balance", () => {
     }
   });
   it.each([1, 2, 5, 10, 20])("cannot be defeated in one round even if all %i players win", count => {
-    const { room, roomId, close } = team(count); room.start(roomId); attack(room, roomId, count);
+    const { room, roomId, close, start } = team(count); start(); attack(room, roomId, count);
     const state = close();
     expect(state.bossHp).toBeGreaterThan(0);
     expect(state.bossHp).toBe(state.bossMaxHp - count * 100);
@@ -41,7 +41,7 @@ describe("participant-scaled raid balance", () => {
       let now = 0;
       const room = new LocalRaidRoom(() => hands[Math.floor(random() * 3)], () => now);
       for (let i = 0; i < count; i++) room.join(`p${i}`, "forest-golem", characterHp[i % characterHp.length], `P${i}`);
-      const roomId = room.snapshot().roomId; room.start(roomId);
+      const roomId = room.snapshot().roomId; room.start(roomId); now += raidTutorialMs; room.snapshot();
       for (let turn = 1; turn <= 30 && room.snapshot().round.phase !== "finished"; turn++) {
         const state = room.snapshot();
         for (let i = 0; i < count; i++) {
@@ -67,29 +67,29 @@ describe("participant-scaled raid balance", () => {
     room.join("p0", "forest-golem", 170, "P0"); room.join("p0", "aqua-spirit", 135, "P0");
     expect(room.snapshot()).toMatchObject({ bossMaxHp: 4500, bossHp: 4500, bossAttack: 14, difficultyPlayers: 10 });
   });
-  it("rejects mid-animation and subsequent-round arrivals and preserves strength across reload", () => {
-    const { room, roomId, close } = team(2); room.start(roomId); attack(room, roomId, 2); close();
-    for (let i = 2; i < 10; i++) expect(() => room.join(`p${i}`, "forest-golem", 170, `P${i}`)).toThrow("バトル開始後");
+  it("rejects arrivals after the grace period and preserves strength across reload", () => {
+    const { room, roomId, close, start } = team(2); start(); attack(room, roomId, 2); close(); close(); close();
+    for (let i = 2; i < 10; i++) expect(() => room.join(`p${i}`, "forest-golem", 170, `P${i}`)).toThrow("受付は終了");
     expect(room.snapshot()).toMatchObject({ bossMaxHp: 900, bossHp: 700, bossAttack: 12, difficultyPlayers: 2 });
     expect(room.snapshot("p9").me).toBeNull();
     room.finish(roomId, 1);
-    const reloaded = LocalRaidRoom.restore(JSON.parse(JSON.stringify(room.save())), () => 10_000);
+    const reloaded = LocalRaidRoom.restore(JSON.parse(JSON.stringify(room.save())), () => raidTutorialMs + 30_000);
     expect(reloaded.snapshot()).toMatchObject({ bossMaxHp: 900, bossHp: 700, bossAttack: 12, difficultyPlayers: 2 });
-    expect(() => reloaded.join("p9", "forest-golem", 170, "P9")).toThrow("バトル開始後");
+    expect(() => reloaded.join("p9", "forest-golem", 170, "P9")).toThrow("受付は終了");
     expect(reloaded.snapshot().members.map(member => member.hp)).toEqual(room.snapshot().members.map(member => member.hp));
   });
   it("does not weaken the boss as allies are knocked out", () => {
-    const { room, roomId, close } = team(9, 10); room.join("p9", "forest-golem", 170, "P9"); room.start(roomId);
+    const { room, roomId, close, start } = team(9, 10); room.join("p9", "forest-golem", 170, "P9"); start();
     close(); room.finish(roomId, 1);
     expect(room.snapshot()).toMatchObject({ alive: 1, bossMaxHp: 4500, bossAttack: 14, difficultyPlayers: 10 });
   });
   it("keeps a legacy running fight unchanged, then enables scaling after reset or for an unstarted lobby", () => {
-    const { room, roomId } = team(10); room.start(roomId);
+    const { room, roomId, start } = team(10); start();
     const legacy = room.save(); delete legacy.balance; legacy.bossHp = 450;
-    let legacyNow = 0;
+    let legacyNow = raidTutorialMs;
     const restored = LocalRaidRoom.restore(legacy, () => legacyNow);
     expect(restored.snapshot()).toMatchObject({ bossMaxHp: 450, bossHp: 450, bossAttack: 20, difficultyPlayers: 0 });
-    legacyNow = 10_000;
+    legacyNow = raidTutorialMs + 10_000;
     expect(restored.snapshot().results.every(result => result.counterDamage === 20)).toBe(true);
     restored.reset(); for (let i = 0; i < 10; i++) restored.join(`p${i}`, "forest-golem", 170, `P${i}`);
     expect(restored.snapshot()).toMatchObject({ bossMaxHp: 4500, bossAttack: 14 });

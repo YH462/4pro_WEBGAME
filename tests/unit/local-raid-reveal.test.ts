@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { LocalRaidRoom } from "../../src/lib/local-raid-room";
+import { LocalRaidRoom, raidTutorialMs } from "../../src/lib/local-raid-room";
 import { visibleLocalRaid } from "../../src/lib/local-raid-presentation";
 function setup() {
   let now = 0;
   const room = new LocalRaidRoom(() => "paper", () => now);
   room.join("a", "forest-golem", 170, "A"); room.join("b", "forest-golem", 170, "B");
-  const roomId = room.snapshot().roomId; room.start(roomId);
+  const roomId = room.snapshot().roomId; room.start(roomId); now += raidTutorialMs; room.snapshot();
   const command = (action: "attack" | "heal" = "attack") => room.command("a", { roomId, round: room.snapshot().round.number, requestId: `r-${room.snapshot().round.number}`, action, hand: "scissors" });
   return { room, roomId, command, close: () => { now += 10000; return room.snapshot(); } };
 }

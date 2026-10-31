@@ -4,6 +4,7 @@ import { api, HttpError, json, rateLimit } from "@/lib/http";
 import { config } from "@/lib/config";
 import { withProductionRaid } from "@/lib/production-raid";
 import { raidReceptionQr } from "@/lib/raid-entry-image";
+import { raidAdmissionOpen } from "@/lib/raid-admission";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
     const roomId = z.uuid().parse(new URL(request.url).searchParams.get("roomId"));
     await withProductionRaid(room => {
       const state = room.snapshot();
-      if (state.roomId !== roomId || state.round.phase !== "lobby") throw new HttpError(409, "このレイドの参加受付は終了しました。");
+      if (state.roomId !== roomId || !raidAdmissionOpen(state)) throw new HttpError(409, "このレイドの参加受付は終了しました。");
     });
     return json({ target: await raidReceptionQr(config().origin, roomId) });
   });

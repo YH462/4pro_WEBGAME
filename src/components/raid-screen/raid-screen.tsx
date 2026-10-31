@@ -6,6 +6,8 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Play, RotateCcw, Settings2, Users, X } from "lucide-react";
 import { useLocalRaid } from "@/components/battle/use-local-raid";
 import type { RaidEntryTarget } from "@/lib/raid-entry";
+import { raidTutorialSeconds } from "@/lib/raid-tutorial-timing";
+import { raidAdmissionOpen } from "@/lib/raid-admission";
 import { visibleLocalRaid } from "@/lib/local-raid-presentation";
 import { emptyRaidPlayback, raidPlaybackReducer, raidScreenIsLast, raidScreenScene } from "@/lib/raid-screen-playback";
 import { useRaidCountdown } from "@/components/battle/use-raid-countdown";
@@ -23,9 +25,11 @@ export function RaidScreen({ local = false, production = false, canSync = false,
   const [publication, setPublication] = useState<{ roomId: string; turn: number; kind: "reveal" | "action" | "counter" | "finish" } | null>(null);
   const settings = useRef<HTMLDialogElement>(null);
   const roster = useRef<HTMLDialogElement>(null);
+  const admissionSeconds = useRaidCountdown(live?.admissionClosesAt, live?.serverNow);
+  const admissionOpen = Boolean(live && raidAdmissionOpen(live) && (live.round.phase === "lobby" || admissionSeconds > 0));
   useEffect(() => {
     if (live?.round.phase !== "lobby") roster.current?.close();
-    if (!production || !live || live.round.phase !== "lobby") { setEntryError(""); return; }
+    if (!production || !live || !admissionOpen) { setEntryError(""); return; }
     let cancelled = false, timer: ReturnType<typeof setTimeout>;
     const roomId = live.roomId;
     const load = async () => {
@@ -39,7 +43,7 @@ export function RaidScreen({ local = false, production = false, canSync = false,
       }
     };
     void load(); return () => { cancelled = true; clearTimeout(timer); };
-  }, [production, live?.roomId, live?.round.phase]);
+  }, [production, live?.roomId, live?.round.phase, admissionOpen]);
   useEffect(() => { if (live) dispatch({ type: "snapshot", snapshot: live }); }, [live]);
   const complete = useCallback((id: string) => {
     if (playback.active && id === raidScreenScene(playback).id && raidScreenIsLast(playback)) setPublication({ roomId: playback.roomId, turn: playback.active.turn, kind: "finish" });
@@ -86,18 +90,18 @@ export function RaidScreen({ local = false, production = false, canSync = false,
   const status = local ? error ? "再接続中" : live ? production ? "会場同期中" : "ローカル同期中" : "接続中" : "参加受付前";
   const title = failed ? "仲間が全員、戦闘不能に！" : scene.cue === "victory" ? "全員の力で、討伐成功！"
     : active ? scene.cue === "rps" ? "みんなでボスとじゃんけん！" : scene.cue === "counter" ? "ボスの全体攻撃！" : "全員の力を合わせよう！"
-      : live?.round.phase === "collecting" ? `入力受付 あと${seconds}秒` : live?.round.phase === "lobby" ? "参加者がそろったら受付を開始しよう"
+      : live?.round.phase === "tutorial" ? `ルール説明中・バトル開始まであと${seconds}秒` : live?.round.phase === "collecting" ? `入力受付 あと${seconds}秒` : live?.round.phase === "lobby" ? "参加者がそろったらルール説明を始めよう"
       : local ? members.length ? "次の行動をスマホから送ろう" : "スマホから参加しよう！" : "会場レイドスクリーン";
-  const message = error || resetError || entryError || (finished ? "「次のバトルを準備」で参加受付に戻ります。" : live?.round.phase === "collecting" ? `${live.round.submitted} / ${live.round.eligible}人が送信済み。全員同じ「ぽん！」で勝負！` : last ? `ROUND ${last.turn}：全員共通のボスの手で、それぞれの勝敗を判定します。`
+  const message = error || resetError || entryError || (finished ? "「次のバトルを準備」で参加受付に戻ります。" : live?.round.phase === "tutorial" ? "説明中も参加できます。バトル開始後30秒まで途中参加OK！" : live?.round.phase === "collecting" ? `${live.round.submitted} / ${live.round.eligible}人が送信済み。全員同じ「ぽん！」で勝負！` : last ? `ROUND ${last.turn}：全員共通のボスの手で、それぞれの勝敗を判定します。`
     : local ? "参加QRを読み取って、スマホから攻撃・回復を選ぼう。" : "開催前です。演出は右下の「演出確認ページ」から確認できます。");
   return <>
-    <RaidShowcase entryTargets={production ? reception && reception.roomId === live?.roomId ? reception.targets : [] : entryTargets} screen={{ admissionOpen: live?.round.phase === "lobby" && (!production || reception?.roomId === live.roomId), musicTrack: live && live.round.phase !== "lobby" ? "battle" : "lobby", scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? boss.name, bossAttack: live?.bossAttack, failed,
+    <RaidShowcase entryTargets={production ? reception && reception.roomId === live?.roomId ? reception.targets : [] : entryTargets} screen={{ admissionOpen: admissionOpen && (!production || reception?.roomId === live?.roomId), admissionSeconds: live?.round.phase !== "lobby" && live?.round.phase !== "tutorial" && admissionOpen ? admissionSeconds : undefined, tutorial: live?.round.phase === "tutorial" ? { roomId: live.roomId, seconds } : undefined, musicTrack: live && live.round.phase !== "lobby" && live.round.phase !== "tutorial" ? "battle" : "lobby", scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? boss.name, bossAttack: live?.bossAttack, failed,
       collection: live?.round.phase === "collecting" ? { round: live.round.number, seconds, submitted: live.round.submitted, eligible: live.round.eligible } : undefined,
       onComplete: complete, onReveal, onImpact, tools: <>{local && (finished ? <button type="button" data-primary disabled={resetting || Boolean(error) || Boolean(removing)} onClick={resetBattle}><RotateCcw/>{resetting ? "準備中…" : "次のバトルを準備"}</button> : <button type="button" data-primary disabled={resetting || Boolean(error) || Boolean(removing) || !live?.alive || live.round.phase !== "lobby"} onClick={async () => {
         if (!live) return;
         setResetting(true); try { await send({ type: "start", roomId: live.roomId }); setResetError(""); }
         catch (reason) { setResetError(reason instanceof Error ? reason.message : "開始できませんでした。"); } finally { setResetting(false); }
-      }}><Play/>{live?.round.phase === "collecting" ? "入力受付中" : live?.round.phase === "playing" ? "バトル進行中" : "10秒の入力受付を開始"}</button>)}<button type="button" onClick={() => settings.current?.showModal()}><Settings2/>{local ? "同期設定" : "表示設定"}</button>{local && <button type="button" disabled={!live || live.round.phase !== "lobby" || resetting} onClick={() => roster.current?.showModal()}><Users/>参加者管理</button>}</> }}/>
+      }}><Play/>{live?.round.phase === "tutorial" ? "ルール説明中" : live?.round.phase === "collecting" ? "入力受付中" : live?.round.phase === "playing" ? "バトル進行中" : `ルール説明を開始（${raidTutorialSeconds}秒）`}</button>)}<button type="button" onClick={() => settings.current?.showModal()}><Settings2/>{local ? "同期設定" : "表示設定"}</button>{local && <button type="button" disabled={!live || live.round.phase !== "lobby" || resetting} onClick={() => roster.current?.showModal()}><Users/>参加者管理</button>}</> }}/>
     <dialog className={styles.settings} ref={roster} aria-labelledby="raid-roster-title" onClick={event => { if (event.target === event.currentTarget) roster.current?.close(); }}>
       <div className={styles.settingsHeading}><h2 id="raid-roster-title">参加者管理</h2><button type="button" aria-label="参加者管理を閉じる" onClick={() => roster.current?.close()}><X/></button></div>
       <p>待機中の参加者 {live?.participants ?? 0} / 20人。解除した人は、このレイドには再参加できません。</p>
@@ -117,7 +121,7 @@ export function RaidScreen({ local = false, production = false, canSync = false,
         {production && <a href="/admin/login?next=raid-screen">管理者ログイン</a>}
         {local && <><a href={production ? "/battle/raid" : "/battle/raid?sync=local"} target="_blank" rel="noreferrer">スマホ画面を開く ↗</a><button type="button" disabled={resetting || !live} onClick={resetBattle}>{resetting ? "リセット中…" : "同期をリセット"}</button></>}
       </div>
-      <p>{local ? "入力受付は全員共通で10秒、1人1回です。ボスのHPと全体攻撃は参加人数に応じて強くなります。参加できるのは開始前の待機中だけです。開始後はQRを非表示にし、新しい参加は受け付けません。未入力の人は行動せず、反撃は受けます。反撃演出後に次の受付が始まります。リセットで参加状況とHPを初期化します。" : "参加受付・正式な戦闘進行は準備中です。仮の参加者や行動を実際の戦闘として自動再生しません。"}</p>
+      <p>{local ? `開始ボタンで${raidTutorialSeconds}秒のルール説明を表示した後、自動でバトルが始まります。説明中とバトル開始後30秒まで参加できます。演出中の途中参加は次の入力受付から操作できます。入力受付は全員共通で10秒、1人1回です。ボスの強さは参加人数に応じて変わります。未入力の人も反撃は受けます。参加者の整理は説明前に行ってください。リセットで参加状況とHPを初期化します。` : "参加受付・正式な戦闘進行は準備中です。仮の参加者や行動を実際の戦闘として自動再生しません。"}</p>
       {resetError && <p role="alert">{resetError}</p>}
     </dialog>
   </>;

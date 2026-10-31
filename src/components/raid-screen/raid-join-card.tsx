@@ -26,7 +26,7 @@ export function RaidJoinCard({ targets, local, production = false, compact = fal
         <p>スマホの標準カメラで読み取ってください。</p>
         <a href={target.url} target="_blank" rel="noreferrer">{target.url}</a>
         {targets.length > 1 && <label className={styles.network}>接続先を選択<select value={target.url} onChange={(event) => setSelected(event.target.value)}>{targets.map((item) => <option key={item.url} value={item.url}>{new URL(item.url).host}</option>)}</select></label>}
-        <p className={styles.dialogNote}>{production ? "初めての方はゲストではじめると、そのままレイドへ進みます。会場スクリーンでの受付開始をお待ちください。" : local ? "スマホとPCを同じWi-Fiに接続してください。初めての方はニックネーム入力後、そのままレイドへ進みます。" : "演出確認用の画面です。参加は会場スクリーンの案内に従ってください。"}</p>
+        <p className={styles.dialogNote}>{production ? "初めての方はニックネームを入力し、スマホの「このレイドに参加」を押してください。「参加完了！」と表示されたら参加できています。説明中とバトル開始後30秒まで参加できます。" : local ? "スマホとPCを同じWi-Fiに接続してください。初めての方はニックネーム入力後、そのままレイドへ進みます。" : "演出確認用の画面です。参加は会場スクリーンの案内に従ってください。"}</p>
       </dialog>
     </> : <div className={styles.unavailable}><Smartphone /><strong>接続先を確認してください</strong><p>PCをWi-Fiに接続し、<br />スクリーンを再読み込みすると<br />参加QRが表示されます。</p></div>}
   </section>;
