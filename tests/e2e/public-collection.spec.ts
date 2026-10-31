@@ -12,7 +12,10 @@ test("an unregistered visitor browses collection and detail tabs without a nickn
   await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
   await expect(page.locator(".collection-card")).toHaveCount(12);
   await expect(page.getByRole("progressbar", { name: "キャラクター獲得進捗" })).toHaveAttribute("aria-valuenow", "0");
-  await page.getByRole("link", { name: "フォレストゴーレムの詳細を見る（未獲得）", exact: true }).click();
+  await page.getByRole("link", { name: "フォレストゴーレムの場所のヒントを見る（未獲得）", exact: true }).click();
+  await expect(page).toHaveURL(/\/collection\/forest-golem\/hint$/);
+  await expect(page.getByRole("region", { name: "フォレストゴーレムの場所のヒント", exact: true })).toBeVisible();
+  await page.goto("/collection/forest-golem");
   await expect(page.getByRole("heading", { name: "フォレストゴーレム", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "必殺技", exact: true })).toHaveCount(0);
   for (const label of ["紹介", "ステータス"]) {

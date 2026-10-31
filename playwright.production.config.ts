@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 // Run against a dedicated PostgreSQL database and an actual `next start` build.
 export default defineConfig({
-  testDir: "./tests/e2e", testMatch: ["production-raid.spec.ts", "lifecycle.spec.ts", "raid-entry.spec.ts", "public-collection.spec.ts", "adventure-records.spec.ts", "collection-swipe.spec.ts", "character-motions.spec.ts", "player-awards.spec.ts", "admin-statistics.spec.ts", "admin-preview.spec.ts"], fullyParallel: false, workers: 1,
+  testDir: "./tests/e2e", testMatch: ["production-raid.spec.ts", "lifecycle.spec.ts", "raid-entry.spec.ts", "public-collection.spec.ts", "collection-hints.spec.ts", "admin-character-hints.spec.ts", "adventure-records.spec.ts", "collection-swipe.spec.ts", "character-motions.spec.ts", "player-awards.spec.ts", "admin-statistics.spec.ts", "admin-preview.spec.ts"], fullyParallel: false, workers: 1,
   timeout: 90_000, reporter: "list", outputDir: ".local/production-raid-test/results",
   use: { baseURL: "http://localhost:13026", trace: "retain-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

@@ -25,9 +25,9 @@ export function PartnerCollection({ partners, collectionHref = "/collection" }: 
       {partners.map((partner) => (
         <li key={partner.id} className={styles.slot}>
           <Link
-            href={`${collectionHref}/${partner.id}`}
+            href={`${collectionHref}/${partner.id}${!partner.owned && collectionHref === "/collection" ? "/hint" : ""}`}
             className={`collection-card ${styles.hexagon} ${elementStyles[partner.element] ?? ""} ${departmentStyles[partner.departmentId ?? ""] ?? ""} ${partner.isLegendary ? styles.legendary : ""} ${partner.owned ? styles.owned : styles.locked}`}
-            aria-label={`${partner.name}の詳細を見る${partner.owned ? "（獲得済み）" : "（未獲得）"}`}
+            aria-label={`${partner.name}の${!partner.owned && collectionHref === "/collection" ? "場所のヒント" : "詳細"}を見る${partner.owned ? "（獲得済み）" : "（未獲得）"}`}
           >
             <span className={styles.innerFill} aria-hidden="true"/>
             <div className={styles.content}>

@@ -133,6 +133,7 @@ model Character {
   owners       PlayerCharacter[]
   acquisitions AcquisitionLog[]
   acquisitionTags AcquisitionTag[]
+  locationHint CharacterLocationHint?
 }
 
 model CharacterImage {
@@ -141,6 +142,30 @@ model CharacterImage {
   data        Bytes
   createdAt   DateTime @default(now())
   character   Character?
+}
+
+model CharacterLocationHint {
+  characterId String @id
+  location    String @default("") @db.VarChar(200)
+  text        String @default("") @db.VarChar(1000)
+  revision    Int @default(0)
+  updatedAt   DateTime @updatedAt
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  images      CharacterHintImage[]
+}
+
+model CharacterHintImage {
+  id          String @id @default(uuid())
+  characterId String
+  kind        String @db.VarChar(16)
+  alt         String @db.VarChar(200)
+  contentType String @default("image/webp")
+  data        Bytes
+  byteLength  Int
+  width       Int
+  height      Int
+  hint        CharacterLocationHint @relation(fields: [characterId], references: [characterId], onDelete: Cascade)
+  @@unique([characterId, kind])
 }
 
 model CharacterModel {

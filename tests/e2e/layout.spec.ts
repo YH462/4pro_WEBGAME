@@ -49,9 +49,10 @@ test.describe("viewport-contained game screens", () => {
           if (route === "/collection") {
             await expect(page.getByRole("list", { name: "キャラクター一覧" }).locator(":scope > li")).toHaveCount(12);
             for (const name of ["フォレストゴーレム", "サンダーフォックス", "フレイムドラゴン", "アクアスピリット", "4プロ"]) {
-              await page.getByRole("link", { name: `${name}の詳細を見る（未獲得）`, exact: true }).click();
+              await page.getByRole("link", { name: `${name}の場所のヒントを見る（未獲得）`, exact: true }).click();
               await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
-              for (const tab of ["紹介", "ステータス"]) { await page.getByRole("tab", { name: tab, exact: true }).click(); await expectScreenFits(page); }
+              await expect(page.getByRole("group", { name: "場所のヒント写真", exact: true })).toBeVisible();
+              await expectScreenFits(page);
               await page.getByRole("link", { name: "図鑑に戻る", exact: true }).click();
               await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
             }

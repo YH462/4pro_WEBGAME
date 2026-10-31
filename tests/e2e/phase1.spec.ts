@@ -26,7 +26,9 @@ test("guest entry, persistent session, dictionary and nickname update", async ({
   await expect(page.getByRole("heading", { name: "キャラ図鑑", exact: true })).toBeVisible();
   await expect(page.locator(".collection-card")).toHaveCount(12);
   await expect(page.getByRole("list", { name: "キャラクター一覧" }).locator(":scope > li")).toHaveCount(12);
-  await page.getByRole("link", { name: "フォレストゴーレムの詳細を見る（未獲得）", exact: true }).click();
+  await page.getByRole("link", { name: "フォレストゴーレムの場所のヒントを見る（未獲得）", exact: true }).click();
+  await expect(page.getByRole("region", { name: "フォレストゴーレムの場所のヒント", exact: true })).toBeVisible();
+  await page.goto("/collection/forest-golem");
   await expect(page.getByRole("heading", { name: "フォレストゴーレム" })).toBeVisible();
   await expect(page.locator(".stat-card strong").first()).toHaveText("170");
   for (const label of ["HP", "攻撃", "防御", "チャージ効率"]) {

@@ -1,0 +1,16 @@
+.editor { margin-bottom:22px; }
+.fields { border:0; padding:0; margin:0; min-width:0; }
+.fields>label { font-weight:700; }
+.fields input:not([type=file]),.fields textarea { width:100%; min-width:0; min-height:44px; border:1px solid #d9d2df; border-radius:6px; background:#fff; color:#24212b; padding:9px 10px; font:inherit; font-size:16px; }
+.fields textarea { resize:vertical; }
+.images { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:18px; margin:20px 0; }
+.imageField { min-width:0; border:1px solid #e5dce4; border-radius:8px; padding:12px; }
+.imageField .imageLabel { display:block; margin:0 0 9px; font-size:14px; font-weight:750; }
+.imageField label { margin:12px 0; }
+.preview { height:170px; background:#f4eef2; border-radius:5px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
+.preview img { display:block; width:100%; height:100%; object-fit:contain; }
+.preview span { color:#796875; font-size:13px; }
+.imageField input[type=file] { display:block; max-width:100%; min-height:44px; font-size:13px; }
+.imageField input[type=file]::file-selector-button { min-height:44px; margin-right:8px; border:1px solid #d9d2df; border-radius:5px; padding:6px 10px; background:#fff; color:#45333e; }
+.size { font-size:12px; color:#796875; overflow-wrap:anywhere; }
+@media(max-width:760px) { .images { grid-template-columns:minmax(0,1fr); gap:12px; } .imageField { padding:10px; } }
