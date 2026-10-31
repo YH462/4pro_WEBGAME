@@ -80,7 +80,7 @@ test("an automatic submission with a lost response retries the same command ID",
     await expect(page.getByRole("button", { name: "攻撃を選択", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "グーを選択", exact: true })).toBeDisabled();
     await retry.click();
-    await expect(page.getByText("送信完了！", { exact: true })).toBeVisible();
+    await expect(page.getByRole("status", { name: "レイド参加状況", exact: true })).toContainText("送信完了！");
     expect(commands).toHaveLength(2);
     expect(commands[1]).toEqual(commands[0]);
     expect(room.snapshot(player.id).me?.submission).toMatchObject({ action: "heal", hand: "paper" });
@@ -123,7 +123,7 @@ test("synced hands submit the chosen action once and reset at the next shared ro
       await hand.evaluate(el => { (el as HTMLButtonElement).click(); (el as HTMLButtonElement).click(); });
       const sent = page.getByRole("group", { name: "送信した行動とじゃんけんの手" });
       await expect(sent).toContainText(choice.label + " / " + choice.name);
-      await expect(page.getByText("送信完了！", { exact: true })).toBeVisible();
+      await expect(page.getByRole("status", { name: "レイド参加状況", exact: true })).toContainText("送信完了！");
       expect(commands).toHaveLength(i + 1);
       expect(commands[i]).toMatchObject({ action: choice.action, hand: choice.hand });
       colors.push(await sent.locator("svg").first().evaluate(el => getComputedStyle(el).backgroundImage));

@@ -504,6 +504,85 @@ test("Japanese narration follows the explanation, lowers BGM and resumes from th
   await page.reload(); await expect(on).toHaveAttribute("aria-pressed", "false");
 });
 
+test("game voices follow displayed milestones and leave a three-second gap before the survey", async ({ page }, testInfo) => {
+  await observeMusic(page, false);
+  await page.addInitScript(() => {
+    const record = window as unknown as { gameVoices: { duration: number; started: number; ended?: number }[] };
+    record.gameVoices = [];
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (this: AudioBufferSourceNode, ...args: Parameters<AudioBufferSourceNode["start"]>) {
+      if (!this.loop && this.buffer) {
+        const cue = { duration: this.buffer.duration, started: performance.now(), ended: undefined as number | undefined };
+        record.gameVoices.push(cue); this.addEventListener("ended", () => { cue.ended = performance.now(); });
+      }
+      return Reflect.apply(start, this, args);
+    };
+  });
+  await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);
+  const room = new LocalRaidRoom(); room.join("voice-example", "forest-golem", 170, "音声確認");
+  await db.raidRoom.create({ data: { eventId, state: JSON.parse(JSON.stringify(room.save())) } });
+  let state = room.snapshot();
+  await page.route("**/api/raid", route => route.fulfill({ json: { state } }));
+  await page.setViewportSize({ width: 1366, height: 768 }); await page.goto("/raid/screen");
+  const durations = await page.evaluate(async () => {
+    const context = new AudioContext();
+    try { return await Promise.all([1, 2, 3, 4, 5].map(async n => {
+      const response = await fetch(`/music/GameVoice${n}.mp3`);
+      if (!response.ok) throw new Error(`GameVoice${n} could not be served`);
+      return (await context.decodeAudioData(await response.arrayBuffer())).duration;
+    })); } finally { await context.close(); }
+  });
+  await page.getByRole("button", { name: "BGMをオンにする", exact: true }).click();
+  await page.getByRole("button", { name: "説明音声をオンにする", exact: true }).click();
+  await expect(page.getByRole("button", { name: "説明音声をオフにする", exact: true })).toHaveText("説明音声 オン");
+  const cues = () => page.evaluate(() => (window as unknown as { gameVoices: { duration: number; started: number; ended?: number }[] }).gameVoices);
+  expect(await cues()).toHaveLength(0);
+  const started = state.serverNow;
+  const change = (patch: Partial<LocalRaidSnapshot>) => { state = { ...state, ...patch, revision: state.revision + 1 }; };
+  change({ admissionClosesAt: started + 30_000, round: { ...state.round, number: 1, phase: "collecting", closesAt: started + 10_000 } });
+  await expect(page.getByRole("timer", { name: "全員共通の入力受付", exact: true })).toBeVisible();
+  expect(await cues()).toHaveLength(0);
+  change({ serverNow: started + 15_000 });
+  await expect.poll(async () => (await cues()).length).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.gains[0].gain.value)).toBeCloseTo(.12, 2);
+  change({ bossHp: state.bossMaxHp / 2 });
+  await expect.poll(async () => (await cues()).length).toBe(2);
+  change({ bossHp: Math.floor(state.bossMaxHp / 4) });
+  await expect.poll(async () => (await cues()).length).toBe(3);
+  change({ bossHp: 0, round: { ...state.round, phase: "finished" } });
+  await expect.poll(async () => (await cues()).length).toBe(4);
+  await expect.poll(async () => (await cues())[3].ended, { timeout: 15_000 }).toBeTruthy();
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.gains[0].gain.value)).toBeCloseTo(.4, 2);
+  await expect.poll(async () => (await cues()).length, { timeout: 5000 }).toBe(5);
+  const played = await cues();
+  played.forEach((cue, index) => expect(cue.duration).toBeCloseTo(durations[index], 2));
+  expect(played[4].started - played[3].ended!).toBeGreaterThanOrEqual(2900);
+  expect(played[4].started - played[3].ended!).toBeLessThan(4500);
+  await page.screenshot({ path: testInfo.outputPath("game-voice-survey.png") });
+  await page.getByRole("button", { name: "説明音声をオフにする", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__raidMusicProbe.gains[0].gain.value)).toBeCloseTo(.4, 2);
+});
+
+test("home survey banner stays above the exhibition map and opens the configured form", async ({ page, context }, testInfo) => {
+  await page.goto("/");
+  const href = process.env.KOSEN_SURVEY_URL;
+  const banner = href ? page.getByRole("link", { name: "高専祭アンケート（外部サイトを新しいタブで開く）", exact: true }) : page.getByRole("region", { name: "高専祭アンケート", exact: true });
+  for (const [width, height] of [[375, 667], [390, 844], [844, 390], [1366, 768]]) {
+    await page.setViewportSize({ width, height }); await expect(banner).toBeVisible();
+    const rect = (await banner.boundingBox())!;
+    expect(rect.y).toBeGreaterThan(0); expect(rect.height).toBeGreaterThanOrEqual(44);
+    expect(rect.x).toBeGreaterThanOrEqual(0); expect(rect.x + rect.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await page.screenshot({ path: testInfo.outputPath(`home-survey-${width}.png`) });
+  }
+  if (href) {
+    await expect(banner).toHaveAttribute("href", href); await expect(banner).toHaveAttribute("target", "_blank");
+    await context.route(href, route => route.fulfill({ contentType: "text/html", body: "<title>Survey test destination</title>" }));
+    const popup = page.waitForEvent("popup"); await banner.click(); const form = await popup;
+    await expect(form).toHaveURL(href); await form.close();
+  } else await expect(banner).toContainText("準備中");
+});
+
 test("phone screenshots highlight all four tutorial steps and leave the reception QR accessible", async ({ page, request }, testInfo) => {
   await observeMusic(page, false);
   await page.context().addCookies([{ name: "fourpro_admin", value: adminToken, url: origin }]);

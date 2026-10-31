@@ -78,6 +78,12 @@ export function RaidScreen({ local = false, production = false, canSync = false,
   const members = visible?.members ?? [];
   const failed = Boolean(visible && visible.participants > 0 && visible.alive === 0 && visible.bossHp > 0 && !active);
   const finished = live?.round.phase === "finished";
+  const narration = live && visible ? {
+    roomId: live.roomId, phase: live.round.phase,
+    bossHp: visible.bossHp, bossMaxHp: visible.bossMaxHp,
+    victory: visible.bossHp === 0 && (scene.cue === "victory" || finished), failed,
+    battleStartsInMs: live.admissionClosesAt == null ? undefined : live.admissionClosesAt - 30_000 - live.serverNow,
+  } : undefined;
   const resetBattle = async () => {
     if (!live) return;
     setResetting(true);
@@ -96,7 +102,7 @@ export function RaidScreen({ local = false, production = false, canSync = false,
     : local ? "参加QRを読み取って、スマホから攻撃・回復を選ぼう。" : "開催前です。演出は右下の「演出確認ページ」から確認できます。");
   return <>
     <RaidShowcase entryTargets={production ? reception && reception.roomId === live?.roomId ? reception.targets : [] : entryTargets} screen={{ admissionOpen: admissionOpen && (!production || reception?.roomId === live?.roomId), admissionSeconds: live?.round.phase !== "lobby" && live?.round.phase !== "tutorial" && admissionOpen ? admissionSeconds : undefined, tutorial: live?.round.phase === "tutorial" ? { roomId: live.roomId, seconds } : undefined, musicTrack: live && live.round.phase !== "lobby" && live.round.phase !== "tutorial" ? "battle" : "lobby", scene, members, local, production, status, title, message, pending: 0, bossName: live?.bossName ?? boss.name, bossAttack: live?.bossAttack, failed,
-      collection: live?.round.phase === "collecting" ? { round: live.round.number, seconds, submitted: live.round.submitted, eligible: live.round.eligible } : undefined,
+      narration, collection: live?.round.phase === "collecting" ? { round: live.round.number, seconds, submitted: live.round.submitted, eligible: live.round.eligible } : undefined,
       onComplete: complete, onReveal, onImpact, tools: <>{local && (finished ? <button type="button" data-primary disabled={resetting || Boolean(error) || Boolean(removing)} onClick={resetBattle}><RotateCcw/>{resetting ? "準備中…" : "次のバトルを準備"}</button> : <button type="button" data-primary disabled={resetting || Boolean(error) || Boolean(removing) || !live?.alive || live.round.phase !== "lobby"} onClick={async () => {
         if (!live) return;
         setResetting(true); try { await send({ type: "start", roomId: live.roomId }); setResetError(""); }

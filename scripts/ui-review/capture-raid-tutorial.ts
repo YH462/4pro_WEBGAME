@@ -56,6 +56,7 @@ try {
   await page.getByRole("button", { name: "攻撃を選択", exact: true }).click();
   await capture("hand", page.getByRole("group", { name: "じゃんけんの手を選ぶ", exact: true }));
   await page.getByRole("button", { name: "チョキを選択", exact: true }).click();
+  await page.getByRole("status", { name: "レイド参加状況", exact: true }).filter({ hasText: "送信完了！" }).waitFor();
   await capture("sent", page.getByRole("group", { name: "送信した行動とじゃんけんの手", exact: true }));
   await writeFile("src/components/raid-screen/raid-tutorial-frames.json", JSON.stringify(frames, null, 2) + "\n");
   console.log("Captured four real phone screens and their highlighted control positions.");

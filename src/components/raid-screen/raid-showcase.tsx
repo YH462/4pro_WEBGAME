@@ -13,6 +13,7 @@ import { EnemyArt } from "../battle/enemy-art";
 import { RaidJoinCard } from "./raid-join-card";
 import { RaidTutorial } from "./raid-tutorial";
 import { RaidNarrationControl } from "./raid-narration-control";
+import type { RaidGameVoiceState } from "@/lib/raid-game-voice";
 import styles from "./raid-showcase.module.css";
 import { useCharacterModels } from "../battle/use-character-models";
 import { boss } from "@/lib/boss";
@@ -34,6 +35,7 @@ export type RaidScreenPresentation = {
   admissionOpen?: boolean;
   admissionSeconds?: number;
   tutorial?: { roomId: string; seconds: number };
+  narration?: RaidGameVoiceState;
   musicTrack: RaidMusicTrack;
   failed: boolean; tools: ReactNode; onComplete: (id: string) => void; onReveal: (id: string) => void;
   onImpact: (id: string, kind: "action" | "counter") => void;
@@ -268,7 +270,7 @@ export function RaidShowcase({ entryTargets, screen, demoCharacters = [], initia
     </footer>}
     {screen && <footer className={styles.operatorBar} aria-label="レイドの進行操作">
       <div className={styles.liveFooter} role="status"><strong>{screen.title}</strong><p>{screen.message}</p>{screen.pending > 0 && <small>演出待ち {screen.pending} 件</small>}</div>
-      <div className={styles.operatorActions}>{screen.tools}<RaidNarrationControl roomId={screen.tutorial?.roomId} seconds={screen.tutorial?.seconds} onPlaying={setNarrating}/><RaidMusicControl track={screen.musicTrack} ducked={narrating}/><RaidAttackSoundControl ref={attackSound}/>{screen.production&&<AdminMenu compact up/>}<a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
+      <div className={styles.operatorActions}>{screen.tools}<RaidNarrationControl roomId={screen.tutorial?.roomId} seconds={screen.tutorial?.seconds} battle={screen.narration} onPlaying={setNarrating}/><RaidMusicControl track={screen.musicTrack} ducked={narrating}/><RaidAttackSoundControl ref={attackSound}/>{screen.production&&<AdminMenu compact up/>}<a href="/raid/screen?demo=effects" aria-label="演出確認ページ">演出確認<Play size={18}/></a><button type="button" aria-label="全画面で表示" onClick={fullscreen}><Expand/></button></div>
     </footer>}
   </div>;
 }

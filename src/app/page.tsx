@@ -1,7 +1,7 @@
-import { ChevronRight, Megaphone } from "lucide-react";
 import { Shell } from "@/components/shell";
 import { ExhibitionMap } from "@/components/exhibition-map";
 import { RaidQrScanner } from "@/components/raid-qr-scanner";
+import { SurveyBanner } from "@/components/survey-banner";
 import { currentPlayer } from "@/lib/session";
 import { db } from "@/lib/db";
 import styles from "./home.module.css";
@@ -16,8 +16,8 @@ export default async function Home() {
   }));
   return (
     <Shell>
-      <div className={styles.screen}>
-
+      <div className={`${styles.screen} ${styles.withSurvey}`}>
+        <SurveyBanner url={process.env.KOSEN_SURVEY_URL}/>
         <ExhibitionMap
           partners={partners.filter((partner) => !partner.isLegendary)}
           legend={partners.find((partner) => partner.id === "four-pro")}
